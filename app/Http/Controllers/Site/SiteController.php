@@ -51,6 +51,6 @@ class SiteController extends Controller
         $member->save();
 
         return Redirect::route('site.member')
-            ->with('success', 'Member created successfully.');
+            ->with('success', __('Thank you for your registration!'));
     }
 }
