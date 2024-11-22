@@ -19,4 +19,14 @@ class ArrayHelper
         }
         return $array;
     }
+
+    public static function groupBy($array, $key)
+    {
+        $grouped = [];
+        foreach ($array as $item) {
+            // create a hash for each group index
+            $grouped[md5($item[$key])][] = $item;
+        }
+        return $grouped;
+    }
 }

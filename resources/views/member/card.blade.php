@@ -33,7 +33,8 @@
                             father: {{ $member->father ? '{ url_photo: \''.$member->father->url_photo.'\', first_and_last_name: \''.$member->father->first_and_last_name.'\' }' : 'null' }},
                             mother: {{ $member->mother ? '{ url_photo: \''.$member->mother->url_photo.'\', first_and_last_name: \''.$member->mother->first_and_last_name.'\' }' : 'null' }},
                             notes: '{{ $member->notes }}',
-                            created_at: '{{ $member->created_at_formatted }}'
+                            created_at: '{{ $member->created_at_formatted }}',
+                            updated_at: '{{ $member->updated_at_formatted }}'
                         };
                         $dispatch('open-modal', 'modal-info');
                     ">

@@ -1,11 +1,11 @@
 <x-guest-layout>
     @if (session('success'))
         <div class="alert alert-success">
-            {{ session('success') }}
+            <img class="block w-auto" src="{{ asset('img/success.jpg') }}" alt="">
         </div>
         <div class="mt-4 flex justify-center">
             <a href="{{ route('site.member') }}" class="bg-primary hover:bg-[#d8881c] text-white font-bold py-2 px-4 rounded">
-                {{ __('Add New Member') }}
+                REGISTAR NOVO MEMBRO
             </a>
         </div>
     @else
@@ -120,6 +120,7 @@
                             autocomplete="phone_number"
                             x-ref="phone_number"
                         />
+                        <x-input-error class="mt-2" :messages="$errors->get('phone_number')" />
                         <p class="error-message text-red-500 text-xs" x-text="errors.phone_number"></p>
                     </div>
                     <div class="mt-4">
@@ -133,6 +134,8 @@
                             x-model="email"
                             autocomplete="email"
                         />
+                        <x-input-error class="mt-2" :messages="$errors->get('email')" />
+                        <p class="error-message text-red-500 text-xs" x-text="errors.email"></p>
                     </div>
                     <div class="mt-4 flex justify-end">
                         <x-primary-button type="button" @click="setStep(2)" class="bg-primary hover:bg-[#d8881c]">
@@ -246,6 +249,14 @@
             color: #e53e3e; /* Vermelho */
             font-size: 0.75rem; /* Menor tamanho de fonte */
         }
+        body {
+            /* background com 50% do tamanho menor com opacidade na imagem */
+            background: url("{{ asset('img/background.jpg') }}") repeat !important;
+            background-position: center !important;
+            background-attachment: fixed !important;
+            background-size: 70%!important;
+            background-color: #333 !important;
+        }
     </style>
     <script src="https://unpkg.com/imask"></script>
     <script>
@@ -278,20 +289,25 @@
                 },
                 validateAndSubmit() {
                     if (this.isFormValid()) {
+
                         this.$refs.form.submit();
                     }
                 },
+                validateFullName(name) {
+                    return name.includes(' ') && name.length >= 5;
+                },
                 isFormValid() {
-                    this.errors.full_name = this.full_name ? '' : 'Campo obrigatório';
+                    this.errors.full_name = this.validateFullName(this.full_name) ? '' : 'Campo obrigatório';
                     this.errors.phone_number = this.phone_number && this.phone_number.length === 9 ? '' : 'Campo obrigatório';
                     this.errors.document_number = this.document_number && this.document_number.length === 9 ? '' : 'Campo obrigatório';
-                    this.errors.birthdate = this.birthdate ? '' : 'Campo obrigatório';
+                    this.errors.birthdate = this.birthdate && this.birthdate.length === 10 ? '' : 'Campo obrigatório';
                     this.errors.zip_code = this.zip_code && this.zip_code.length === 8 ? '' : 'Campo obrigatório';
                     this.errors.city = this.city ? '' : 'Campo obrigatório';
                     this.errors.address = this.address ? '' : 'Campo obrigatório';
                     this.errors.address_number = this.address_number ? '' : 'Campo obrigatório';
                     this.errors.marital_status = this.marital_status ? '' : 'Campo obrigatório';
                     this.errors.gender = this.gender ? '' : 'Campo obrigatório';
+                    this.errors.email = this.email && this.email.includes('@') ? '' : 'Campo obrigatório';
 
                     return Object.values(this.errors).every(error => error === '');
                 },

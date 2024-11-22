@@ -25,19 +25,19 @@ class SiteMemberRequest extends FormRequest
     {
         return [
 			'full_name' => 'required|string',
-            'birthdate' => 'required|nullable|date|before:today',
+            'birthdate' => 'required|date|before:today',
             'document_number' => [
                 'required',
                 'string',
                 'lowercase',
                 Rule::unique(Member::class)
             ],
-			'email' => 'nullable|string',
-			'phone_number' => 'nullable|string',
-			'address' => 'nullable|string',
-			'address_number' => 'nullable|string',
-			'city' => 'nullable|string',
-			'zip_code' => 'nullable|string',
+			'email' => 'required|string',
+			'phone_number' => 'required|string',
+			'address' => 'required|string',
+			'address_number' => 'required|string',
+			'city' => 'required|string',
+			'zip_code' => 'required|string',
 			'gender' => 'required|string',
 			'marital_status' => 'required|string',
 			//'membership_status' => 'nullable|string',

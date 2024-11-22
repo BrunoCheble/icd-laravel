@@ -149,7 +149,7 @@ class Member extends Model
     {
         if ($this->date_of_birth) {
             $this->date_of_birth = \Carbon\Carbon::parse($this->date_of_birth);
-            return $this->date_of_birth->age;
+            return $this->date_of_birth->age ? $this->date_of_birth->age. ' '. __('years') : null;
         }
         return null;
     }
@@ -181,12 +181,12 @@ class Member extends Model
 
     public function getGenderNameAttribute()
     {
-        return isset(Gender::options()[$this->gender]) ? __(Gender::options()[$this->gender]) : 'Unknown';
+        return isset(Gender::options()[$this->gender]) ? __(Gender::options()[$this->gender]) : 'N/D';
     }
 
     public function getMaritalStatusNameAttribute()
     {
-        return isset(MaritalStatus::options()[$this->marital_status]) ? __(MaritalStatus::options()[$this->marital_status]) : 'Unknown';
+        return isset(MaritalStatus::options()[$this->marital_status]) ? __(MaritalStatus::options()[$this->marital_status]) : 'N/D';
     }
 
     public function isActived()
@@ -207,5 +207,16 @@ class Member extends Model
     public function getCreatedAtFormattedAttribute()
     {
         return \Carbon\Carbon::parse($this->created_at)->format('d/m/Y H:i');
+    }
+
+    public function getUpdatedAtFormattedAttribute()
+    {
+        return \Carbon\Carbon::parse($this->updated_at)->format('d/m/Y H:i');
+    }
+
+    // Definir a relação many-to-many com o model Ministry
+    public function ministries()
+    {
+        return $this->belongsToMany(Ministry::class);
     }
 }

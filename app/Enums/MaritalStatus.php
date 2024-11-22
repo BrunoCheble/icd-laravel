@@ -12,10 +12,10 @@ class MaritalStatus
     public static function options()
     {
         return [
-            self::SINGLE => __('Single'),
-            self::MARRIED => __('Married'),
-            self::DIVORCED => __('Divorced'),
-            self::WIDOWED => __('Widowed'),
+            'S' => __('Single'),
+            'M' => __('Married'),
+            'D' => __('Divorced'),
+            'W' => __('Widowed'),
         ];
     }
 
