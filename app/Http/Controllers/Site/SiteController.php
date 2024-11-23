@@ -53,4 +53,12 @@ class SiteController extends Controller
         return Redirect::route('site.member')
             ->with('success', __('Thank you for your registration!'));
     }
+
+    public function checkDocumentNumber($document_number) {
+        $member = Member::where('document_number', $document_number)->first();
+        if ($member) {
+            return response()->json(['exists' => true]);
+        }
+        return response()->json(['exists' => false]);
+    }
 }

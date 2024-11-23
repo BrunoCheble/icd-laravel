@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/contact', [SiteController::class, 'contact'])->name('site.contact');
 Route::post('/new-member', [SiteController::class, 'register'])->name('member.register');
 
+Route::get('/check-document-number/{document_number}', [SiteController::class, 'checkDocumentNumber'])->name('member.checkDocumentNumber');
+
 Route::get('/', [SiteController::class, 'member'])->name('site.member');
 
 Route::get('/dashboard', function () {
