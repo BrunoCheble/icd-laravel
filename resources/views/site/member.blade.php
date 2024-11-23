@@ -229,8 +229,8 @@
                     address_number: '',
                 },
                 checkDocumentNumber() {
-                    fetch(`/check-document-number/${this.document_number}`)
-                        .then(response => response.json())
+                    fetch(`{{ route('member.checkDocumentNumber', ':document_number') }}`.replace(':document_number', this.document_number))
+                    .then(response => response.json())
                         .then(data => {
                             if (data.exists) {
                                 this.errors.document_number = 'Este número de documento já está registrado.';
