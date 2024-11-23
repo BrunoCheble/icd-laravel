@@ -35,14 +35,14 @@ class SiteController extends Controller
         $member->middle_name = $full_name['middle_name'];
         $member->last_name = $full_name['last_name'];
 
-        $member->email = $request->email;
+        $member->email = strtolower($request->email);
         $member->phone_number = $request->phone_number;
         $member->document_number = $request->document_number;
         $member->date_of_birth = $request->birthdate;
 
         $member->zip_code = $request->zip_code;
-        $member->city = $request->city;
-        $member->address = $request->address.' '.$request->address_number;
+        $member->city = NameHelper::normalizeName($request->city);
+        $member->address = NameHelper::normalizeName($request->address).' '.$request->address_number;
 
         $member->gender = Gender::getIndexByValue($request->gender);
         $member->marital_status = MaritalStatus::getIndexByValue($request->marital_status);

@@ -66,10 +66,15 @@ class MemberController extends Controller
      */
     public function store(MemberRequest $request): RedirectResponse
     {
-        Member::create($request->validated());
+        try {
+            Member::create($request->validated());
+        } catch (\Exception $e) {
+            return Redirect::route('members.index')
+                ->with('error', __('Something went wrong'));
+        }
 
         return Redirect::route('members.index')
-            ->with('success', 'Member created successfully.');
+            ->with('success', 'Member created successfully');
     }
 
     /**
@@ -113,31 +118,70 @@ class MemberController extends Controller
      */
     public function update(MemberRequest $request, Member $member): RedirectResponse
     {
-        $member->update($request->validated());
+        try {
+            $member->update($request->validated());
+        } catch (\Exception $e) {
+            return Redirect::route('members.index')
+                ->with('error', __('Something went wrong'));
+        }
 
         return Redirect::route('members.index')
             ->with('success', 'Member updated successfully');
     }
 
+
     public function destroy($id): RedirectResponse
     {
-        Member::find($id)->delete();
+        try {
+            $member = Member::findOrFail($id);
+            $isActived = $member->isActive();
+
+            if ($member->membership_status == MembershipStatus::ACTIVED) {
+                $member->membership_status = MembershipStatus::INACTIVED;
+                $member->save();
+            }
+            else if($member->membership_status == MembershipStatus::PENDING) {
+                $member->delete();
+            }
+        } catch (\Exception $e) {
+            return Redirect::route('members.index')
+                ->with('error', __('Something went wrong'));
+        }
 
         return Redirect::route('members.index')
-            ->with('success', 'Member deleted successfully');
+            ->with('success', $isActived ? __('Member deactivated successfully') : __('Member deleted successfully'));
     }
 
     public function uploadPhoto($id, Request $request): RedirectResponse
     {
-        $request->validate([
-            'photo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        ]);
-
-        $member = Member::findOrFail($id);
-        UploadMemberPhoto::uploadAndSave($request->file('photo'), $member);
+        try {
+            $request->validate([
+                'photo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            ]);
+            $member = Member::findOrFail($id);
+            UploadMemberPhoto::uploadAndSave($request->file('photo'), $member);
+        } catch (\Exception $e) {
+            return Redirect::route('members.index')
+                ->with('error', __('Something went wrong'));
+        }
 
         return Redirect::route('members.index')
-            ->with('success', 'Member updated successfully');
+            ->with('success', __('Member updated successfully'));
+    }
+
+    public function activate($id): RedirectResponse
+    {
+        try {
+            $member = Member::findOrFail($id);
+            $member->membership_status = MembershipStatus::ACTIVED;
+            $member->save();
+        } catch (\Exception $e) {
+            return Redirect::route('members.index')
+                ->with('error', __('Something went wrong'));
+        }
+
+        return Redirect::route('members.index')
+            ->with('success', __('Member activated successfully'));
     }
 
     public function generateMemberCard($id): View

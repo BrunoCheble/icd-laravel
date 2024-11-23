@@ -69,12 +69,6 @@ class Member extends Model
     protected static function boot()
     {
         parent::boot();
-
-        static::deleting(function ($member) {
-            $member->membership_status = MembershipStatus::INACTIVED;
-            $member->save();
-            return false;
-        });
     }
 
     public function scopeActives($query)
@@ -189,7 +183,7 @@ class Member extends Model
         return isset(MaritalStatus::options()[$this->marital_status]) ? __(MaritalStatus::options()[$this->marital_status]) : 'N/D';
     }
 
-    public function isActived()
+    public function isActive()
     {
         return $this->membership_status == MembershipStatus::ACTIVED;
     }
@@ -199,7 +193,7 @@ class Member extends Model
         return $this->membership_status == MembershipStatus::PENDING;
     }
 
-    public function isInactived()
+    public function isInactive()
     {
         return $this->membership_status == MembershipStatus::INACTIVED;
     }

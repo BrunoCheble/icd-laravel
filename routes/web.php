@@ -30,6 +30,7 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('members', MemberController::class);
     Route::patch('/members/{id}/photo', [MemberController::class, 'uploadPhoto'])->name('members.uploadPhoto');
+    Route::get('/members/{id}/activate', [MemberController::class, 'activate'])->name('members.activate');
     Route::get('/members/{id}/card', [MemberController::class, 'generateMemberCard'])->name('members.generateMemberCard');
 
     Route::get('/report/families', [ReportController::class, 'families'])->name('report.families.index');
