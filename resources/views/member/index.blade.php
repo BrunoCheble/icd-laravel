@@ -25,13 +25,18 @@
                         </div>
                     </div>
 
-                    <div x-data="{ selectedMember: null, toggleView: 'card' }" class="flow-root">
+                    <div x-data="{ selectedMember: null }" class="flow-root">
 
-                        <a x-on:click="toggleView = toggleView === 'table' ? 'card' : 'table'"
-                            href="#">
-                            <i class="fa-solid fa-list" x-show="toggleView === 'table'"></i>
-                            <i class="fa-solid fa-table" x-show="toggleView === 'card'"></i>
-                        </a>
+                        @if ($view === 'table')
+                            <a href="{{ route('members.index', ['view' => 'card']) }}">
+                                <i class="fa fa-id-card" aria-hidden="true"></i>
+                            </a>
+                        @else
+                            <a href="{{ route('members.index', ['view' => 'table']) }}">
+                                <i class="fa fa-table" aria-hidden="true"></i>
+                            </a>
+                        @endif
+
                         <div class="mt-8 overflow-x-auto">
                             <div class="inline-block min-w-full py-2 align-middle">
 
@@ -39,12 +44,12 @@
                                     @include('member.modal-delete')
                                 @endforeach
 
-                                <div x-show="toggleView === 'table'" >
+                                @if ($view === 'table')
                                     @include('member.table')
-                                </div>
-                                <div x-show="toggleView === 'card'">
+                                @else
                                     @include('member.list')
-                                </div>
+                                @endif
+
                                 <div class="mt-4 px-4">
                                     {!! $members->withQueryString()->links() !!}
                                 </div>

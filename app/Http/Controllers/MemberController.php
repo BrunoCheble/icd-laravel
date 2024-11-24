@@ -29,7 +29,9 @@ class MemberController extends Controller
         $membershipStatus = MembershipStatus::options();
         $availableAttributes = MemberOptions::options();
 
-        return view('member.index', compact('members', 'membershipStatus', 'availableAttributes'))
+        $view = $request->query('view') ?? 'table';
+
+        return view('member.index', compact('members', 'membershipStatus', 'availableAttributes', 'view'))
             ->with('i', ($request->input('page', 1) - 1) * $members->perPage());
     }
 

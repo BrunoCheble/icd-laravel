@@ -54,8 +54,9 @@
                     </div>
                     <div class="mt-4">
                         <x-input-label for="birthdate" :value="__('Date of Birth')" />
-                        <x-text-input :value="old('birthdate')" id="birthdate" class="block mt-1 w-full" type="date"
-                            name="birthdate" x-model="birthdate" autocomplete="birthdate" placeholder="" />
+                        <x-text-input :value="old('birthdate')" id="birthdate" class="block mt-1 w-full" type="text"
+                            name="birthdate" x-ref="birthdate" x-model="birthdate" @change="checkBirthdate"
+                            autocomplete="birthdate" placeholder="" />
                         <x-input-error class="mt-2" :messages="$errors->get('birthdate')" />
                         <p class="error-message text-red-500 text-xs" x-text="errors.birthdate"></p>
                     </div>
@@ -156,7 +157,7 @@
                             <li class="flex justify-between"><strong>{{ __('NIF') }}:</strong> <span
                                     x-text="document_number"></span></li>
                             <li class="flex justify-between"><strong>{{ __('Date of Birth') }}:</strong> <span
-                                    x-text="formatDate(birthdate)"></span></li>
+                                    x-text="birthdate"></span></li>
                             <li class="flex justify-between"><strong>{{ __('Postal Code') }}:</strong> <span
                                     x-text="zip_code"></span></li>
                             <li class="flex justify-between"><strong>{{ __('City') }}:</strong> <span
@@ -197,7 +198,6 @@
             background-size: 70% !important;
             background-color: #333 !important;
         }
-
     </style>
     <script src="https://unpkg.com/imask"></script>
     <script>
@@ -228,9 +228,50 @@
                     address: '',
                     address_number: '',
                 },
+                checkBirthdate() {
+                    if (!this.birthdate || this.birthdate.length !== 10) {
+                        this.errors.birthdate = 'Campo obrigatório';
+                        return false;
+                    }
+
+                    console.log('1');
+                    const dateRegex = /^([0-2][0-9]|3[0-1])\/(0[1-9]|1[0-2])\/\d{4}$/;
+                    if (!dateRegex.test(this.birthdate)) {
+                        this.errors.birthdate = 'Data inválida';
+                        return false;
+                    }
+
+                    console.log('2');
+                    const [day, month, year] = this.birthdate.split('/').map(Number);
+
+                    const isValidDate = (d, m, y) => {
+                        const date = new Date(y, m - 1, d);
+                        return (
+                            date.getFullYear() === y &&
+                            date.getMonth() === m - 1 &&
+                            date.getDate() === d
+                        );
+                    };
+                    console.log('3');
+
+                    if(!isValidDate(day, month, year)) {
+                        this.errors.birthdate = 'Data inválida';
+                        return false;
+                    }
+                    console.log('4');
+
+                    if (new Date(this.birthdate) > new Date() ) {
+                        this.errors.birthdate = 'A data de nascimento nao pode ser uma data futura.';
+                        return false;
+                    }
+                    console.log('5');
+                    this.errors.birthdate = '';
+                    return true;
+                },
                 checkDocumentNumber() {
-                    fetch(`{{ route('member.checkDocumentNumber', ':document_number') }}`.replace(':document_number', this.document_number))
-                    .then(response => response.json())
+                    fetch(`{{ route('member.checkDocumentNumber', ':document_number') }}`.replace(':document_number', this
+                            .document_number))
+                        .then(response => response.json())
                         .then(data => {
                             if (data.exists) {
                                 this.errors.document_number = 'Este número de documento já está registrado.';
@@ -258,7 +299,9 @@
                     this.errors.document_number = this.document_number && this.document_number.length === 9 && this.errors
                         .document_number === '' ? '' :
                         'Campo obrigatório';
-                    this.errors.birthdate = this.birthdate && this.birthdate.length === 10 ? '' : 'Campo obrigatório';
+
+                    this.checkBirthdate();
+
                     this.errors.zip_code = this.zip_code && this.zip_code.length === 8 ? '' : 'Campo obrigatório';
                     this.errors.city = this.city ? '' : 'Campo obrigatório';
                     this.errors.address = this.address ? '' : 'Campo obrigatório';
@@ -274,10 +317,6 @@
                         return;
                     }
                     this.step = step;
-                },
-                formatDate(date) {
-                    if (!date) return '';
-                    return new Date(date).toLocaleDateString('pt-BR');
                 },
                 fetchAddressData() {
                     if (this.zip_code.length !== 8) {
@@ -299,6 +338,9 @@
                         });
                 },
                 init() {
+                    IMask(this.$refs.birthdate, {
+                        mask: '00/00/0000'
+                    });
                     IMask(this.$refs.zip_code, {
                         mask: '0000-000'
                     });
