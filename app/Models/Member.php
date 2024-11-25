@@ -208,6 +208,11 @@ class Member extends Model
         return \Carbon\Carbon::parse($this->updated_at)->format('d/m/Y H:i');
     }
 
+    public function getDateOfBirthFormattedAttribute()
+    {
+        return \Carbon\Carbon::parse($this->date_of_birth)->format('d/m/Y');
+    }
+
     // Definir a relação many-to-many com o model Ministry
     public function ministries()
     {

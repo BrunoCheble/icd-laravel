@@ -16,4 +16,22 @@ class ReportController extends Controller
 
         return view('report.families.index', compact('families'));
     }
+
+    public function anniversaries(Request $request)
+    {
+        $month = $request->query('month', now()->month);
+
+        if ($month < 1 || $month > 12) {
+            return response()->json(['error' => 'Invalid month value. Must be between 1 and 12.'], 400);
+        }
+
+        $birthdays = Member::whereMonth('date_of_birth', $month)->get();
+        $weddingAnniversaries = Member::whereMonth('date_joined', $month)->get();
+
+        return view('report.anniversaries.index', [
+            'month' => $month,
+            'birthdays' => $birthdays,
+            'weddingAnniversaries' => $weddingAnniversaries,
+        ]);
+    }
 }

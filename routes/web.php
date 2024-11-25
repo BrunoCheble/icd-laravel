@@ -36,6 +36,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/members/{id}/card', [MemberController::class, 'generateMemberCard'])->name('members.generateMemberCard');
 
     Route::get('/report/families', [ReportController::class, 'families'])->name('report.families.index');
+    Route::get('/report/anniversaries', [ReportController::class, 'anniversaries'])->name('report.anniversaries.index');
 
     Route::prefix('ministries')->group(function () {
         Route::get('/', [MinistryMemberController::class, 'index'])->name('ministries.index');
