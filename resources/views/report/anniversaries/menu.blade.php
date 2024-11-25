@@ -14,6 +14,31 @@
 
     <x-slot name="content">
 
+        <x-dropdown-link x-data=""
+            x-on:click.prevent="
+                selectedMember = {
+                    url_photo: '{{ $member->url_photo }}',
+                    full_name: '{{ $member->full_name }}',
+                    document_number: '{{ $member->document_number }}',
+                    contact: '{{ $member->contact }}',
+                    full_address: '{{ $member->full_address }}',
+                    age: '{{ $member->age }}',
+                    gender_name: '{{ $member->gender_name }}',
+                    marital_status_name: '{{ $member->marital_status_name }}',
+                    spouse: {{ $member->spouse ? '{ url_photo: \''.$member->spouse->url_photo.'\', full_name: \''.$member->spouse->full_name.'\' }' : 'null' }},
+                    date_joined: '{{ $member->date_joined }}',
+                    baptism_date: '{{ $member->baptism_date }}',
+                    father: {{ $member->father ? '{ url_photo: \''.$member->father->url_photo.'\', first_and_last_name: \''.$member->father->first_and_last_name.'\' }' : 'null' }},
+                    mother: {{ $member->mother ? '{ url_photo: \''.$member->mother->url_photo.'\', first_and_last_name: \''.$member->mother->first_and_last_name.'\' }' : 'null' }},
+                    notes: '{{ $member->notes }}',
+                    created_at: '{{ $member->created_at_formatted }}',
+                    updated_at: '{{ $member->updated_at_formatted }}'
+                };
+                $dispatch('open-modal', 'modal-info');
+            ">
+            {{ __('Details') }}
+        </x-dropdown-link>
+
         <x-dropdown-link :href="route('members.edit', $member->id)">
             {{ __('Edit') }}
         </x-dropdown-link>

@@ -7,7 +7,7 @@
 
     <div class="py-12">
         <div class="max-w-full mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+            <div x-data="{ selectedMember: null }" class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
                 <form action="{{ route('report.anniversaries.index') }}" method="GET" class="mb-4">
                     <label for="month" class="block text-sm font-medium text-gray-700">{{ __('Select Month') }}</label>
                     <select name="month" id="month" onchange="this.form.submit()" class="block w-full mt-1 border-gray-300 rounded-md shadow-sm">
@@ -21,6 +21,9 @@
 
                 @include('report.anniversaries.list')
 
+                <x-modal name="modal-info" :show="false" focusable>
+                    @include('report.anniversaries.modal')
+                </x-modal>
             </div>
         </div>
     </div>
