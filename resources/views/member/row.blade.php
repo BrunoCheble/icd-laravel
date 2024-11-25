@@ -1,5 +1,5 @@
-<!-- member row from table with -->
-<tr>
+<!-- member row from table with in color background by status -->
+<tr class="{{ $member->isInactive() ? 'bg-red-100' : ($member->isPending() ? 'bg-yellow-100' : 'bg-white') }}">
 
     <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
         @include('member.avatar', ['class' => 'w-8 h-8'])

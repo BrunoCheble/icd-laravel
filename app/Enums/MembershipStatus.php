@@ -11,9 +11,9 @@ class MembershipStatus
     public static function options()
     {
         return [
-            self::ACTIVED => 'Actived',
-            self::INACTIVED => 'Inactived',
-            self::PENDING => 'Pending',
+            self::ACTIVED => __('Actived'),
+            self::INACTIVED => __('Inactived'),
+            self::PENDING => __('Pending'),
         ];
     }
 }

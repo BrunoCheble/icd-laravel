@@ -12,35 +12,48 @@
 
                     @include('layouts.alert')
 
+
                     <div class="sm:flex sm:items-center">
                         <div class="sm:flex-auto">
-                            <h1 class="text-base font-semibold leading-6 text-gray-900">{{ __('Members') }}</h1>
+                            <h1 class="text-base font-semibold leading-6 text-gray-900">
+
+                                @if ($view === 'table')
+                                    <a href="{{ route('members.index', ['view' => 'card']) }}">
+                                        <i class="fa fa-id-card" aria-hidden="true"></i>
+                                    </a>
+                                @else
+                                    <a href="{{ route('members.index', ['view' => 'table']) }}">
+                                        <i class="fa fa-table" aria-hidden="true"></i>
+                                    </a>
+                                @endif
+                                {{ __('Members') }}
+                            </h1>
                         </div>
 
-                        @include('member.filter')
+                        <div class="mt-4 sm:ml-16 sm:mt-0 flex gap-2">
+                            <div>
+                                <a type="button" href="{{ route('members.create') }}"
+                                    class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                                    <i class="fa fa-plus" aria-hidden="true"></i>
+                                    {{ __('Create') }}
+                                    {{ __('Member') }}
+                                </a>
+                            </div>
 
-                        <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-                            <a
-                            type="button" href="{{ route('members.create') }}" class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{{ __('Create') }} {{ __('Member') }}</a>
+                            <div>
+                                @include('member.filter')
+                            </div>
                         </div>
                     </div>
 
-                    <div x-data="{ selectedMember: null }" class="flow-root">
 
-                        @if ($view === 'table')
-                            <a href="{{ route('members.index', ['view' => 'card']) }}">
-                                <i class="fa fa-id-card" aria-hidden="true"></i>
-                            </a>
-                        @else
-                            <a href="{{ route('members.index', ['view' => 'table']) }}">
-                                <i class="fa fa-table" aria-hidden="true"></i>
-                            </a>
-                        @endif
+
+                    <div x-data="{ selectedMember: null }" class="flow-root">
 
                         <div class="mt-8 overflow-x-auto">
                             <div class="inline-block min-w-full py-2 align-middle">
 
-                                @foreach($members as $member)
+                                @foreach ($members as $member)
                                     @include('member.modal-delete')
                                 @endforeach
 
