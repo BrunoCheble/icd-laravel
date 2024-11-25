@@ -25,7 +25,7 @@ class SiteMemberRequest extends FormRequest
     {
         return [
 			'full_name' => 'required|string',
-            'birthdate' => 'required|date|before:today',
+            'birthdate' => 'required|string',
             'document_number' => [
                 'required',
                 'string',
