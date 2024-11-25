@@ -43,7 +43,7 @@
             {{ __('Edit') }}
         </x-dropdown-link>
 
-        <x-dropdown-link class="font-bold rounded" target="_blank" :href="'https://wa.me/'.$member->phone_number.'?text=A paz, '.($member->gender == 'M' ? 'irmão ' : 'irmã ').' '.$member->first_name.'. Tudo bem ?'">
+        <x-dropdown-link class="font-bold rounded" target="_blank" :href="'https://wa.me/351'.$member->phone_number.'?text=A paz, '.($member->gender == 'M' ? 'irmão ' : 'irmã ').' '.$member->first_name.'. Tudo bem ?'">
             {{ __('Whatsapp') }}
         </x-dropdown-link>
 
