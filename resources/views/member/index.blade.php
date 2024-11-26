@@ -47,20 +47,14 @@
                     </div>
 
 
-
-                    <div x-data="{ selectedMember: null }" class="flow-root">
-
+                    <div class="flow-root">
                         <div class="mt-8 overflow-x-auto">
                             <div class="inline-block min-w-full py-2 align-middle">
 
-                                @foreach ($members as $member)
-                                    @include('member.modal-delete')
-                                @endforeach
-
                                 @if ($view === 'table')
-                                    @include('member.table')
+                                    @include('member.table.index')
                                 @else
-                                    @include('member.list')
+                                    @include('member.list.index')
                                 @endif
 
                                 <div class="mt-4 px-4">
@@ -68,10 +62,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <x-modal name="modal-info" :show="false" focusable>
-                            @include('member.modal')
-                        </x-modal>
                     </div>
                 </div>
             </div>

@@ -14,7 +14,7 @@
     </thead>
     <tbody class="divide-y divide-gray-200 bg-white">
         @foreach($members as $member)
-            @include('member.row')
+            @include('member.table.row')
         @endforeach
     </tbody>
 </table>

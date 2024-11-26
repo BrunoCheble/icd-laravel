@@ -20,10 +20,6 @@
                 </form>
 
                 @include('report.anniversaries.list')
-
-                <x-modal name="modal-info" :show="false" focusable>
-                    @include('report.anniversaries.modal')
-                </x-modal>
             </div>
         </div>
     </div>

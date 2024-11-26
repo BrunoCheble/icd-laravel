@@ -26,7 +26,7 @@
         {{ $member->created_at_formatted }}
     </td>
     <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 gap-4 flex">
-        @include('member.menu')
+        @include('member.menu.index')
     </td>
 
 </tr>

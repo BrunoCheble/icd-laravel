@@ -1,6 +1,6 @@
 <div class="w-full {{ $member->isInactive() ? 'bg-red-100' : ($member->isPending() ? 'bg-yellow-100' : 'bg-white') }} border border-gray-200 rounded-lg shadow">
     <div class="flex justify-end px-4 pt-4">
-        @include('member.menu')
+        @include('member.menu.index')
     </div>
     <div x-data="" class="flex flex-col items-center pb-10">
         @include('member.avatar', ['class' => 'w-24 h-24 mb-3'])
