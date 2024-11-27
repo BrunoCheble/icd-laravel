@@ -26,7 +26,7 @@
             <!-- Mensagem de Aniversário -->
             <li class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition duration-200 ease-in-out flex items-center space-x-4">
                 <i class="fas fa-gift text-blue-500 w-6 h-6"></i>
-                <a href="https://wa.me/351{{ $member->phone_number }}?text=Feliz aniversário, {{ $member->gender == 'M' ? 'irmão' : 'irmã' }} {{ $member->first_name }}! Que o Senhor te abençoe."
+                <a href="https://wa.me/351{{ $member->phone_number }}?text=Feliz aniversário, {{ $member->gender == 'M' ? 'irmão' : 'irmã' }} {{ $member->first_name }}!"
                    target="_blank" class="block text-blue-500 font-medium hover:underline">
                     Feliz aniversário, {{ $member->gender == 'M' ? 'irmão' : 'irmã' }} {{ $member->first_name }}!
                 </a>
@@ -35,7 +35,7 @@
             <!-- Mensagem de Oração para Força -->
             <li class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition duration-200 ease-in-out flex items-center space-x-4">
                 <i class="fas fa-praying-hands text-blue-500 w-6 h-6"></i>
-                <a href="https://wa.me/351{{ $member->phone_number }}?text=Deus te fortaleça, {{ $member->first_name }}! “Tudo posso naquele que me fortalece.” – Filipenses 4:13"
+                <a href="https://wa.me/351{{ $member->phone_number }}?text=Deus te fortaleça, {{ $member->first_name }}!"
                    target="_blank" class="block text-blue-500 font-medium hover:underline">
                     Deus te fortaleça, {{ $member->first_name }}!
                 </a>
@@ -44,7 +44,7 @@
             <!-- Mensagem de Consolo em tempos difíceis -->
             <li class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition duration-200 ease-in-out flex items-center space-x-4">
                 <i class="fas fa-heartbeat text-blue-500 w-6 h-6"></i>
-                <a href="https://wa.me/351{{ $member->phone_number }}?text=O Senhor é o meu pastor, nada me faltará. – Salmo 23:1. Estamos orando por você, {{ $member->first_name }}."
+                <a href="https://wa.me/351{{ $member->phone_number }}?text=Estamos orando por você, {{ $member->first_name }}."
                    target="_blank" class="block text-blue-500 font-medium hover:underline">
                     Estamos orando por você, {{ $member->first_name }}.
                 </a>
@@ -53,7 +53,7 @@
             <!-- Mensagem de Saudação e Encorajamento -->
             <li class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition duration-200 ease-in-out flex items-center space-x-4">
                 <i class="fas fa-smile-beam text-blue-500 w-6 h-6"></i>
-                <a href="https://wa.me/351{{ $member->phone_number }}?text=Que Deus abençoe sua semana, {{ $member->first_name }}! “O Senhor é a minha luz.” – Salmo 27:1"
+                <a href="https://wa.me/351{{ $member->phone_number }}?text=Que Deus abençoe sua semana, {{ $member->first_name }}!"
                    target="_blank" class="block text-blue-500 font-medium hover:underline">
                     Que Deus abençoe sua semana, {{ $member->first_name }}!
                 </a>
