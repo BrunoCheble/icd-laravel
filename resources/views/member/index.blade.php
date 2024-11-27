@@ -49,7 +49,7 @@
 
                     <div class="flow-root">
                         <div class="mt-8 overflow-x-auto">
-                            <div class="inline-block min-w-full py-2 align-middle">
+                            <div class="inline-block min-w-full min-h-screen py-2 align-middle">
 
                                 @if ($view === 'table')
                                     @include('member.table.index')
