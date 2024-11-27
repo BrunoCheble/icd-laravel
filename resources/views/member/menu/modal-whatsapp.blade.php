@@ -59,6 +59,17 @@
                 </a>
             </li>
         </ul>
+
+        <hr class="my-6 border-gray-200">
+        <h3 class="text-lg font-medium text-gray-700">{{ __('Or send your own message:') }}</h3>
+        <form action="https://wa.me/351{{ $member->phone_number }}" method="GET" target="_blank" class="mt-4">
+            <div class="flex items-center space-x-4">
+                <textarea name="text" class="w-full rounded-md border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Type your message here...">A paz, {{ $member->gender == 'M' ? 'irmão' : 'irmã' }} {{ $member->first_name }}! Tudo bem ?</textarea>
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded">
+                    {{ __('Send Message') }}
+                </button>
+            </div>
+        </form>
     </div>
 
 </x-modal>
