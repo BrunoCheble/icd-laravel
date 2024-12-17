@@ -66,11 +66,10 @@
             </dl>
         </div>
         <div class="p-3">
-
             <dl class="divide-y divide-gray-100">
                 <div class="px-2 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
                     <dt class="text-sm font-medium leading-6 text-gray-900">{{ __('Notes') }}</dt>
-                    <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                    <dd style="text-wrap: pretty;" class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
                         {{ $visitor->observation }}
                     </dd>
                 </div>
