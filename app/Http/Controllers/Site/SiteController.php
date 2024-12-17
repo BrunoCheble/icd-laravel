@@ -1,14 +1,18 @@
 <?php
 namespace App\Http\Controllers\Site;
 
+use Illuminate\Support\Facades\Session;
 use App\Enums\Gender;
 use App\Enums\MaritalStatus;
 use App\Enums\MembershipStatus;
+use App\Enums\VisitorStatus;
 use App\Helpers\DateHelper;
 use App\Helpers\NameHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SiteMemberRequest;
+use App\Http\Requests\VisitorRequest;
 use App\Models\Member;
+use App\Models\Visitor;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Redirect;
@@ -62,6 +66,44 @@ class SiteController extends Controller
             ->with('success', __('Thank you for your registration!'));
     }
 
+    public function visitor(): View {
+        $visitor = new Visitor();
+        $visitor->created_by = session('created_by');
+        $visitor->invited_by = session('invited_by');
+        $visitor->phone_number = session('phone_number');
+        $visitor->city = session('city');
+        return view('site.visitor', compact('visitor'));
+    }
+
+    public function registervisitor(VisitorRequest $request): RedirectResponse {
+        try {
+            $request->validated();
+            $visitor = new Visitor();
+            $visitor->name = NameHelper::normalizeName($request->name);
+            $visitor->phone_number = $request->phone_number;
+            $visitor->gender = $request->gender;
+            $visitor->city = NameHelper::normalizeName($request->city);
+            $visitor->group = NameHelper::normalizeName($request->group);
+            $visitor->invited_by = NameHelper::normalizeName($request->invited_by);
+            $visitor->created_by = NameHelper::normalizeName($request->created_by);
+            $visitor->status = VisitorStatus::ACTIVED;
+
+            Session::put('created_by', $visitor->created_by);
+            Session::put('invited_by', $visitor->invited_by);
+            Session::put('phone_number', $visitor->phone_number);
+            Session::put('city', $visitor->city);
+
+            $visitor->save();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return Redirect::route('site.visitor')
+                ->withErrors($e->validator)
+                ->withInput();
+        }
+
+        return Redirect::route('site.visitor')
+            ->with('success', __('Thank you for your registration!'))
+            ->with('created_by', NameHelper::normalizeName($request->created_by));
+    }
     public function checkDocumentNumber($document_number) {
         $member = Member::where('document_number', $document_number)->first();
         if ($member) {

@@ -3,19 +3,22 @@
 use App\Http\Controllers\FinancialCategoryController;
 use App\Http\Controllers\FinancialController;
 use App\Http\Controllers\MemberController;
+use App\Http\Controllers\VisitorController;
+use App\Http\Controllers\MinistryController;
 use App\Http\Controllers\MinistryMemberController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Site\SiteController;
-use App\Models\FinancialCategory;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/contact', [SiteController::class, 'contact'])->name('site.contact');
+Route::get('/new-visitor', [SiteController::class, 'registervisitor'])->name('visitor.register');
 Route::post('/new-member', [SiteController::class, 'register'])->name('member.register');
 
 Route::get('/check-document-number/{document_number}', [SiteController::class, 'checkDocumentNumber'])->name('member.checkDocumentNumber');
 
 Route::get('/', [SiteController::class, 'member'])->name('site.member');
+Route::get('/visitor', [SiteController::class, 'visitor'])->name('site.visitor');
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -30,6 +33,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('/financial-categories', FinancialCategoryController::class);
     Route::resource('/financials', FinancialController::class);
 
+    Route::resource('visitors', VisitorController::class);
+    Route::get('/visitors/{id}/activate', [VisitorController::class, 'activate'])->name('visitors.activate');
+
     Route::resource('members', MemberController::class);
     Route::patch('/members/{id}/photo', [MemberController::class, 'uploadPhoto'])->name('members.uploadPhoto');
     Route::get('/members/{id}/activate', [MemberController::class, 'activate'])->name('members.activate');
@@ -38,11 +44,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/report/families', [ReportController::class, 'families'])->name('report.families.index');
     Route::get('/report/anniversaries', [ReportController::class, 'anniversaries'])->name('report.anniversaries.index');
 
-    Route::prefix('ministries')->group(function () {
-        Route::get('/', [MinistryMemberController::class, 'index'])->name('ministries.index');
-        Route::get('/manage/{ministryId}', [MinistryMemberController::class, 'manage'])->name('ministries.manage');
-        Route::post('/save/{ministryId}', [MinistryMemberController::class, 'save'])->name('ministries.save');
-        Route::delete('/remove/{ministryId}/{memberId}', [MinistryMemberController::class, 'removeMember'])->name('ministries.removeMember');
+    Route::resource('ministries', MinistryController::class);
+
+    Route::prefix('ministries-members')->group(function () {
+        Route::get('/', [MinistryMemberController::class, 'index'])->name('ministries-members.index');
+        Route::get('/manage/{ministryId}', [MinistryMemberController::class, 'manage'])->name('ministries-members.manage');
+        Route::post('/create/{ministryId}', [MinistryMemberController::class, 'save'])->name('ministries-members.save');
+        Route::delete('/remove/{ministryId}/{memberId}', [MinistryMemberController::class, 'removeMember'])->name('ministries-members.removeMember');
     });
 });
 

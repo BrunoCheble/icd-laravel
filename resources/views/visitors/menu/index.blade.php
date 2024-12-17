@@ -2,9 +2,10 @@
 $menu = $menu ?? ['all'];
 @endphp
 
-@include('member.menu.modal-info')
-@include('member.menu.modal-whatsapp')
-@include('member.menu.modal-delete')
+@include('visitors.menu.modal-edit')
+@include('visitors.menu.modal-info')
+@include('visitors.menu.modal-whatsapp')
+@include('visitors.menu.modal-delete')
 
 <x-dropdown align="right" width="48">
     <x-slot name="trigger">
@@ -24,7 +25,7 @@ $menu = $menu ?? ['all'];
 
         @if (array_intersect($menu, ['details', 'all']))
             <x-dropdown-link class="cursor-pointer" x-data=""
-                x-on:click.prevent="$dispatch('open-modal', 'modal-info-{{ $member->id }}');">
+                x-on:click.prevent="$dispatch('open-modal', 'modal-info-{{ $visitor->id }}');">
                 <i class="fas fa-info-circle"></i>
                 {{ __('Details') }}
             </x-dropdown-link>
@@ -32,7 +33,7 @@ $menu = $menu ?? ['all'];
 
         @if (array_intersect($menu, ['edit', 'all']))
             <x-dropdown-link class="cursor-pointer" x-data=""
-                x-on:click.prevent="$dispatch('open-modal', 'modal-edit-{{ $member->id }}');">
+                x-on:click.prevent="$dispatch('open-modal', 'modal-edit-{{ $visitor->id }}');">
                 <i class="fas fa-edit"></i>
                 {{ __('Edit') }}
             </x-dropdown-link>
@@ -40,24 +41,24 @@ $menu = $menu ?? ['all'];
 
         @if (array_intersect($menu, ['whatsapp', 'all']))
             <x-dropdown-link class="cursor-pointer" x-data=""
-                x-on:click.prevent="$dispatch('open-modal', 'modal-whatsapp-{{ $member->id }}');">
+                x-on:click.prevent="$dispatch('open-modal', 'modal-whatsapp-{{ $visitor->id }}');">
                 <i class="fas fa-message"></i>
                 {{ __('Whatsapp') }}
             </x-dropdown-link>
         @endif
 
-        @if (array_intersect($menu, ['active', 'all']) && !$member->isActive())
-            <x-dropdown-link class="text-green-600 rounded" :href="route('members.activate', $member->id)">
+        @if (array_intersect($menu, ['active', 'all']) && !$visitor->isActive())
+            <x-dropdown-link class="text-green-600 rounded" :href="route('visitors.activate', $visitor->id)">
                 <i class="fas fa-check"></i>
                 {{ __('Active') }}
             </x-dropdown-link>
         @endif
 
-        @if (array_intersect($menu, ['delete', 'all']) && ($member->isActive() || $member->isPending()))
+        @if (array_intersect($menu, ['delete', 'all']))
             <x-dropdown-link class="text-red-600 rounded cursor-pointer"
-                x-on:click.prevent="$dispatch('open-modal', 'modal-delete-{{ $member->id }}')">
+                x-on:click.prevent="$dispatch('open-modal', 'modal-delete-{{ $visitor->id }}')">
                 <i class="fas fa-trash"></i>
-                {{ $member->isActive() ? __('Inactive') : __('Delete') }}
+                {{ $visitor->isActive() ? __('Inactive') : __('Delete') }}
             </x-dropdown-link>
         @endif
 

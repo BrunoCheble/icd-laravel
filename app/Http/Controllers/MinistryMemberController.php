@@ -34,7 +34,7 @@ class MinistryMemberController extends Controller
         $allMembers = Member::all();
         $associatedMembers = $ministry->members()->withPivot('role', 'active')->get();
 
-        return view('ministries.manage', compact('ministry', 'allMembers', 'associatedMembers'));
+        return view('ministries-members.index', compact('ministry', 'allMembers', 'associatedMembers'));
     }
 
     /**

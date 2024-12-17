@@ -34,7 +34,8 @@
                     <div class="flow-root">
                         <div class="mt-8 overflow-x-auto">
                             <div class="inline-block min-w-full min-h-screen py-2 align-middle">
-                                @include('ministries.table.index')
+                                @include('ministries-members.table')
+                                @include('ministries-members.form')
                             </div>
                         </div>
                     </div>
