@@ -20,6 +20,11 @@ class Visitor extends Model
         'status',
     ];
 
+    public function scopeActives($query)
+    {
+        return $query->where('status', VisitorStatus::ACTIVED);
+    }
+
     public function getCreatedAtFormattedAttribute()
     {
         return \Carbon\Carbon::parse($this->created_at)->format('d/m/Y H:i');

@@ -74,7 +74,7 @@
                     </div>
 
                     <div class="px-4 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-                        <dt class="text-sm font-medium leading-6 text-gray-900">{{ __('Invited By') }}</dt>
+                        <dt class="text-sm font-medium leading-6 text-gray-900">{{ __('Invited by') }}</dt>
                         <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
                             <x-text-input
                                 id="invited_by"
@@ -86,7 +86,7 @@
                     </div>
 
                     <div class="px-4 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-                        <dt class="text-sm font-medium leading-6 text-gray-900">{{ __('Created By') }}</dt>
+                        <dt class="text-sm font-medium leading-6 text-gray-900">{{ __('Registered by') }}</dt>
                         <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
                             <x-text-input
                                 id="created_by"
@@ -101,7 +101,6 @@
                     <div class="px-4 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
                         <dt class="text-sm font-medium leading-6 text-gray-900">{{ __('Observation') }}</dt>
                         <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                            <!-- Mudei o textarea para a coluna da esquerda, alinhado com os outros campos -->
                             <textarea name="observation" class="border-gray-300 focus:border-primary focus:ring-primary rounded-md shadow-sm w-full mt-1" rows="3">{{ old('observation', $visitor->observation) }}</textarea>
                         </dd>
                     </div>

@@ -1,7 +1,6 @@
 <x-modal name="modal-info-{{ $visitor->id }}" :show="false" focusable>
     <div class="flex">
-        <div class="p-3">
-
+        <div class="p-3 w-1/2">
             <dl class="divide-y divide-gray-100">
                 <div class="px-2 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
                     <dt class="text-sm font-medium leading-6 text-gray-900">{{ __('Name') }}</dt>

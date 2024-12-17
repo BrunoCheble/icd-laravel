@@ -1,4 +1,4 @@
-<table class="w-full divide-y divide-gray-300">
+<table class="w-full divide-y divide-gray-300" style="font-size: .9em">
     <thead>
 
         <tr>
@@ -18,10 +18,10 @@
                 {{ __('Group') }}
             </th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                {{ __('Invited By') }}
+                {{ __('Invited by') }}
             </th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                {{ __('Created By') }}
+                {{ __('Registered by') }}
             </th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 {{ __('Created At') }}

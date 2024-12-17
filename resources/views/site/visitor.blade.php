@@ -49,7 +49,7 @@
                     <x-input-label for="group" :value="__('Group')" />
                     <x-dropdown-select
                         :options="[
-                            __('Child') => __('Child'),
+                            __('Kid') => __('Kid'),
                             __('Teen') => __('Teen'),
                             __('Youth') => __('Youth'),
                             __('Adult') => __('Adult'),

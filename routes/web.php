@@ -19,6 +19,7 @@ Route::get('/check-document-number/{document_number}', [SiteController::class, '
 
 Route::get('/', [SiteController::class, 'member'])->name('site.member');
 Route::get('/visitor', [SiteController::class, 'visitor'])->name('site.visitor');
+Route::get('/today-visitors', [SiteController::class, 'todayVisitor'])->name('site.todayVisitor');
 
 Route::get('/dashboard', function () {
     return view('dashboard');

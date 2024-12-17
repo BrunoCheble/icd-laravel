@@ -104,6 +104,23 @@ class SiteController extends Controller
             ->with('success', __('Thank you for your registration!'))
             ->with('created_by', NameHelper::normalizeName($request->created_by));
     }
+
+    public function todayVisitor() {
+        $all = Visitor::actives()->where('created_at', 'like', '%'.date('Y-m-d').'%')->get();
+
+        $visitors = [];
+        foreach ($all as $visitor) {
+            if (empty($visitor->invited_by)) {
+                $visitors[] = $visitor->name;
+            } else if (!isset($visitors[$visitor->invited_by])) {
+                $visitors[$visitor->invited_by] = $visitor->name;
+            } else {
+                $visitors[$visitor->invited_by] .= ' - ' . $visitor->name;
+            }
+        }
+        return view('site.todayvisitor', compact('visitors'));
+    }
+
     public function checkDocumentNumber($document_number) {
         $member = Member::where('document_number', $document_number)->first();
         if ($member) {
