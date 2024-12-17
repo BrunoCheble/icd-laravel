@@ -19,9 +19,14 @@
         <span>{{ $visitor->city }}</span>
     </td>
 
-    <!-- Invited By -->
+    <!-- Group -->
     <td class="px-6 py-4 whitespace-nowrap">
         <span>{{ $visitor->group }}</span>
+    </td>
+
+    <!-- Invited By -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <span>{{ $visitor->invited_by }}</span>
     </td>
 
     <!-- Created By -->
@@ -29,14 +34,14 @@
         <span>{{ $visitor->created_by }}</span>
     </td>
 
-    <!-- Updated At -->
-    <td class="px-6 py-4 whitespace-nowrap">
-        <span>{{ $visitor->updated_at_formatted }}</span>
-    </td>
-
     <!-- Created At -->
     <td class="px-6 py-4 whitespace-nowrap">
         <span>{{ $visitor->created_at_formatted }}</span>
+    </td>
+
+    <!-- Updated At -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <span>{{ $visitor->updated_at_formatted }}</span>
     </td>
 
     <!-- Actions -->
