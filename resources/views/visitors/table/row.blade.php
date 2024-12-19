@@ -21,7 +21,7 @@
 
     <!-- Group -->
     <td class="px-6 py-4 whitespace-nowrap">
-        <span>{{ $visitor->group }}</span>
+        <span>{{ $visitorGroupOptions[$visitor->group] ?? $visitor->group }}</span>
     </td>
 
     <!-- Invited By -->

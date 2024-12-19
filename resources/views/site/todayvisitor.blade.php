@@ -1,30 +1,14 @@
-<x-guest-layout>
-    <div class="mb-8 text-xl text-center text-gray-600">
+<x-visitors-today-layout>
+
+    <div class="text-center text-white" style="font-size: 40px; margin: 40px; text-transform:uppercase;">
         {{ __('Today Visitors') }}
     </div>
-    <div id="list" class="text-center">
-        @foreach($visitors as $visitedBy => $people)
-            <div class="mt-4">
-                <div><strong>{{ is_numeric($visitedBy) ? ' ' : $visitedBy }}</strong></div>
+    <div id="grid" class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 text-center p-10">
+        @foreach($visitors as $invited => $people)
+            <div class="visitor">
+                <strong>{{ is_numeric($invited) ? ' ' : ($invited === $socialMedia ? $socialMedia : $invited.' convidou:' ) }}</strong>
                 {{ $people }}
             </div>
         @endforeach
     </div>
-    <style>
-        body {
-            /* background com 50% do tamanho menor com opacidade na imagem */
-            background: url("{{ asset('img/background.jpg') }}") repeat !important;
-            background-position: center !important;
-            background-attachment: fixed !important;
-            background-size: 70% !important;
-            background-color: #333 !important;
-        }
-        #list > div{
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 10px
-        }
-        #list > div:last-child{
-            border-bottom: none;
-        }
-    </style>
-</x-guest-layout>
+</x-visitors-today-layout>

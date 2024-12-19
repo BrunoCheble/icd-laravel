@@ -12,7 +12,7 @@ use App\Http\Controllers\Site\SiteController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/contact', [SiteController::class, 'contact'])->name('site.contact');
-Route::get('/new-visitor', [SiteController::class, 'registervisitor'])->name('visitor.register');
+Route::get('/new-visitor', [SiteController::class, 'registerVisitor'])->name('visitor.register');
 Route::post('/new-member', [SiteController::class, 'register'])->name('member.register');
 
 Route::get('/check-document-number/{document_number}', [SiteController::class, 'checkDocumentNumber'])->name('member.checkDocumentNumber');

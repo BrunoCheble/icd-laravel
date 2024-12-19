@@ -11,11 +11,9 @@ use App\Http\Requests\MemberRequest;
 use App\Enums\Gender;
 use App\Enums\MaritalStatus;
 use App\Enums\MembershipStatus;
-use App\Services\GenerateMemberCard;
 use App\Helpers\MemberHelper;
 use App\Services\UploadMemberPhoto;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class MemberController extends Controller

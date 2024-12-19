@@ -36,6 +36,10 @@
                         <div class="mt-8 overflow-x-auto">
                             <div class="inline-block min-w-full min-h-screen py-2 align-middle">
                                 @include('visitors.table.index')
+
+                                <div class="mt-4 px-4">
+                                    {!! $visitors->withQueryString()->links() !!}
+                                </div>
                             </div>
                         </div>
                     </div>

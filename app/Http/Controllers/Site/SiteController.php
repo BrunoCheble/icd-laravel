@@ -3,8 +3,10 @@ namespace App\Http\Controllers\Site;
 
 use Illuminate\Support\Facades\Session;
 use App\Enums\Gender;
+use App\Enums\InvitedBy;
 use App\Enums\MaritalStatus;
 use App\Enums\MembershipStatus;
+use App\Enums\VisitorGroup;
 use App\Enums\VisitorStatus;
 use App\Helpers\DateHelper;
 use App\Helpers\NameHelper;
@@ -68,14 +70,29 @@ class SiteController extends Controller
 
     public function visitor(): View {
         $visitor = new Visitor();
-        $visitor->created_by = session('created_by');
+        $visitor->created_by = session('visitor_created_by');
         $visitor->invited_by = session('invited_by');
         $visitor->phone_number = session('phone_number');
         $visitor->city = session('city');
-        return view('site.visitor', compact('visitor'));
+
+        $genderOptions = Gender::options();
+        $invitedByOptions = InvitedBy::options();
+        $invitedByDefault = InvitedBy::WHO;
+
+        $visitorGroupOptions = VisitorGroup::options();
+        $invitedByOther = session('invited_by_other');
+
+        return view('site.visitor', compact(
+            'visitor',
+            'genderOptions',
+            'invitedByOther',
+            'invitedByOptions',
+            'invitedByDefault',
+            'visitorGroupOptions'
+        ));
     }
 
-    public function registervisitor(VisitorRequest $request): RedirectResponse {
+    public function registerVisitor(VisitorRequest $request): RedirectResponse {
         try {
             $request->validated();
             $visitor = new Visitor();
@@ -83,15 +100,16 @@ class SiteController extends Controller
             $visitor->phone_number = $request->phone_number;
             $visitor->gender = $request->gender;
             $visitor->city = NameHelper::normalizeName($request->city);
-            $visitor->group = NameHelper::normalizeName($request->group);
-            $visitor->invited_by = NameHelper::normalizeName($request->invited_by);
+            $visitor->group = $request->group;
+            $visitor->invited_by = $request->invited_by_other !== InvitedBy::WHO ? $request->invited_by_other : NameHelper::normalizeName($request->invited_by);
             $visitor->created_by = NameHelper::normalizeName($request->created_by);
             $visitor->status = VisitorStatus::ACTIVED;
 
-            Session::put('created_by', $visitor->created_by);
-            Session::put('invited_by', $visitor->invited_by);
+            Session::put('invited_by_other', $request->invited_by_other);
+            Session::put('invited_by', NameHelper::normalizeName($request->invited_by));
             Session::put('phone_number', $visitor->phone_number);
             Session::put('city', $visitor->city);
+            Session::put('visitor_created_by', $visitor->created_by);
 
             $visitor->save();
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -107,18 +125,20 @@ class SiteController extends Controller
 
     public function todayVisitor() {
         $all = Visitor::actives()->where('created_at', 'like', '%'.date('Y-m-d').'%')->get();
+        $invitedByOptions = InvitedBy::options();
 
+        $socialMedia = __('Social Media');
         $visitors = [];
         foreach ($all as $visitor) {
-            if (empty($visitor->invited_by)) {
-                $visitors[] = $visitor->name;
-            } else if (!isset($visitors[$visitor->invited_by])) {
+            $visitor->invited_by = isset($invitedByOptions[$visitor->invited_by]) ? $socialMedia : $visitor->invited_by;
+
+            if (!isset($visitors[$visitor->invited_by])) {
                 $visitors[$visitor->invited_by] = $visitor->name;
             } else {
                 $visitors[$visitor->invited_by] .= ' - ' . $visitor->name;
             }
         }
-        return view('site.todayvisitor', compact('visitors'));
+        return view('site.todayvisitor', compact('visitors','invitedByOptions', 'socialMedia'));
     }
 
     public function checkDocumentNumber($document_number) {

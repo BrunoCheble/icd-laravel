@@ -4,7 +4,11 @@ $menu = $menu ?? ['all'];
 
 @include('visitors.menu.modal-edit')
 @include('visitors.menu.modal-info')
-@include('visitors.menu.modal-whatsapp')
+
+@if($visitor->phone_number)
+    @include('visitors.menu.modal-whatsapp')
+@endif
+
 @include('visitors.menu.modal-delete')
 
 <x-dropdown align="right" width="48">
@@ -39,7 +43,7 @@ $menu = $menu ?? ['all'];
             </x-dropdown-link>
         @endif
 
-        @if (array_intersect($menu, ['whatsapp', 'all']))
+        @if (array_intersect($menu, ['whatsapp', 'all']) && $visitor->phone_number)
             <x-dropdown-link class="cursor-pointer" x-data=""
                 x-on:click.prevent="$dispatch('open-modal', 'modal-whatsapp-{{ $visitor->id }}');">
                 <i class="fas fa-message"></i>

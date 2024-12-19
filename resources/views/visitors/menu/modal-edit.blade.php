@@ -68,7 +68,7 @@
                                 name="group"
                                 :selected="old('group', $visitor->group)"
                                 placeholder="{{ __('Select group') }}"
-                                :options="[__('Kid') => __('Kid'), __('Teen') => __('Teen'), __('Youth') => __('Youth'), __('Adult') => __('Adult'), __('Couple') => __('Couple')]"
+                                :options="$visitorGroupOptions"
                                 class="mt-1 w-full" />
                         </dd>
                     </div>

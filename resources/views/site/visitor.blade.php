@@ -16,12 +16,12 @@
                     <div style="flex: 1">
                         <x-input-label for="name" :value="__('Name')" />
                         <x-text-input :value="old('name')" id="name" class="block mt-1 w-full" type="text"
-                            name="name" x-model="name" autofocus autocomplete="name" />
+                            name="name" x-model="name" autocomplete="name" />
                         <p class="error-message text-red-500 text-xs" x-text="errors.name"></p>
                     </div>
                     <div>
                         <x-input-label for="gender" :value="__('Gender')" />
-                        <x-dropdown-select :options="['M' => 'M', 'F' => 'F']" placeholder="" :selected="__('M')" x-model="gender"
+                        <x-dropdown-select :options="$genderOptions" placeholder="" :selected="old('gender')" x-model="gender"
                             name="gender" />
                     </div>
                 </div>
@@ -48,30 +48,34 @@
                 <div class="mt-4">
                     <x-input-label for="group" :value="__('Group')" />
                     <x-dropdown-select
-                        :options="[
-                            __('Kid') => __('Kid'),
-                            __('Teen') => __('Teen'),
-                            __('Youth') => __('Youth'),
-                            __('Adult') => __('Adult'),
-                            __('Couple') => __('Couple')
-                        ]"
+                        :options="$visitorGroupOptions"
                         placeholder=""
                         x-model="group"
                         name="group" />
                 </div>
                 <div class="mt-4">
                     <x-input-label for="invited_by" :value="__('Invited by')" />
-                    <div class="relative">
-                        <x-text-input id="invited_by" class="block w-full pr-10" type="text"
-                        name="invited_by" x-model="invited_by" autocomplete="invited_by" />
-                        <button type="button" x-show="invited_by" @click="invited_by = ''"
-                            class="absolute inset-y-0 right-0 flex items-center pr-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 hover:text-gray-600"
-                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                    <div class="flex gap-[10px]">
+                        <div style="flex: 1">
+                            <x-dropdown-select
+                                :options="$invitedByOptions"
+                                placeholder=""
+                                x-model="invited_by_other"
+                                name="invited_by_other" />
+                        </div>
+                        <div class="relative content-end" x-show="invited_by_other === '{{ $invitedByDefault }}'">
+                            <x-text-input id="invited_by" class="block w-full pr-10" type="text"
+                            name="invited_by" x-model="invited_by" autocomplete="invited_by" />
+                            <button type="button" x-show="invited_by" @click="invited_by = ''"
+                                class="absolute inset-y-0 right-0 flex items-center pr-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 hover:text-gray-600"
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
+
                 </div>
                 <div class="mt-4 flex justify-between">
                     <x-primary-button type="submit" class="bg-primary hover:bg-[#d8881c]">
@@ -85,13 +89,10 @@
         .error-message {
             margin-top: 0.25rem;
             color: #e53e3e;
-            /* Vermelho */
             font-size: 0.75rem;
-            /* Menor tamanho de fonte */
         }
 
         body {
-            /* background com 50% do tamanho menor com opacidade na imagem */
             background: url("{{ asset('img/background.jpg') }}") repeat !important;
             background-position: center !important;
             background-attachment: fixed !important;
@@ -106,6 +107,7 @@
                 created_by: @json($visitor->created_by ?? ''),
                 name: '',
                 gender: '',
+                invited_by_other: @json($invitedByOther ?? $invitedByDefault),
                 phone_number: @json($visitor->phone_number ?? ''),
                 invited_by: @json($visitor->invited_by ?? ''),
                 group: '',

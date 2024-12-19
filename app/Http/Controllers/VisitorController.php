@@ -1,19 +1,24 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Enums\VisitorGroup;
 use App\Enums\VisitorStatus;
 use App\Helpers\NameHelper;
 use App\Models\Visitor;
 use App\Http\Requests\VisitorRequest;
+use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Redirect;
 
 class VisitorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $visitors = Visitor::all();
-        return view('visitors.index', compact('visitors'));
+        $visitors = Visitor::orderBy('created_at', 'desc')->paginate();
+
+        $visitorGroupOptions = VisitorGroup::options();
+        return view('visitors.index', compact('visitors', 'visitorGroupOptions'))
+            ->with('i', ($request->input('page', 1) - 1) * $visitors->perPage());
     }
 
     public function create()
@@ -29,8 +34,8 @@ class VisitorController extends Controller
             $visitor->phone_number = $request->phone_number;
             $visitor->gender = $request->gender;
             $visitor->city = NameHelper::normalizeName($request->city);
-            $visitor->group = NameHelper::normalizeName($request->group);
-            $visitor->invited_by = NameHelper::normalizeName($request->invited_by);
+            $visitor->group = $request->group;
+            $visitor->invited_by = $request->invited_by;
             $visitor->created_by = NameHelper::normalizeName($request->created_by);
             $visitor->observation = $request->observation;
             $visitor->status = VisitorStatus::ACTIVED;

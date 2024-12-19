@@ -15,6 +15,8 @@ class Visitor extends Model
         'gender',
         'phone_number',
         'invited_by',
+        'group',
+        'city',
         'observation',
         'created_by',
         'status',
@@ -33,6 +35,13 @@ class Visitor extends Model
     public function getUpdatedAtFormattedAttribute()
     {
         return \Carbon\Carbon::parse($this->updated_at)->format('d/m/Y H:i');
+    }
+
+    public function getPhoneNumberFormattedAttribute()
+    {
+        return str_starts_with($this->phone_number, '+')
+            ? $this->phone_number
+            : '351' . $this->phone_number;
     }
 
     public function getGenderNameAttribute()
