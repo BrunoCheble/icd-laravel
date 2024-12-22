@@ -16,14 +16,11 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
+<!-- background 100% -->
 <body
-    style="background: #333"
+    style="background: url('{{ asset('img/bg-welcome.png') }}') center center no-repeat !important; background-size: cover !important;"
     class="font-sans text-gray-900 antialiased">
-    <div class="min-h-screen flex flex-col sm:justify-start items-center pt-6 sm:pt-0">
-        <div class="mt-6">
-            <x-application-logo class="w-40 h-40 fill-current text-gray-500" />
-        </div>
-
+    <div class="min-h-screen flex flex-col sm:justify-end items-center pt-6 sm:pt-0">
         {{ $slot }}
 
         <style>
@@ -60,12 +57,15 @@
             }*/
 
             .visitor {
+                background-color: rgba(0, 0, 0, 0.8);
+                border-radius: 20px;
                 position: relative;
                 padding: 2rem;
                 color: #fff;
             }
             .visitor strong {
                 display: block;
+                color: rgba(255, 165, 0, 1);
             }
 
         </style>
