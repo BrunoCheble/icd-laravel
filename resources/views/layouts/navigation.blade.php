@@ -86,6 +86,15 @@
             <x-responsive-nav-link :href="route('members.index')" :active="request()->routeIs('members')">
                 {{ __('Members') }}
             </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('visitors.index')" :active="request()->routeIs('visitors')">
+                {{ __('Visitors') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('report.anniversaries.index')" :active="request()->routeIs('report.anniversaries.index')">
+                {{ __('Anniversaries') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('ministries.index')" :active="request()->routeIs('ministries')">
+                {{ __('Ministries') }}
+            </x-responsive-nav-link>
         </div>
 
         <!-- Responsive Settings Options -->
