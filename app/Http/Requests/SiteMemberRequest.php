@@ -2,6 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\Gender;
+use App\Enums\MaritalStatus;
+use App\Helpers\DateHelper;
+use App\Helpers\NameHelper;
 use App\Models\Member;
 use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -16,6 +20,16 @@ class SiteMemberRequest extends FormRequest
         return true;
     }
 
+    public function prepareForValidation()
+    {
+        $this->merge([
+            'email' => strtolower($this->email),
+            'date_of_birth' => DateHelper::formatStringToDate($this->birthdate),
+            'address' => NameHelper::normalizeName($this->address) . ' ' . $this->address_number,
+            'gender' => Gender::getIndexByValue($this->gender),
+            'marital_status' => MaritalStatus::getIndexByValue($this->marital_status),
+        ]);
+    }
     /**
      * Get the validation rules that apply to the request.
      *

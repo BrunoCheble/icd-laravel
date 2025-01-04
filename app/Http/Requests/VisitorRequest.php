@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Helpers\NameHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
 class VisitorRequest extends FormRequest
@@ -9,6 +10,16 @@ class VisitorRequest extends FormRequest
     public function authorize()
     {
         return true;
+    }
+
+    public function prepareForValidation()
+    {
+        $this->merge([
+            'name' => NameHelper::normalizeName($this->name),
+            'phone_number' => str_replace(' ', '', $this->phone_number),
+            'city' => NameHelper::normalizeName($this->city),
+            'created_by' => NameHelper::normalizeName($this->created_by),
+        ]);
     }
 
     public function rules()

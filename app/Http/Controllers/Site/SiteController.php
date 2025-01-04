@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Site;
 
 use Illuminate\Support\Facades\Session;
@@ -21,54 +22,43 @@ use Illuminate\Support\Facades\Redirect;
 
 class SiteController extends Controller
 {
-    public function contact() {
+    public function contact()
+    {
         return view('site/contact');
     }
 
-    public function member(): View {
+    public function member(): View
+    {
         $member = new Member();
         return view('site.member', compact('member'));
     }
 
-    public function register(SiteMemberRequest $request): RedirectResponse {
-
+    public function register(SiteMemberRequest $request): RedirectResponse
+    {
         try {
-            $request->validated();
+            $fullName = NameHelper::splitFullName($request->full_name);
+            Member::create(array_merge(
+                $request->validated(),
+                [
+                    'first_name' => $fullName['first_name'],
+                    'middle_name' => $fullName['middle_name'],
+                    'last_name' => $fullName['last_name'],
+                    'membership_status' => MembershipStatus::PENDING,
+                ]
+            ));
 
-            $member = new Member();
-
-            $full_name = NameHelper::splitFullName($request->full_name);
-
-            $member->first_name = $full_name['first_name'];
-            $member->middle_name = $full_name['middle_name'];
-            $member->last_name = $full_name['last_name'];
-
-            $member->email = strtolower($request->email);
-            $member->phone_number = $request->phone_number;
-            $member->document_number = $request->document_number;
-            $member->date_of_birth = DateHelper::formatStringToDate($request->birthdate);
-
-            $member->zip_code = $request->zip_code;
-            $member->city = NameHelper::normalizeName($request->city);
-            $member->address = NameHelper::normalizeName($request->address).' '.$request->address_number;
-
-            $member->gender = Gender::getIndexByValue($request->gender);
-            $member->marital_status = MaritalStatus::getIndexByValue($request->marital_status);
-            $member->membership_status = MembershipStatus::PENDING;
-
-            $member->save();
-
+            return Redirect::route('site.member')
+                ->with('success', __('Thank you for your registration!'));
         } catch (\Illuminate\Validation\ValidationException $e) {
             return Redirect::route('site.member')
                 ->withErrors($e->validator)
                 ->withInput();
         }
-
-        return Redirect::route('site.member')
-            ->with('success', __('Thank you for your registration!'));
     }
 
-    public function visitor(): View {
+
+    public function visitor(): View
+    {
         $visitor = new Visitor();
         $visitor->created_by = session('visitor_created_by');
         $visitor->invited_by = session('invited_by');
@@ -92,7 +82,8 @@ class SiteController extends Controller
         ));
     }
 
-    public function registerVisitor(VisitorRequest $request): RedirectResponse {
+    public function registerVisitor(VisitorRequest $request): RedirectResponse
+    {
         try {
             $request->validated();
             $visitor = new Visitor();
@@ -123,8 +114,9 @@ class SiteController extends Controller
             ->with('created_by', NameHelper::normalizeName($request->created_by));
     }
 
-    public function todayVisitor() {
-        $all = Visitor::actives()->where('created_at', 'like', '%'.date('Y-m-d').'%')->get();
+    public function todayVisitor()
+    {
+        $all = Visitor::actives()->where('created_at', 'like', '%' . date('Y-m-d') . '%')->get();
         $invitedByOptions = InvitedBy::options();
 
         $socialMedia = __('Social Media');
@@ -138,10 +130,11 @@ class SiteController extends Controller
                 $visitors[$visitor->invited_by] .= ' - ' . $visitor->name;
             }
         }
-        return view('site.todayvisitor', compact('visitors','invitedByOptions', 'socialMedia'));
+        return view('site.todayvisitor', compact('visitors', 'invitedByOptions', 'socialMedia'));
     }
 
-    public function checkDocumentNumber($document_number) {
+    public function checkDocumentNumber($document_number)
+    {
         $member = Member::where('document_number', $document_number)->first();
         if ($member) {
             return response()->json(['exists' => true]);

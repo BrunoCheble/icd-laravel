@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Enums\VisitorGroup;
@@ -26,31 +27,23 @@ class VisitorController extends Controller
         return view('visitors.create');
     }
 
-    public function store(VisitorRequest $request): RedirectResponse {
+    public function store(VisitorRequest $request): RedirectResponse
+    {
         try {
-            $request->validated();
-            $visitor = new Visitor();
-            $visitor->name = NameHelper::normalizeName($request->name);
-            $visitor->phone_number = $request->phone_number;
-            $visitor->gender = $request->gender;
-            $visitor->city = NameHelper::normalizeName($request->city);
-            $visitor->group = $request->group;
-            $visitor->invited_by = $request->invited_by;
-            $visitor->created_by = NameHelper::normalizeName($request->created_by);
-            $visitor->observation = $request->observation;
-            $visitor->status = VisitorStatus::ACTIVED;
+            Visitor::create(array_merge(
+                $request->validated(),
+                ['status' => VisitorStatus::ACTIVED]
+            ));
 
-            $visitor->save();
+            return Redirect::route('visitors.index')
+                ->with('success', __('Thank you for your registration!'));
         } catch (\Illuminate\Validation\ValidationException $e) {
             return Redirect::route('visitors.index')
                 ->withErrors($e->validator)
                 ->withInput();
         }
-
-        return Redirect::route('visitors.index')
-            ->with('success', __('Thank you for your registration!'))
-            ->with('created_by', NameHelper::normalizeName($request->created_by));
     }
+
 
     public function edit(Visitor $visitor)
     {
@@ -72,8 +65,7 @@ class VisitorController extends Controller
             if ($visitor->status == VisitorStatus::ACTIVED) {
                 $visitor->status = VisitorStatus::INACTIVED;
                 $visitor->save();
-            }
-            else if($visitor->status == VisitorStatus::INACTIVED) {
+            } else if ($visitor->status == VisitorStatus::INACTIVED) {
                 $visitor->delete();
             }
         } catch (\Exception $e) {
