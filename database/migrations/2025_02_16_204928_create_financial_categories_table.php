@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('financial_categories', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->nullable()->decimal('expected_total', 15, 2)->default(0);
+            $table->decimal('expected_total', 15, 2)->nullable()->default(0);
             $table->boolean('active')->default(true);
             $table->timestamps();
         });
