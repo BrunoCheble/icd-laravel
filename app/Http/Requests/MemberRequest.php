@@ -22,8 +22,7 @@ class MemberRequest extends FormRequest
      */
     public function rules(): array
     {
-        $memberId = $this->route('member') ? $this->route('member')->id : null;
-
+        $memberId = $this->route('member')?->id;
         return [
             'first_name' => 'required|string',
             'middle_name' => 'nullable|string',

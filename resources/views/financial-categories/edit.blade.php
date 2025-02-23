@@ -22,10 +22,10 @@
                     <div class="flow-root">
                         <div class="mt-8 overflow-x-auto">
                             <div class="max-w-xl py-2 align-middle">
-                                <form method="POST" action="{{ route('financial-categories.update', $financialCategory->id) }}"  role="form" enctype="multipart/form-data">
+                                <form method="POST" action="{{ route('financial-categories.update', $category->id) }}"  role="form" enctype="multipart/form-data">
                                     {{ method_field('PATCH') }}
                                     @csrf
-                                    @include('financial-category.form')
+                                    @include('financial-categories.form')
                                 </form>
                             </div>
                         </div>

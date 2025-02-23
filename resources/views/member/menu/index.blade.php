@@ -31,8 +31,7 @@ $menu = $menu ?? ['all'];
         @endif
 
         @if (array_intersect($menu, ['edit', 'all']))
-            <x-dropdown-link class="cursor-pointer" x-data=""
-                x-on:click.prevent="$dispatch('open-modal', 'modal-edit-{{ $member->id }}');">
+            <x-dropdown-link class="cursor-pointer" :href="route('members.edit', $member->id)">
                 <i class="fas fa-edit"></i>
                 {{ __('Edit') }}
             </x-dropdown-link>

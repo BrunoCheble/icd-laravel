@@ -1,30 +1,39 @@
 <?php
-
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class FinancialCategoryRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
-    public function authorize(): bool
+    public function authorize()
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
-    public function rules(): array
+    public function rules()
+    {
+        $categoryId = $this->route('financial-categories') ? $this->route('financial-categories')->id : null;
+        return [
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('financial_categories')->ignore($categoryId),
+            ],
+            'expected_total' => 'nullable|numeric|min:0',
+            'active' => 'boolean',
+        ];
+    }
+
+    public function messages()
     {
         return [
-			'name' => 'required|string',
-			'description' => 'string',
-			'active' => 'required',
+            'name.required' => 'The category name is required.',
+            'name.unique' => 'A category with this name already exists.',
+            'expected_total.numeric' => 'The expected total value must be numeric.',
+            'expected_total.min' => 'The expected total value cannot be negative.',
+            'active.boolean' => 'The active field must be true or false.',
         ];
     }
 }

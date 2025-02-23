@@ -102,6 +102,11 @@ class Member extends Model
         return $query->where('membership_status', $membership_status);
     }
 
+    public function scopeWithDocument($query)
+    {
+        return $query->where('document_number', '!=', null);
+    }
+
     public function spouse()
     {
         return $this->belongsTo(Member::class, 'spouse_id');
@@ -129,6 +134,10 @@ class Member extends Model
 
     public function getFirstAndLastNameAttribute() {
         return $this->first_name . ' ' . $this->last_name;
+    }
+
+    public function getFirstAndLastNameAndDocumentAttribute() {
+        return $this->first_name . ' ' . $this->last_name . ' (' . $this->document_number . ')';
     }
 
     public function getParentsNameAttribute() {

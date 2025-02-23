@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\FinancialBalanceController;
+use App\Http\Controllers\WalletController;
 use App\Http\Controllers\FinancialCategoryController;
-use App\Http\Controllers\FinancialController;
+use App\Http\Controllers\FinancialMovementController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\VisitorController;
 use App\Http\Controllers\MinistryController;
@@ -31,8 +33,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::resource('/financial-categories', FinancialCategoryController::class);
-    Route::resource('/financials', FinancialController::class);
+    Route::resource('wallets', WalletController::class);
+    Route::resource('financial-balances', FinancialBalanceController::class);
+    Route::resource('financial-categories', FinancialCategoryController::class);
+    Route::resource('financial-movements', FinancialMovementController::class);
 
     Route::resource('visitors', VisitorController::class);
     Route::get('/visitors/{id}/activate', [VisitorController::class, 'activate'])->name('visitors.activate');

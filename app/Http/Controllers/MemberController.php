@@ -26,7 +26,6 @@ class MemberController extends Controller
         $members = Member::byStatus($request->membership_status)->filter($request->attribute, $request->search)->orderBy($request->sort ?? 'created_at', $request->order ?? 'desc')->paginate();
         $membershipStatus = MembershipStatus::options();
         $availableAttributes = MemberOptions::options();
-
         $view = $request->query('view') ?? 'table';
 
         return view('member.index', compact('members', 'membershipStatus', 'availableAttributes', 'view'))

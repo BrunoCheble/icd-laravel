@@ -2,35 +2,40 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
-/**
- * Class FinancialCategory
- *
- * @property $id
- * @property $name
- * @property $description
- * @property $active
- * @property $deleted_at
- * @property $created_at
- * @property $updated_at
- *
- * @package App
- * @mixin \Illuminate\Database\Eloquent\Builder
- */
 class FinancialCategory extends Model
 {
-    use SoftDeletes;
 
-    protected $perPage = 20;
+    // Campos que podem ser preenchidos em massa
+    protected $fillable = [
+        'name',
+        'expected_total',
+        'active',
+    ];
 
     /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
+     * Relacionamento: Uma categoria financeira pode ter vários movimentos financeiros
      */
-    protected $fillable = ['name', 'description', 'active'];
+    public function financials()
+    {
+        return $this->hasMany(FinancialMovement::class);
+    }
 
+    /**
+     * Escopo para buscar categorias ativas
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('active', true);
+    }
 
+    /**
+     * Retorna a descrição do total esperado, com formatação adequada
+     */
+    public function getFormattedExpectedTotalAttribute()
+    {
+        return number_format($this->expected_total, 2, ',', '.'); // Formata para exibir como dinheiro
+    }
 }

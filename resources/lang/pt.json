@@ -155,5 +155,16 @@
     "Add New Member": "Adicionar novo membro",
     "Thank you for your registration!": "Obrigado por se registar!",
     "Are you sure you want to delete this member?": "Tem certeza que deseja remover este membro?",
-    "Back": "Voltar"
+    "Back": "Voltar",
+    "Expense": "Despesa",
+    "Income": "Receita",
+    "Refund": "Reembolso",
+    "Discount": "Desconto",
+    "Transfer": "Transferência",
+    "Date": "Data",
+    "Description": "Descrição",
+    "Amount": "Valor",
+    "Type": "Tipo",
+    "Category": "Categoria",
+    "Ministry": "Ministerio"
 }

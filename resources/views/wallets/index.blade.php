@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Financial Categories') }}
+            {{ __('Wallets') }}
         </h2>
     </x-slot>
 
@@ -11,11 +11,11 @@
                 <div class="w-full">
                     <div class="sm:flex sm:items-center">
                         <div class="sm:flex-auto">
-                            <h1 class="text-base font-semibold leading-6 text-gray-900">{{ __('Financial Categories') }}</h1>
-                            <p class="mt-2 text-sm text-gray-700">A list of all the {{ __('Financial Categories') }}.</p>
+                            <h1 class="text-base font-semibold leading-6 text-gray-900">{{ __('Wallets') }}</h1>
+                            <p class="mt-2 text-sm text-gray-700">A list of all the {{ __('Wallets') }}.</p>
                         </div>
                         <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-                            <a type="button" href="{{ route('financial-categories.create') }}" class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{{ __('Add new') }}</a>
+                            <a type="button" href="{{ route('wallets.create') }}" class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{{ __('Add new') }}</a>
                         </div>
                     </div>
 
@@ -28,28 +28,25 @@
                                         <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">No</th>
 
 									<th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Name</th>
-									<th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Description</th>
 									<th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Active</th>
 
                                         <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"></th>
                                     </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-200 bg-white">
-                                    @foreach ($financialCategories as $financialCategory)
+                                    @foreach ($wallets as $i => $wallet)
                                         <tr class="even:bg-gray-50">
                                             <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-semibold text-gray-900">{{ ++$i }}</td>
 
-										<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $financialCategory->name }}</td>
-										<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $financialCategory->description }}</td>
-										<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $financialCategory->active }}</td>
+										<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $wallet->name }}</td>
+										<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $wallet->active }}</td>
 
                                             <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
-                                                <form action="{{ route('financial-categories.destroy', $financialCategory->id) }}" method="POST">
-                                                    <a href="{{ route('financial-categories.show', $financialCategory->id) }}" class="text-gray-600 font-bold hover:text-gray-900 mr-2">{{ __('Show') }}</a>
-                                                    <a href="{{ route('financial-categories.edit', $financialCategory->id) }}" class="text-indigo-600 font-bold hover:text-indigo-900  mr-2">{{ __('Edit') }}</a>
+                                                <form action="{{ route('wallets.destroy', $wallet->id) }}" method="POST">
+                                                    <a href="{{ route('wallets.edit', $wallet->id) }}" class="text-indigo-600 font-bold hover:text-indigo-900  mr-2">{{ __('Edit') }}</a>
                                                     @csrf
                                                     @method('DELETE')
-                                                    <a href="{{ route('financial-categories.destroy', $financialCategory->id) }}" class="text-red-600 font-bold hover:text-red-900" onclick="event.preventDefault(); confirm('Are you sure to delete?') ? this.closest('form').submit() : false;">{{ __('Delete') }}</a>
+                                                    <a href="{{ route('wallets.destroy', $wallet->id) }}" class="text-red-600 font-bold hover:text-red-900" onclick="event.preventDefault(); confirm('Are you sure to delete?') ? this.closest('form').submit() : false;">{{ __('Delete') }}</a>
                                                 </form>
                                             </td>
                                         </tr>
@@ -58,7 +55,7 @@
                                 </table>
 
                                 <div class="mt-4 px-4">
-                                    {!! $financialCategories->withQueryString()->links() !!}
+                                    {!! $wallets->withQueryString()->links() !!}
                                 </div>
                             </div>
                         </div>

@@ -63,7 +63,7 @@
 
     <div>
         <x-input-label for="spouse_id" :value="__('Spouse')" />
-        <x-dropdown-select
+        <x-autocomplete-select
             :options="$spouses"
             selected="{{ old('spouse_id', $member?->spouse_id) }}"
             name="spouse_id"
@@ -73,7 +73,7 @@
 
     <div>
         <x-input-label for="father_id" :value="__('Father')" />
-        <x-dropdown-select
+        <x-autocomplete-select
             :options="$fathers"
             selected="{{ old('father_id', $member?->father_id) }}"
             name="father_id"
@@ -83,7 +83,7 @@
 
     <div>
         <x-input-label for="mother_id" :value="__('Mother')" />
-        <x-dropdown-select
+        <x-autocomplete-select
             :options="$mothers"
             selected="{{ old('mother_id', $member?->mother_id) }}"
             name="mother_id"
