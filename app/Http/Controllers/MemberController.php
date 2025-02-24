@@ -135,7 +135,7 @@ class MemberController extends Controller
     }
 
 
-    public function destroy($id): RedirectResponse
+    public function destroy($id, Request $request): RedirectResponse
     {
         try {
             $member = Member::findOrFail($id);
@@ -143,6 +143,7 @@ class MemberController extends Controller
 
             if ($member->membership_status == MembershipStatus::ACTIVED) {
                 $member->membership_status = MembershipStatus::INACTIVED;
+                $member->notes .= ' - Motivo da desativação: ' . $request->input('reason');
                 $member->save();
             }
             else if($member->membership_status == MembershipStatus::PENDING) {

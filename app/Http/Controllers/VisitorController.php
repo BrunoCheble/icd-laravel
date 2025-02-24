@@ -56,7 +56,7 @@ class VisitorController extends Controller
         return redirect()->route('visitors.index')->with('success', 'Visitor updated successfully!');
     }
 
-    public function destroy($id): RedirectResponse
+    public function destroy($id, Request $request): RedirectResponse
     {
         try {
             $visitor = Visitor::findOrFail($id);
@@ -64,6 +64,8 @@ class VisitorController extends Controller
 
             if ($visitor->status == VisitorStatus::ACTIVED) {
                 $visitor->status = VisitorStatus::INACTIVED;
+                $visitor->observation .= ' - Motivo da desativação: ' . $request->input('reason');
+
                 $visitor->save();
             } else if ($visitor->status == VisitorStatus::INACTIVED) {
                 $visitor->delete();
