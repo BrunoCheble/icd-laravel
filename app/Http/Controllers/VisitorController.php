@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\VisitorGroup;
+use App\Enums\VisitorOptions;
 use App\Enums\VisitorStatus;
 use App\Helpers\NameHelper;
 use App\Models\Visitor;
@@ -15,10 +16,10 @@ class VisitorController extends Controller
 {
     public function index(Request $request)
     {
-        $visitors = Visitor::orderBy('created_at', 'desc')->paginate();
-
+        $visitors = Visitor::filter($request->attribute, $request->search)->orderBy($request->sort ?? 'created_at', $request->order ?? 'desc')->paginate();
+        $availableAttributes = VisitorOptions::options();
         $visitorGroupOptions = VisitorGroup::options();
-        return view('visitors.index', compact('visitors', 'visitorGroupOptions'))
+        return view('visitors.index', compact('visitors', 'visitorGroupOptions','availableAttributes'))
             ->with('i', ($request->input('page', 1) - 1) * $visitors->perPage());
     }
 

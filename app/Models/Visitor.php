@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use App\Enums\Gender;
+use App\Enums\VisitorOptions;
 use App\Enums\VisitorStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,15 @@ class Visitor extends Model
     public function scopeActives($query)
     {
         return $query->where('status', VisitorStatus::ACTIVED);
+    }
+
+    public function scopeFilter($query, $attribute, $search)
+    {
+        if (!$attribute || !$search || !isset(VisitorOptions::options()[$attribute])) {
+            return $query;
+        }
+
+        return $query->where($attribute, 'like', '%' . $search . '%');
     }
 
     public function getCreatedAtFormattedAttribute()

@@ -29,6 +29,10 @@
                                     {{ __('Create') }} {{ __('Visitor') }}
                                 </button>
                             </div>
+
+                            <div>
+                                @include('visitors.filter')
+                            </div>
                         </div>
                     </div>
 
