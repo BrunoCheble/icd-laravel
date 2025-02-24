@@ -61,16 +61,23 @@ class MemberObserver
 
         // if the spouse_id has been changed to null, set the spouse_id of the old spouse to null
         if (!$member->spouse_id) {
-            Member::where('spouse_id','=',$member->id)->update(['spouse_id' => null]);
+            Member::where('spouse_id','=',$member->id)->update(['spouse_id' => null, 'date_joined' => null]);
             return;
         }
 
+        $oldSpouseId = $member->getOriginal('spouse_id');
+
+        $changedSpouse = $oldSpouseId != $member->spouse_id;
+        $changeDateJoined = $member->getOriginal('date_joined') != $member->date_joined;
+
         // if the old spouse exists, update the spouse_id of the old spouse to null
-        if ($oldSpouseId = $member->getOriginal('spouse_id')) {
-            Member::find($oldSpouseId)->update(['spouse_id' => null]);
+        if ($oldSpouseId && $changedSpouse) {
+            Member::find($oldSpouseId)->update(['spouse_id' => null, 'date_joined' => null]);
         }
 
         // if the spouse_id has been changed, update the spouse_id of the old spouse
-        Member::where('id','=',$member->spouse_id, 'and', 'spouse_id', '!=', $member->id)->update(['spouse_id' => $member->id]);
+        if ($changedSpouse || $changeDateJoined) {
+            Member::where('id','=',$member->spouse_id)->update(['spouse_id' => $member->id, 'date_joined' => $member->date_joined]);
+        }
     }
 }
