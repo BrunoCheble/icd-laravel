@@ -54,8 +54,13 @@ class MemberObserver
      */
     protected function updateSpouse(Member $member): void
     {
+        $oldSpouseId = $member->getOriginal('spouse_id');
+
+        $changedSpouse = $oldSpouseId != $member->spouse_id;
+        $changeDateJoined = $member->getOriginal('date_joined') != $member->date_joined;
+
         // if the spouse_id hasn't been changed, don't update it
-        if (!$member->isDirty('spouse_id') || (!$member->getOriginal('spouse_id') && !$member->spouse_id)) {
+        if (!$changedSpouse && !$changeDateJoined) {
             return;
         }
 
@@ -65,19 +70,14 @@ class MemberObserver
             return;
         }
 
-        $oldSpouseId = $member->getOriginal('spouse_id');
-
-        $changedSpouse = $oldSpouseId != $member->spouse_id;
-        $changeDateJoined = $member->getOriginal('date_joined') != $member->date_joined;
-
-        // if the old spouse exists, update the spouse_id of the old spouse to null
-        if ($oldSpouseId && $changedSpouse) {
-            Member::find($oldSpouseId)->update(['spouse_id' => null, 'date_joined' => null]);
-        }
-
         // if the spouse_id has been changed, update the spouse_id of the old spouse
         if ($changedSpouse || $changeDateJoined) {
             Member::where('id','=',$member->spouse_id)->update(['spouse_id' => $member->id, 'date_joined' => $member->date_joined]);
+        }
+
+        // if the old spouse exists, update the spouse_id of the old spouse to null
+        if ($oldSpouseId && $changedSpouse) {
+            Member::where('id','=',$oldSpouseId)->update(['spouse_id' => null, 'date_joined' => null]);
         }
     }
 }
