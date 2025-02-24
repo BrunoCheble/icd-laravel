@@ -25,25 +25,25 @@ class FinancialBalanceController extends Controller
         return redirect()->route('financial-balances.index')->with('success', 'Financial Balance created successfully.');
     }
 
-    public function show(FinancialBalance $financialBalance): View
+    public function show(FinancialBalance $financial_balance): View
     {
         return view('financial-balances.show', compact('financialBalance'));
     }
 
-    public function edit(FinancialBalance $financialBalance): View
+    public function edit(FinancialBalance $financial_balance): View
     {
         return view('financial-balances.edit', compact('financialBalance'));
     }
 
-    public function update(FinancialBalanceRequest $request, FinancialBalance $financialBalance)
+    public function update(FinancialBalanceRequest $request, FinancialBalance $financial_balance)
     {
-        $financialBalance->update($request->validated());
+        $financial_balance->update($request->validated());
         return redirect()->route('financial-balances.index')->with('success', 'Financial Balance updated successfully.');
     }
 
-    public function destroy(FinancialBalance $financialBalance)
+    public function destroy(FinancialBalance $financial_balance)
     {
-        $financialBalance->delete();
+        $financial_balance->delete();
         return redirect()->route('financial-balances.index')->with('success', 'Financial Balance deleted successfully.');
     }
 }

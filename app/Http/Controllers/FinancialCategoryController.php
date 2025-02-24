@@ -44,14 +44,14 @@ class FinancialCategoryController extends Controller
 
     public function edit($id): View
     {
-        $category = FinancialCategory::find($id);
+        $category = FinancialCategory::findOrFail($id);
         return view('financial-categories.edit', compact('category'));
     }
 
-    public function update(FinancialCategoryRequest $request, FinancialCategory $category): RedirectResponse
+    public function update(FinancialCategoryRequest $request, FinancialCategory $financial_category): RedirectResponse
     {
         try {
-            $category->update($request->validated());
+            $financial_category->update($request->validated());
         } catch (\Exception $e) {
             return Redirect::route('financial-categories.index')
                 ->with('error', __('Something went wrong'));

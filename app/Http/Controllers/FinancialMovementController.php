@@ -31,7 +31,7 @@ class FinancialMovementController extends Controller
         $categories = ArrayHelper::toKeyValueArray(FinancialCategory::all(), 'id', 'name');
         $wallets = ArrayHelper::toKeyValueArray(Wallet::all(), 'id', 'name');
         $ministries = ArrayHelper::toKeyValueArray(Ministry::all(), 'id', 'name');
-        $members = ArrayHelper::toKeyValueArray(Member::all(), 'id', 'first_and_last_name');
+        $members = ArrayHelper::toKeyValueArray(Member::all(), 'id', 'first_and_last_name_and_document');
 
         return view('financial-movements.create', compact('types','categories','wallets', 'ministries', 'financialMovement', 'members'));
     }
@@ -61,10 +61,10 @@ class FinancialMovementController extends Controller
         return view('financial-movements.edit', compact('types', 'categories', 'wallets', 'ministries', 'financialMovement', 'members'));
     }
 
-    public function update(FinancialMovementRequest $request, FinancialMovement $movement): RedirectResponse
+    public function update(FinancialMovementRequest $request, FinancialMovement $financial_movement): RedirectResponse
     {
         try {
-            $movement->update($request->validated());
+            $financial_movement->update($request->validated());
             return Redirect::route('financial-movements.index')
                 ->with('success', 'Financial Movement updated successfully');
         } catch (\Exception $e) {

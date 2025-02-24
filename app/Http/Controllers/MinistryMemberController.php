@@ -2,70 +2,48 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ArrayHelper;
 use App\Models\Ministry;
-use App\Http\Requests\SaveMinistryMemberRequest; // Importa a classe de Request
+use App\Http\Requests\MinistryMemberRequest; // Importa a classe de Request
 use App\Models\Member;
-use App\Services\MinistryMemberService; // Importa o serviço
+use App\Models\MinistryMember;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redirect;
+use Illuminate\View\View;
+
 
 class MinistryMemberController extends Controller
 {
-    protected $ministryMemberService;
-
-    public function __construct(MinistryMemberService $ministryMemberService)
-    {
-        $this->ministryMemberService = $ministryMemberService;
-    }
-
-    /**
-     * Display a listing of ministries.
-     */
-    public function index()
-    {
-        $ministries = Ministry::all();
-        return view('ministries.index', compact('ministries'));
-    }
-
-    /**
-     * Show the form for managing members of a ministry.
-     */
-    public function manage($ministryId)
+    public function manage(int $ministryId): View
     {
         $ministry = Ministry::findOrFail($ministryId);
-        $allMembers = Member::all();
-        $associatedMembers = $ministry->members()->withPivot('role', 'active')->get();
+        $members = ArrayHelper::toKeyValueArray(Member::all(), 'id', 'first_and_last_name');
 
-        return view('ministries-members.index', compact('ministry', 'allMembers', 'associatedMembers'));
+        $ministryMembers = MinistryMember::where('ministry_id', $ministryId)->get();
+
+        return view('ministries-members.index', compact('ministry', 'members', 'ministryMembers'));
     }
 
-    /**
-     * Save or update the association of a member to a ministry.
-     */
-    public function save(SaveMinistryMemberRequest $request, $ministryId)
+    public function store(int $ministryId, MinistryMemberRequest $request): RedirectResponse
     {
-        // Validate the request is automatically handled by SaveMinistryMemberRequest
-
-        // Get the ministry and ensure it exists
-        $ministry = Ministry::findOrFail($ministryId);
-
-        // Save or update the member's association using the service
-        $this->ministryMemberService->saveOrUpdateMemberAssociation($ministry, $request->validated());
-
-        return redirect()->route('ministries.manage', $ministryId)
-                         ->with('success', 'Member association saved successfully.');
-    }
-
-    /**
-     * Remove a member from a ministry.
-     */
-    public function removeMember($ministryId, $memberId)
-    {
-        $ministry = Ministry::findOrFail($ministryId);
-
-        if ($ministry->members()->find($memberId)) {
-            $ministry->members()->detach($memberId);
+        try {
+            MinistryMember::create($request->validated());
+        } catch (\Exception $e) {
+            return Redirect::route('ministries-members.manage', $ministryId)
+                ->with('error', __('Something went wrong'));
         }
+        return Redirect::route('ministries-members.manage', $ministryId)
+            ->with('success', 'Ministry created successfully.');
+    }
 
-        return redirect()->route('ministries.manage', $ministryId)
+    public function destroy($id): RedirectResponse
+    {
+        $member = MinistryMember::findOrFail($id);
+        $ministryId = $member->ministry_id;
+        $member->delete();
+
+        return redirect()->route('ministries-members.manage', $ministryId)
                          ->with('success', 'Member removed successfully.');
     }
 }

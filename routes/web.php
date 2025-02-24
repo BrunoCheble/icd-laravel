@@ -51,12 +51,9 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('ministries', MinistryController::class);
 
-    Route::prefix('ministries-members')->group(function () {
-        Route::get('/', [MinistryMemberController::class, 'index'])->name('ministries-members.index');
-        Route::get('/manage/{ministryId}', [MinistryMemberController::class, 'manage'])->name('ministries-members.manage');
-        Route::post('/create/{ministryId}', [MinistryMemberController::class, 'save'])->name('ministries-members.save');
-        Route::delete('/remove/{ministryId}/{memberId}', [MinistryMemberController::class, 'removeMember'])->name('ministries-members.removeMember');
-    });
+    Route::get('/ministries-members/manage/{ministryId}', [MinistryMemberController::class, 'manage'])->name('ministries-members.manage');
+    Route::post('/ministries-members/{ministryId}', [MinistryMemberController::class, 'store'])->name('ministries-members.store');
+    Route::delete('/ministries-members/{id}', [MinistryMemberController::class, 'destroy'])->name('ministries-members.destroy');
 });
 
 

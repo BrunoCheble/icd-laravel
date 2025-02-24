@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class FinancialCategory extends Model
 {
+    protected $primaryKey = 'id'; // Altere se a chave for diferente de 'id'
 
+    protected $perPage = 20;
     // Campos que podem ser preenchidos em massa
     protected $fillable = [
         'name',

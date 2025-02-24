@@ -11,9 +11,9 @@ class FinancialCategoryRequest extends FormRequest
         return true;
     }
 
-    public function rules()
+    public function rules(): array
     {
-        $categoryId = $this->route('financial-categories') ? $this->route('financial-categories')->id : null;
+        $categoryId = $this->route('financial_category')?->id;
         return [
             'name' => [
                 'required',
@@ -22,7 +22,7 @@ class FinancialCategoryRequest extends FormRequest
                 Rule::unique('financial_categories')->ignore($categoryId),
             ],
             'expected_total' => 'nullable|numeric|min:0',
-            'active' => 'boolean',
+            'active' => 'numeric',
         ];
     }
 

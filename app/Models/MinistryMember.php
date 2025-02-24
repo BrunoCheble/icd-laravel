@@ -10,7 +10,7 @@ class MinistryMember extends Model
     use HasFactory;
 
     // Definindo o nome da tabela associativa
-    protected $table = 'ministry_member';
+    protected $table = 'ministry_members';
 
     // Definir os campos que podem ser atribuídos em massa (mass-assignment)
     protected $fillable = ['ministry_id', 'member_id', 'role', 'active'];

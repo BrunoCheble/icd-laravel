@@ -2,7 +2,10 @@
 $menu = $menu ?? ['all'];
 @endphp
 
-@include('member.menu.modal-pending')
+@if ($member->pendingInformations)
+    @include('member.menu.modal-pending')
+@endif
+
 @include('member.menu.modal-info')
 @include('member.menu.modal-whatsapp')
 @include('member.menu.modal-delete')

@@ -14,6 +14,6 @@ class Ministry extends Model
     // Definir a relação many-to-many com o model Member
     public function members()
     {
-        return $this->belongsToMany(Member::class, 'ministry_member');
+        return $this->belongsToMany(Member::class, 'ministry_members');
     }
 }

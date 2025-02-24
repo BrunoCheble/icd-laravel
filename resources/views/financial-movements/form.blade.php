@@ -55,7 +55,7 @@
         <!-- Member Field -->
         <div class="flex-1">
             <x-input-label for="member_id" :value="__('Member')" />
-            <x-dropdown-select
+            <x-autocomplete-select
                 :options="$members"
                 selected="{{ old('member_id', $financialMovement?->member_id) }}"
                 name="member_id"
