@@ -2,9 +2,11 @@
 $menu = $menu ?? ['all'];
 @endphp
 
+@include('member.menu.modal-pending')
 @include('member.menu.modal-info')
 @include('member.menu.modal-whatsapp')
 @include('member.menu.modal-delete')
+
 
 <x-dropdown align="right" width="48">
     <x-slot name="trigger">
@@ -27,6 +29,14 @@ $menu = $menu ?? ['all'];
                 x-on:click.prevent="$dispatch('open-modal', 'modal-info-{{ $member->id }}');">
                 <i class="fas fa-info-circle"></i>
                 {{ __('Details') }}
+            </x-dropdown-link>
+        @endif
+
+        @if ($member?->pendingInformations)
+            <x-dropdown-link class="cursor-pointer" x-data=""
+                x-on:click.prevent="$dispatch('open-modal', 'modal-pending-{{ $member->id }}');">
+                <i class="fas fa-alert"></i>
+                {{ __('Pending') }}
             </x-dropdown-link>
         @endif
 

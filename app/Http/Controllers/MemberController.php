@@ -13,6 +13,7 @@ use App\Enums\MaritalStatus;
 use App\Enums\MembershipStatus;
 use App\Helpers\MemberHelper;
 use App\Services\UploadMemberPhoto;
+use App\Services\GetMemberPendingInformationService;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 
@@ -24,6 +25,11 @@ class MemberController extends Controller
     public function index(Request $request): View
     {
         $members = Member::byStatus($request->membership_status)->filter($request->attribute, $request->search)->orderBy($request->sort ?? 'created_at', $request->order ?? 'desc')->paginate();
+
+        foreach ($members as $member) {
+            $member->pendingInformations = GetMemberPendingInformationService::execute($member);
+        }
+
         $membershipStatus = MembershipStatus::options();
         $availableAttributes = MemberOptions::options();
         $view = $request->query('view') ?? 'table';
