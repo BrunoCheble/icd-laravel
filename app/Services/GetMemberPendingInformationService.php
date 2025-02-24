@@ -16,11 +16,11 @@ class GetMemberPendingInformationService
             return $pendingInformations;
         }
 
-        if ($member->martial_status == MaritalStatus::MARRIED && !$member->spouse_id) {
+        if ($member->marital_status == MaritalStatus::MARRIED && !$member->spouse_id) {
             $pendingInformations[] = $member->gender == Gender::MALE ? 'Nome completo da esposa' : 'Nome completo do marido';
         }
 
-        if ($member->martial_status == MaritalStatus::MARRIED && !$member->date_joined) {
+        if ($member->marital_status == MaritalStatus::MARRIED && !$member->date_joined) {
             $pendingInformations[] = 'Data de casamento';
         }
 
