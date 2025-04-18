@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Enums\FinancialMovementOptions;
 use App\Enums\FinancialMovementType;
 use App\Helpers\ArrayHelper;
 use App\Http\Requests\FinancialMovementRequest;
@@ -12,7 +13,6 @@ use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Redirect;
 
 class FinancialMovementController extends Controller
@@ -20,7 +20,10 @@ class FinancialMovementController extends Controller
     public function index(Request $request): View
     {
         $financials = FinancialMovement::paginate();
-        return view('financial-movements.index', compact('financials'))
+
+        $availableAttributes = FinancialMovementOptions::options();
+
+        return view('financial-movements.index', compact('financials', 'availableAttributes'))
             ->with('i', ($request->input('page', 1) - 1) * $financials->perPage());
     }
 
@@ -74,10 +77,10 @@ class FinancialMovementController extends Controller
 
     }
 
-    public function destroy(FinancialMovement $movement)
+    public function destroy(FinancialMovement $financial_movement)
     {
         try {
-            $movement->delete();
+            $financial_movement->delete();
             return Redirect::route('financial-movements.index')
                 ->with('success', 'Financial Movement deleted successfully');
         } catch (\Exception $e) {

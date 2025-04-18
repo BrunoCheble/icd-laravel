@@ -28,6 +28,7 @@ class FinancialMovementRequest extends FormRequest
                 'string',
                 Rule::in(['expense', 'income', 'refund', 'discount', 'transfer']),
             ],
+            'processed_date' => 'nullable|date',
         ];
     }
 

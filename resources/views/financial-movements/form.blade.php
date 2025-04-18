@@ -92,11 +92,18 @@
 
 
 
-    <div>
-        <x-input-label for="notes" :value="__('Notes')" />
-        <x-text-input id="notes" name="notes" type="text" class="mt-1 block w-full" :value="old('notes', $financialMovement?->notes)"
-            autocomplete="notes" placeholder="Notes" />
-        <x-input-error class="mt-2" :messages="$errors->get('notes')" />
+    <div class="flex flex-row gap-4">
+        <div class="flex-1">
+            <x-input-label for="notes" :value="__('Notes')" />
+            <x-text-input id="notes" name="notes" type="text" class="mt-1 block w-full" :value="old('notes', $financialMovement?->notes)"
+                autocomplete="notes" placeholder="Notes" />
+            <x-input-error class="mt-2" :messages="$errors->get('notes')" />
+        </div>
+        <div>
+            <x-input-label for="processed_date" :value="__('Processed Date')" />
+            <x-text-input id="processed_date" name="processed_date" type="date" class="mt-1 block w-full" :value="old('date', $financialMovement?->processed_date)" autocomplete="date" />
+            <x-input-error class="mt-2" :messages="$errors->get('processed_date')" />
+        </div>
     </div>
 
     <div class="flex items-center gap-4">

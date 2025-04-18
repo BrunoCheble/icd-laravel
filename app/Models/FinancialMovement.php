@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\FinancialMovementType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -62,5 +63,29 @@ class FinancialMovement extends Model
     public function scopeBetweenDates($query, $startDate, $endDate)
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
+    }
+
+    public function getTypeNameAttribute() {
+        return FinancialMovementType::options()[$this->type];
+    }
+
+    public function isProcessedAttribute() {
+        return $this->processed_date != null;
+    }
+
+    public function isDebitAttribute() {
+        return $this->type === FinancialMovementType::EXPENSE || $this->type === FinancialMovementType::DISCOUNT;
+    }
+
+    public function getAmountFormattedAttribute() {
+        return '€ '.number_format($this->amount, 2, ',', '.');
+    }
+
+    public function getDateFormattedAttribute() {
+        return date('d/m/Y', strtotime($this->date));
+    }
+
+    public function getProcessedDateFormattedAttribute() {
+        return $this->processed_date != null ? date('d/m/Y', strtotime($this->processed_date)) : null;
     }
 }
