@@ -13,12 +13,8 @@ class WalletController extends Controller
 {
     public function index(): View
     {
-        try {
-            $wallets = Wallet::paginate();
-            return view('wallets.index', compact('wallets'));
-        } catch (Exception $e) {
-            return redirect()->route('wallets.index')->with('error', 'Failed to load wallets.');
-        }
+        $wallets = Wallet::paginate();
+        return view('wallets.index', compact('wallets'));
     }
 
     public function create(): View
@@ -39,26 +35,14 @@ class WalletController extends Controller
 
     public function show($id): View
     {
-        try {
-            $wallet = Wallet::findOrFail($id);
-            return view('wallets.show', compact('wallet', 'wallet'));
-        } catch (ModelNotFoundException $e) {
-            return redirect()->route('wallets.index')->with('error', 'Wallet not found.');
-        } catch (Exception $e) {
-            return redirect()->route('wallets.index')->with('error', 'Failed to load wallet details.');
-        }
+        $wallet = Wallet::findOrFail($id);
+        return view('wallets.show', compact('wallet', 'wallet'));
     }
 
     public function edit($id): View
     {
-        try {
-            $wallet = Wallet::findOrFail($id);
-            return view('wallets.edit', compact('wallet'));
-        } catch (ModelNotFoundException $e) {
-            return redirect()->route('wallets.index')->with('error', 'Wallet not found.');
-        } catch (Exception $e) {
-            return redirect()->route('wallets.index')->with('error', 'Failed to load wallet for editing.');
-        }
+        $wallet = Wallet::findOrFail($id);
+        return view('wallets.edit', compact('wallet'));
     }
 
     public function update(WalletRequest $request, Wallet $wallet): RedirectResponse
@@ -75,11 +59,6 @@ class WalletController extends Controller
     {
         try {
             $wallet = Wallet::findOrFail($id);
-
-            // if ($wallet->financialMovements()->count() > 0) {
-            //     return redirect()->route('wallets.index')->with('error', 'Wallet has financial movements, cannot delete.');
-            // }
-
             $wallet->delete();
 
             return redirect()->route('wallets.index')->with('success', 'Wallet deleted successfully.');
