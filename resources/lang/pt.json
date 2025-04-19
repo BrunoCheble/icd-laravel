@@ -169,5 +169,33 @@
     "Ministry": "Ministério",
     "Ministries": "Ministérios",
     "Pending Informations": "Informações Pendentes",
-    "Processed At": "Processado em"
+    "Processed At": "Processado em",
+    "Member Document": "NIF do Membro",
+    "Announcement Type": "Tipo de Anúncio",
+    "Title": "Título",
+    "Upload File": "PDF ou Imagem",
+    "Resume": "Currículo",
+    "Service": "Serviço",
+    "Donation": "Doação",
+    "Product": "Produto",
+    "Telephone Number": "Telemóvel",
+
+    "announcement.success.resume.title": "Currículo enviado com sucesso!",
+    "announcement.success.resume.message": "Seu currículo foi recebido. Ele será avaliado pela nossa equipe e poderá ser visualizado por responsáveis de empresas em busca de novos talentos.",
+
+    "announcement.success.product.title": "Produto anunciado com sucesso!",
+    "announcement.success.product.message": "O anúncio foi enviado e será avaliado em até :hours horas úteis. Se houver qualquer impedimento para a publicação, entraremos em contacto via telefone.",
+    "announcement.success.product.note": "Observação: É permitido um máximo de 5 anúncios de produtos por vendedor e expiram em 2 semanas.",
+
+    "announcement.success.service.title": "Serviço registado com sucesso!",
+    "announcement.success.service.message": "O seu serviço foi submetido e está em processo de análise. Após aprovação, ficará visível para todos os interessados.",
+
+    "announcement.success.donation.title": "Doação enviada com sucesso!",
+    "announcement.success.donation.message": "Agradecemos sua generosidade! A doação será analisada antes de ser publicada. Entraremos em contacto caso haja qualquer necessidade de ajuste.",
+
+    "announcement.success.default.title": "Anúncio criado com sucesso!",
+    "announcement.success.default.message": "O seu anúncio foi enviado e será analisado em breve.",
+
+    "Create Announcement": "Publicar",
+    "To be a member!": "Seja membro!"
 }

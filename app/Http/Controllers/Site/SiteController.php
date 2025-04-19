@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Site;
 
+use App\Enums\AnnouncementType;
 use Illuminate\Support\Facades\Session;
 use App\Enums\Gender;
 use App\Enums\InvitedBy;
@@ -12,10 +13,13 @@ use App\Enums\VisitorStatus;
 use App\Helpers\DateHelper;
 use App\Helpers\NameHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SiteAnnouncementRequest;
 use App\Http\Requests\SiteMemberRequest;
 use App\Http\Requests\VisitorRequest;
+use App\Models\Announcement;
 use App\Models\Member;
 use App\Models\Visitor;
+use App\Services\RegisterAnnouncementService;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Redirect;
@@ -112,6 +116,58 @@ class SiteController extends Controller
         return Redirect::route('site.visitor')
             ->with('success', __('Thank you for your registration!'))
             ->with('created_by', NameHelper::normalizeName($request->created_by));
+    }
+
+    public function announcement(): View
+    {
+        $announcement = new Announcement();
+        $announcementOptions = AnnouncementType::options();
+
+        return view('site.announcement', compact(
+            'announcement',
+            'announcementOptions',
+        ));
+    }
+
+    /**
+     * Store a newly created announcement in storage.
+     */
+    public function registerAnnouncement(SiteAnnouncementRequest $request, RegisterAnnouncementService $service): RedirectResponse
+    {
+        try {
+            $successMessages = [
+                'resume' => [
+                    'success-title' => __('announcement.success.resume.title'),
+                    'success-message' => __('announcement.success.resume.message'),
+                ],
+                'service' => [
+                    'success-title' => __('announcement.success.service.title'),
+                    'success-message' => __('announcement.success.service.message'),
+                ],
+                'product' => [
+                    'success-title' => __('announcement.success.product.title'),
+                    'success-message' => __('announcement.success.product.message'),
+                    'success-note' => __('announcement.success.product.note'),
+                ],
+                'donation' => [
+                    'success-title' => __('announcement.success.donation.title'),
+                    'success-message' => __('announcement.success.donation.message'),
+                ],
+            ];
+
+            $announcement = $service->execute($request->validated(), $request->member());
+            return Redirect::route('site.announcement')
+                ->with('success', [
+                    'title' => $successMessages[$announcement->type]['success-title'],
+                    'message' => $successMessages[$announcement->type]['success-message'],
+                    'note' => $successMessages[$announcement->type]['success-note'] ?? null,
+                ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return Redirect::route('site.announcement')
+                ->withErrors($e->validator)
+                ->withInput();
+        }
     }
 
     public function todayVisitor()

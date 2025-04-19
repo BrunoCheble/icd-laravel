@@ -22,16 +22,19 @@
                     <x-nav-link :href="route('visitors.index')" :active="request()->routeIs('visitors.index')">
                         {{ __('Visitors') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('report.anniversaries.index')" :active="request()->routeIs('report.anniversaries.index')">
+                    <x-nav-link :href="route('announcements.index')" :active="request()->routeIs('announcements.index')">
+                        {{ __('Announcements') }}
+                    </x-nav-link>
+                    <x-nav-link style="display: none" :href="route('report.anniversaries.index')" :active="request()->routeIs('report.anniversaries.index')">
                         {{ __('Anniversaries') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('ministries.index')" :active="request()->routeIs('ministry.index')">
+                    <x-nav-link style="display: none" :href="route('ministries.index')" :active="request()->routeIs('ministry.index')">
                         {{ __('Ministries') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('financial-movements.index')" :active="request()->routeIs('financial-movements.index')">
+                    <x-nav-link style="display: none" :href="route('financial-movements.index')" :active="request()->routeIs('financial-movements.index')">
                         {{ __('Financial Movements') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('financial-categories.index')" :active="request()->routeIs('financial-categories.index')">
+                    <x-nav-link style="display: none" :href="route('financial-categories.index')" :active="request()->routeIs('financial-categories.index')">
                         {{ __('Financial Categories') }}
                     </x-nav-link>
                 </div>
