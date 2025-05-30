@@ -15,9 +15,11 @@ use App\Helpers\NameHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SiteAnnouncementRequest;
 use App\Http\Requests\SiteMemberRequest;
+use App\Http\Requests\SitePrayerRequest;
 use App\Http\Requests\VisitorRequest;
 use App\Models\Announcement;
 use App\Models\Member;
+use App\Models\Prayer;
 use App\Models\Visitor;
 use App\Services\RegisterAnnouncementService;
 use Illuminate\View\View;
@@ -196,5 +198,23 @@ class SiteController extends Controller
             return response()->json(['exists' => true]);
         }
         return response()->json(['exists' => false]);
+    }
+
+    public function registerPrayerRequest(SitePrayerRequest $request)
+    {
+        Prayer::create($request->validated());
+        return redirect()->route('site.prayer')->with('success', 'Prayer request created successfully!');
+    }
+
+    public function prayerRequest(): View
+    {
+        $prayer = new Prayer();
+        return view('site.prayer', compact('prayer'));
+    }
+
+    public function todayPrayer()
+    {
+        $prayers = Prayer::where('created_at', 'like', '%' . date('Y-m-d') . '%')->get();
+        return view('site.todayprayer', compact('prayers'));
     }
 }
