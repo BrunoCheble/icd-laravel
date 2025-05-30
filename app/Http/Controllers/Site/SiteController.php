@@ -212,7 +212,7 @@ class SiteController extends Controller
         return view('site.prayer', compact('prayer'));
     }
 
-    public function todayPrayer()
+    public function todayPrayer(): View
     {
         $prayers = Prayer::where('created_at', 'like', '%' . date('Y-m-d') . '%')->get();
         return view('site.todayprayer', compact('prayers'));
