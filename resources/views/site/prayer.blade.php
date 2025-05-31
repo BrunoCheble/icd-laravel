@@ -50,7 +50,7 @@
             background: url("{{ asset('img/bg-prayer.jpg') }}") repeat !important;
             background-position: center !important;
             background-attachment: fixed !important;
-            background-size: 100% !important;
+            background-size: cover !important;
             background-color: #333 !important;
         }
     </style>
