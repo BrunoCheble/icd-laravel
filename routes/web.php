@@ -27,7 +27,7 @@ Route::get('/visitor', [SiteController::class, 'visitor'])->name('site.visitor')
 Route::get('/prayer-request', [SiteController::class, 'prayerRequest'])->name('site.prayer');
 Route::get('/announcement', [SiteController::class, 'announcement'])->name('site.announcement');
 Route::get('/today-visitors', [SiteController::class, 'todayVisitor'])->name('site.todayVisitor');
-Route::get('/today-prayer', [SiteController::class, 'todayPrayer'])->name('site.todayPrayer');
+Route::get('/today-prayers', [SiteController::class, 'todayPrayer'])->name('site.todayPrayer');
 
 Route::get('/dashboard', function () {
     return view('dashboard');
