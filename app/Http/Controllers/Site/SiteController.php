@@ -203,7 +203,7 @@ class SiteController extends Controller
     public function registerPrayerRequest(SitePrayerRequest $request)
     {
         Prayer::create($request->validated());
-        return redirect()->route('site.prayer')->with('success', 'Prayer request created successfully!');
+        return redirect()->route('site.prayer')->with('success', 'Pedido de oração realizado com sucesso!');
     }
 
     public function prayerRequest(): View

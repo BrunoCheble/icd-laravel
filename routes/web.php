@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\PrayerController;
 use App\Http\Controllers\FinancialBalanceController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\FinancialCategoryController;
@@ -61,6 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/ministries-members/{id}', [MinistryMemberController::class, 'destroy'])->name('ministries-members.destroy');
 
     Route::resource('announcements', AnnouncementController::class);
+    Route::resource('prayers', PrayerController::class);
 });
 
 

@@ -25,6 +25,9 @@
                     <x-nav-link :href="route('announcements.index')" :active="request()->routeIs('announcements.index')">
                         {{ __('Announcements') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('prayers.index')" :active="request()->routeIs('prayers.index')">
+                        {{ __('Prayer Requests') }}
+                    </x-nav-link>
                     <x-nav-link style="display: none" :href="route('report.anniversaries.index')" :active="request()->routeIs('report.anniversaries.index')">
                         {{ __('Anniversaries') }}
                     </x-nav-link>
