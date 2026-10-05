@@ -12,6 +12,11 @@ use App\Http\Controllers\MinistryController;
 use App\Http\Controllers\MinistryMemberController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SetlistController;
+use App\Http\Controllers\SongChordSheetController;
+use App\Http\Controllers\SongController;
+use App\Http\Controllers\SongTimingController;
+use App\Http\Controllers\Site\SetlistController as SiteSetlistController;
 use App\Http\Controllers\Site\SiteController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +34,15 @@ Route::get('/prayer-request', [SiteController::class, 'prayerRequest'])->name('s
 Route::get('/announcement', [SiteController::class, 'announcement'])->name('site.announcement');
 Route::get('/today-visitors', [SiteController::class, 'todayVisitor'])->name('site.todayVisitor');
 Route::get('/today-prayers', [SiteController::class, 'todayPrayer'])->name('site.todayPrayer');
+Route::prefix('repertoire')->name('site.setlist')->controller(SiteSetlistController::class)->group(function () {
+    Route::get('/', 'index');
+    Route::get('/songs/search', 'searchSongs')->name('.songs.search');
+    Route::get('/{setlist}', 'show')->whereNumber('setlist')->name('.show');
+    Route::post('/{setlist}/songs', 'addSong')->whereNumber('setlist')->name('.songs.add');
+    Route::delete('/{setlist}/songs/{song}', 'removeSong')->whereNumber(['setlist', 'song'])->name('.songs.remove');
+    Route::patch('/{setlist}/songs/{song}/key', 'updateKey')->whereNumber(['setlist', 'song'])->name('.songs.key');
+    Route::put('/{setlist}/order', 'reorder')->whereNumber('setlist')->name('.order');
+});
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -63,6 +77,15 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('announcements', AnnouncementController::class);
     Route::resource('prayers', PrayerController::class);
+    Route::get('/songs/bookmarklet', [SongChordSheetController::class, 'bookmarklet'])->name('songs.bookmarklet');
+    Route::post('/songs/chord-sheet/structure', [SongChordSheetController::class, 'structure'])->name('songs.chord-sheet.structure');
+    Route::post('/songs/chord-sheet/parse', [SongChordSheetController::class, 'parse'])->name('songs.chord-sheet.parse');
+    Route::resource('songs', SongController::class);
+    Route::get('/songs/{song}/timing', [SongTimingController::class, 'edit'])->name('songs.timing.edit');
+    Route::put('/songs/{song}/timing', [SongTimingController::class, 'update'])->name('songs.timing.update');
+
+    Route::get('/setlists/songs/search', [SetlistController::class, 'searchSongs'])->name('setlists.songs.search');
+    Route::resource('setlists', SetlistController::class);
 });
 
 

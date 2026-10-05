@@ -28,6 +28,12 @@
                     <x-nav-link :href="route('prayers.index')" :active="request()->routeIs('prayers.index')">
                         {{ __('Prayer Requests') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('songs.index')" :active="request()->routeIs('songs.*')">
+                        {{ __('Songs') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('setlists.index')" :active="request()->routeIs('setlists.*')">
+                        {{ __('Setlists') }}
+                    </x-nav-link>
                     <x-nav-link style="display: none" :href="route('report.anniversaries.index')" :active="request()->routeIs('report.anniversaries.index')">
                         {{ __('Anniversaries') }}
                     </x-nav-link>
