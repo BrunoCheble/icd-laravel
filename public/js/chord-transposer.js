@@ -2,6 +2,10 @@
  * Chord transposition by interval (letter steps + semitones), so note spelling follows the target key.
  * e.g. G -> A: D/F# -> E/G#   |   C -> Eb: Bb -> Db   |   E -> F#: B/D# -> C#/F (E# written as F)
  *
+ * A minor key is taken as the aeolian mode of its relative major (Am = C, Em = G), so keys are compared by their
+ * relative majors: Am -> C keeps the chords (same scale, only the key name changes), Em -> A moves them up a tone
+ * (G -> A). Between keys of the same mode this is the usual transposition.
+ *
  * Tokens that are not chord symbols (N.C., x2, %, ...) are returned unchanged.
  */
 (function (global) {
@@ -44,10 +48,18 @@
         return sharps > 6;
     }
 
+    // Relative major of a minor key (a minor third up: A -> C, F# -> A, Bb -> Db); a major key as it is.
+    function relativeMajor(key) {
+        if (!key.minor) return key;
+        return { letter: LETTERS[mod(LETTERS.indexOf(key.letter) + 2, 7)], pc: mod(key.pc + 3, 12) };
+    }
+
     function interval(fromKey, toKey) {
+        const from = relativeMajor(fromKey);
+        const to = relativeMajor(toKey);
         return {
-            letters: mod(LETTERS.indexOf(toKey.letter) - LETTERS.indexOf(fromKey.letter), 7),
-            semitones: mod(toKey.pc - fromKey.pc, 12),
+            letters: mod(LETTERS.indexOf(to.letter) - LETTERS.indexOf(from.letter), 7),
+            semitones: mod(to.pc - from.pc, 12),
         };
     }
 

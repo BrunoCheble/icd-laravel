@@ -13,54 +13,12 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     {{-- Version from the file time, so browsers load the new file after every change --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="{{ asset('js/chord-transposer.js') }}?v={{ filemtime(public_path('js/chord-transposer.js')) }}"></script>
+    <script src="{{ asset('js/chord-lines.js') }}?v={{ filemtime(public_path('js/chord-lines.js')) }}"></script>
 
+    @include('site.partials.theme')
     <style>
-        :root {
-            --bg: #111318;
-            --surface: #1b1e25;
-            --surface-2: #252a33;
-            --border: #313743;
-            --text: #f3f4f6;
-            --muted: #9aa3b2;
-            --accent: #f5a524;
-            --accent-text: #1b1300;
-            --danger: #ef4444;
-            --chord: #ffffff;
-            --accent-soft: rgba(245, 165, 36, .14);
-            /* Chord colors for progressions that repeat in the song */
-            --group-1: #5eead4;
-            --group-2: #c4b5fd;
-            --group-3: #fda4af;
-            --group-4: #93c5fd;
-            --group-5: #bef264;
-            --group-6: #f9a8d4;
-            --group-7: #fde047;
-        }
-
-        @media (prefers-color-scheme: light) {
-            :root {
-                --bg: #f7f7f8;
-                --surface: #ffffff;
-                --surface-2: #f0f1f3;
-                --border: #d9dce1;
-                --text: #111318;
-                --muted: #5f6673;
-                --accent: #d9860b;
-                --accent-text: #ffffff;
-                --danger: #dc2626;
-                --chord: #111318;
-                --accent-soft: rgba(217, 134, 11, .12);
-                --group-1: #0f766e;
-                --group-2: #6d28d9;
-                --group-3: #be123c;
-                --group-4: #1d4ed8;
-                --group-5: #4d7c0f;
-                --group-6: #be185d;
-                --group-7: #a16207;
-            }
-        }
-
         html, body { height: 100%; }
         body { margin: 0; background: var(--bg); color: var(--text); font-family: Figtree, ui-sans-serif, system-ui, sans-serif; }
         [x-cloak] { display: none !important; }
@@ -134,9 +92,11 @@
         .hint { font-size: .85rem; color: var(--muted); }
 
         .sections { margin-top: .6rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--section-gap, 1) * .6rem); font-size: calc(clamp(1.1rem, 3.6vw, 1.7rem) * var(--chord-scale, 1)); }
+        /* Each block: a side line and its chords in the color of its kind (intro, chorus...) */
         .sections section {
             break-inside: avoid; position: relative; border-radius: .5rem;
-            padding: .2rem .5rem; margin: 0 -.5rem; transition: background-color .2s, opacity .2s, box-shadow .2s;
+            padding: .2rem .5rem .2rem .6rem; margin: 0 -.5rem; transition: background-color .2s, opacity .2s, box-shadow .2s;
+            border-left: 3px solid var(--type-color, transparent);
         }
         .sections section.is-current { background: var(--accent-soft); box-shadow: inset 4px 0 0 var(--accent); }
         .sections section.is-next { box-shadow: inset 4px 0 0 var(--border); }
@@ -157,14 +117,15 @@
         .player-section .names strong { color: var(--text); }
         .player-progress { height: 3px; margin-top: .2rem; background: var(--border); border-radius: 2px; overflow: hidden; }
 
-        .section-name { font-size: calc(.85rem * var(--label-scale, 1)); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); line-height: 1.2; }
+        /* Block name: small, in the block's color, so it does not get in the way of the chords */
+        .section-name { font-size: calc(.68rem * var(--label-scale, 1)); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--type-color, var(--accent)); line-height: 1.3; opacity: .9; }
         .section-anchor { font-size: calc(.95rem * var(--label-scale, 1)); font-style: italic; color: var(--muted); line-height: 1.25; }
         /* Chord sheet: each chord sits over the piece of lyric it starts on; lines wrap between words. */
-        .sheet-lines { display: grid; gap: .15rem; }
+        .sheet-lines { display: grid; gap: calc(.15rem + (var(--line-gap, 1) - 1) * .8em); }
         /* Top aligned, with the lyric row always reserved, so chords stay on one row even without text below. */
         .sheet-line { display: flex; flex-wrap: wrap; align-items: flex-start; line-height: 1.2; }
         .seg { display: inline-flex; flex-direction: column; max-width: 100%; }
-        .seg-chord { min-height: 1.2em; width: 0; overflow: visible; font-weight: 700; color: var(--accent); white-space: pre; font-size: .85em; }
+        .seg-chord { min-height: 1.2em; width: 0; overflow: visible; font-weight: 700; color: var(--type-color, var(--accent)); white-space: pre; font-size: .85em; }
         /* The chord floats over the following text; it only takes room when the next chord would overlap it. */
         .seg.is-wide .seg-chord { width: auto; padding-right: .35em; }
         .seg-text { min-height: 1.2em; white-space: pre-wrap; font-weight: 500; color: var(--chord); font-size: .8em; }
@@ -175,10 +136,12 @@
         .mode-toggle button { padding: .15rem .7rem; font-size: .85rem; font-weight: 600; background: none; color: var(--muted); border: 0; cursor: pointer; min-height: 32px; }
         .mode-toggle button.is-active { background: var(--accent); color: var(--accent-text); }
         .section-lyrics { margin-top: .2rem; font-size: calc(.95rem * var(--label-scale, 1)); color: var(--muted); line-height: 1.35; white-space: pre-line; }
-        .section-chords { font-weight: 700; color: var(--chord); line-height: 1.3; }
-        .chord-line { color: var(--repeat-color, inherit); }
+        /* Room between chord lines: set in the options ("line spacing"), per song */
+        .section-chords { font-weight: 700; color: var(--type-color, var(--chord)); line-height: calc(1.3 * var(--line-gap, 1)); }
         .chord-line { display: flex; flex-wrap: wrap; column-gap: 1em; user-select: none; -webkit-user-select: none; }
         .chord-step { white-space: pre; }
+        /* Passing chords: dotted underline */
+        .chord-step .is-passing, .seg-chord.is-passing { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .22em; }
         /* Repeated cycles in columns: each column is as wide as its widest chord across the lines. */
         .section-chords.is-aligned { display: grid; grid-template-columns: repeat(var(--chord-columns, 1), max-content); column-gap: 1em; justify-content: start; }
         .section-chords.is-aligned .chord-line { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
@@ -214,7 +177,7 @@
         .panel-header h2 { margin: 0; font-size: 1.1rem; }
         .panel-body { flex: 1; overflow-y: auto; padding: .75rem 1rem 1rem; }
 
-        .song-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+        .song-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; }
         .song-item {
             display: flex; align-items: center; gap: .5rem;
             padding: .35rem .35rem .35rem .25rem; border-radius: .5rem;
@@ -235,7 +198,8 @@
         .result:disabled { opacity: .5; cursor: default; }
 
         .modal { position: fixed; z-index: 60; inset: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; }
-        .modal-box { width: min(24rem, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1.25rem; }
+        .modal .overlay { z-index: 0; }
+        .modal-box { position: relative; z-index: 1; width: min(24rem, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1.25rem; }
         .modal-box p { margin: 0 0 1.25rem; font-size: 1.05rem; }
         .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; }
 
@@ -251,6 +215,24 @@
             border: 0; background: rgba(0, 0, 0, .65); color: #fff; font-size: .85rem; cursor: pointer;
         }
         @media (max-width: 480px) { .yt-mini { width: 200px; } }
+        /* Above the blocks bar when it is shown */
+        .has-jump-bar .yt-mini { bottom: calc(3.4rem + max(.75rem, env(safe-area-inset-bottom))); }
+
+        /* Blocks bar: one button per block of the song; a tap goes to the last block with that name */
+        .jump-bar {
+            position: fixed; z-index: 34; left: 0; right: 0; bottom: 0;
+            display: flex; gap: .35rem; overflow-x: auto; scrollbar-width: none;
+            padding: .4rem max(.5rem, env(safe-area-inset-left)) max(.4rem, env(safe-area-inset-bottom));
+            background: var(--surface); border-top: 1px solid var(--border);
+        }
+        .jump-bar::-webkit-scrollbar { display: none; }
+        .jump-bar button {
+            flex-shrink: 0; min-height: 36px; padding: 0 .8rem; border-radius: 999px; cursor: pointer;
+            border: 1px solid var(--type-color, var(--border)); background: none; color: var(--type-color, var(--text));
+            font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;
+        }
+        .jump-bar button.is-current { background: var(--type-color, var(--accent)); color: var(--surface); }
+        .has-jump-bar .stage { padding-bottom: 4rem; }
         .toast {
             position: fixed; z-index: 70; left: 50%; bottom: 1rem; transform: translateX(-50%);
             max-width: calc(100% - 2rem); padding: .6rem 1rem; border-radius: .5rem;
@@ -281,38 +263,38 @@
             'removed' => __('Song removed from the setlist.'),
             'sessionExpired' => __('Your session expired. Please reload the page.'),
         ],
-    ]))" @keydown.window="onKeydown($event)">
+    ]))" @keydown.window="onKeydown($event)" :class="{ 'has-jump-bar': current && jumpTargets.length > 1 }">
 
         <div class="chrome">
         <header class="topbar">
             @if ($data)
-                <button type="button" class="btn btn-icon" @click="openPanel()" :aria-expanded="panelOpen" aria-label="{{ __('Songs') }}" title="{{ __('Songs') }}">☰</button>
-                <button type="button" class="btn btn-icon" @click="go(currentIndex - 1)" :disabled="currentIndex <= 0" aria-label="{{ __('Previous') }}" :title="songs[currentIndex - 1]?.title">←</button>
+                <button type="button" class="btn btn-icon" @click="openPanel()" :aria-expanded="panelOpen" aria-label="{{ __('Songs') }}" title="{{ __('Songs') }}"><i class="fa-solid fa-bars"></i></button>
+                <button type="button" class="btn btn-icon" @click="go(currentIndex - 1)" :disabled="currentIndex <= 0" aria-label="{{ __('Previous') }}" :title="songs[currentIndex - 1]?.title"><i class="fa-solid fa-chevron-left"></i></button>
                 <span class="counter" x-text="songs.length ? `${currentIndex + 1} / ${songs.length}` : '0 / 0'"></span>
-                <button type="button" class="btn btn-icon" @click="go(currentIndex + 1)" :disabled="currentIndex >= songs.length - 1" aria-label="{{ __('Next') }}" :title="songs[currentIndex + 1]?.title">→</button>
+                <button type="button" class="btn btn-icon" @click="go(currentIndex + 1)" :disabled="currentIndex >= songs.length - 1" aria-label="{{ __('Next') }}" :title="songs[currentIndex + 1]?.title"><i class="fa-solid fa-chevron-right"></i></button>
                 <span class="setlist-name">{{ $data['title'] }}{{ $data['event_date'] ? ' · ' . $data['event_date'] : '' }}</span>
                 <span class="spacer-mobile"></span>
             @else
                 <span class="setlist-name">{{ __('Setlist') }}</span>
             @endif
-            <button type="button" class="btn btn-icon" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" :aria-expanded="optionsOpen" aria-label="{{ __('Options') }}" title="{{ __('Options') }}">⚙</button>
+            <button type="button" class="btn btn-icon" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" :aria-expanded="optionsOpen" aria-label="{{ __('Options') }}" title="{{ __('Options') }}"><i class="fa-solid fa-gear"></i></button>
         </header>
 
         @if ($data)
             {{-- Section timer: follows the "start" times of the structure; tapping a block re-syncs it --}}
             <div class="player" x-show="current">
-                <button type="button" class="btn btn-icon" @click="togglePlay()" :aria-label="playing ? @js(__('Pause')) : @js(__('Play'))" x-text="playing ? '⏸' : '▶'"></button>
+                <button type="button" class="btn btn-icon" @click="togglePlay()" :aria-label="playing ? @js(__('Pause')) : @js(__('Play'))" ><i class="fa-solid" :class="playing ? 'fa-pause' : 'fa-play'"></i></button>
                 <span class="player-time" x-text="formatTime(elapsed)"></span>
                 <div class="player-section">
                     <div class="names">
                         <strong x-text="currentSection !== null ? timedName(currentSection) : '—'"></strong>
                         <template x-if="nextSection !== null">
-                            <span> → <span x-text="timedName(nextSection)"></span></span>
+                            <span> <i class="fa-solid fa-arrow-right" style="font-size: .8em;"></i> <span x-text="timedName(nextSection)"></span></span>
                         </template>
                     </div>
                     <div class="player-progress" x-show="currentProgress !== null"><div :style="`width: ${(currentProgress ?? 0) * 100}%`"></div></div>
                 </div>
-                <button type="button" class="btn btn-icon" @click="restart()" aria-label="{{ __('Restart') }}" title="{{ __('Restart') }}">↺</button>
+                <button type="button" class="btn btn-icon" @click="restart()" aria-label="{{ __('Restart') }}" title="{{ __('Restart') }}"><i class="fa-solid fa-rotate-left"></i></button>
             </div>
         @endif
 
@@ -359,7 +341,6 @@
                     <label class="switch"><input type="checkbox" x-model="settings.showAnchors"> {{ __('Anchors') }}</label>
                     <label class="switch"><input type="checkbox" x-model="settings.showLyrics"> {{ __('Lyrics') }}</label>
                     <label class="switch"><input type="checkbox" x-model="settings.twoColumns"> {{ __('Two columns') }}</label>
-                    <label class="switch"><input type="checkbox" x-model="settings.colorRepeats"> {{ __('Colors for repeats') }}</label>
                     <label class="switch" :title="videoId ? '' : @js(__('This song has no YouTube video.'))"><input type="checkbox" x-model="settings.youtubeSound"> {{ __('YouTube sound') }}</label>
                 </div>
 
@@ -385,11 +366,12 @@
                 </div>
 
                 <div class="option-row">
-                    <span class="option-label">{{ __('Block spacing') }}</span>
-                    <button type="button" class="btn btn-icon" @click="step('sectionGap', -0.25, 0, 3)" :disabled="layout.sectionGap <= 0" aria-label="{{ __('Less') }}">−</button>
-                    <span class="font-size" x-text="layout.sectionGap.toFixed(2).replace(/\.?0+$/, '')"></span>
-                    <button type="button" class="btn btn-icon" @click="step('sectionGap', 0.25, 0, 3)" :disabled="layout.sectionGap >= 3" aria-label="{{ __('More') }}">+</button>
+                    <span class="option-label">{{ __('Line spacing') }}</span>
+                    <button type="button" class="btn btn-icon" @click="step('lineGap', -0.25, 1, 3)" :disabled="layout.lineGap <= 1" aria-label="{{ __('Less space') }}"><i class="fa-solid fa-minus"></i></button>
+                    <span class="font-size" x-text="Math.round(layout.lineGap * 100) + '%'"></span>
+                    <button type="button" class="btn btn-icon" @click="step('lineGap', 0.25, 1, 3)" :disabled="layout.lineGap >= 3" aria-label="{{ __('More space') }}"><i class="fa-solid fa-plus"></i></button>
                 </div>
+
 
                 <div class="option-row">
                     <span class="option-label"></span>
@@ -442,9 +424,9 @@
                         </p>
 
                         <template x-if="sheetMode">
-                        <div class="sections" :class="{ 'two-columns': settings.twoColumns }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --section-gap: ${layout.sectionGap}`">
+                        <div class="sections" :class="{ 'two-columns': settings.twoColumns }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
                             <template x-for="(section, index) in current.chord_sheet" :key="`${current.id}-${index}`">
-                                <section :class="sectionState(index)" @click="selectSection(index)">
+                                <section :class="sectionState(index)" :style="typeStyle(timedName(index))" @click="selectSection(index)">
                                     <div class="section-label">
                                         <div class="section-name">
                                             <span x-text="timedName(index)"></span><span class="section-time" x-show="sectionRange(index)" x-text="sectionRange(index)"></span><span class="next-badge" x-show="index === nextSection">{{ __('next') }}</span>
@@ -456,7 +438,7 @@
                                                 :class="parsed.type === 'comment' ? 'sheet-comment' : { 'sheet-line': true, 'no-chords': !parsed.hasChords, 'only-chords': !parsed.hasText }">
                                                 <span x-show="parsed.type === 'comment'" x-text="parsed.text"></span>
                                                 <template x-for="(unit, unitIndex) in (parsed.units || [])" :key="unitIndex">
-                                                    <span class="seg" :class="{ 'is-wide': unit.wide }"><span class="seg-chord" :style="unit.chord ? sheetChordColor(index, lineIndex, unit.ordinal) : ''" x-text="unit.chord ? chordFor(unit.chord) : ''"></span><span class="seg-text" x-text="unit.text"></span></span>
+                                                    <span class="seg" :class="{ 'is-wide': unit.wide }"><span class="seg-chord" :class="{ 'is-passing': unit.chord && sheetChordPassing(index, lineIndex, unit.ordinal) }" x-text="unit.chord ? chordFor(unit.chord) : ''"></span><span class="seg-text" x-text="unit.text"></span></span>
                                                 </template>
                                             </div>
                                         </template>
@@ -470,9 +452,9 @@
                         </template>
 
                         <template x-if="!sheetMode">
-                        <div class="sections" :class="{ 'two-columns': settings.twoColumns }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --section-gap: ${layout.sectionGap}`">
+                        <div class="sections" :class="{ 'two-columns': settings.twoColumns }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
                             <template x-for="(section, index) in sections" :key="`${current.id}-${index}`">
-                                <section :class="sectionState(index)" @click="selectSection(index)">
+                                <section :class="sectionState(index)" :style="typeStyle(sectionName(section))" @click="selectSection(index)">
                                     <div class="section-label">
                                         <div class="section-name">
                                             <span x-text="sectionName(section)"></span><span class="section-time" x-show="sectionRange(index)" x-text="sectionRange(index)"></span><span class="next-badge" x-show="index === nextSection">{{ __('next') }}</span><span class="edited-badge" x-show="section.edited">{{ __('edited') }}</span>
@@ -503,9 +485,9 @@
                                                 :aria-label="`{{ __('Chords') }}: ${sectionName(section)}`"></textarea>
                                         </template>
                                         <template x-for="(line, lineIndex) in lines" :key="lineIndex">
-                                            <div class="chord-line" :style="lineColor(index, lineIndex)">
+                                            <div class="chord-line">
                                                 <template x-for="(step, stepIndex) in line" :key="stepIndex">
-                                                    <span class="chord-step" x-text="step.join(' ')"></span>
+                                                    <span class="chord-step"><template x-for="(chord, c) in step" :key="c"><span :class="{ 'is-passing': chord.passing }" x-text="(c ? ' ' : '') + chord.name"></span></template></span>
                                                 </template>
                                             </div>
                                         </template>
@@ -530,18 +512,18 @@
             <aside class="panel" x-show="panelOpen" x-cloak @keydown.escape="panelOpen = false">
                 <div class="panel-header">
                     <h2>{{ __('Songs') }}</h2>
-                    <button type="button" class="btn btn-icon" @click="panelOpen = false" aria-label="{{ __('Close') }}">✕</button>
+                    <button type="button" class="btn btn-icon" @click="panelOpen = false" aria-label="{{ __('Close') }}"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="panel-body">
                     <ol class="song-list" x-ref="list">
                         <template x-for="(song, index) in songs" :key="song.id">
                             <li class="song-item" :data-id="song.id" :class="{ 'is-current': song.id === currentId, 'is-dragging': song.id === dragId }">
-                                <span class="handle" @pointerdown="startDrag($event, song.id)" aria-hidden="true">☰</span>
+                                <span class="handle" @pointerdown="startDrag($event, song.id)" aria-hidden="true"><i class="fa-solid fa-grip-vertical"></i></span>
                                 <button type="button" class="song-item-main" @click="go(index); panelOpen = false">
                                     <span class="song-item-title" x-text="`${index + 1}. ${song.title}`"></span>
                                     <span class="song-item-meta" x-text="[song.artist, song.setlist_key ?? song.original_key ?? '—', song.minister_name].filter(Boolean).join(' · ')"></span>
                                 </button>
-                                <button type="button" class="btn btn-icon" @click="askRemove(song)" aria-label="{{ __('Remove') }}">✕</button>
+                                <button type="button" class="btn btn-icon" @click="askRemove(song)" aria-label="{{ __('Remove') }}"><i class="fa-solid fa-xmark"></i></button>
                             </li>
                         </template>
                     </ol>
@@ -570,7 +552,7 @@
             {{-- Remove confirmation --}}
             <div class="modal" x-show="removing" x-cloak>
                 <div class="overlay" @click="removing = null"></div>
-                <div class="modal-box" style="position: relative; z-index: 1;" role="dialog" aria-modal="true">
+                <div class="modal-box" role="dialog" aria-modal="true">
                     <p x-text="removing ? messages.confirmRemove.replace(':title', removing.title) : ''"></p>
                     <div class="modal-actions">
                         <button type="button" class="btn" @click="removing = null">{{ __('Cancel') }}</button>
@@ -580,9 +562,18 @@
             </div>
         @endif
 
+        @if ($data)
+            {{-- Blocks bar: quick way back to a block (e.g. the chorus): goes to the last one with that name --}}
+            <nav class="jump-bar" x-show="current && jumpTargets.length > 1" x-cloak aria-label="{{ __('Blocks') }}">
+                <template x-for="target in jumpTargets" :key="target.key">
+                    <button type="button" :style="typeStyle(target.name)" :class="{ 'is-current': isCurrentTarget(target) }" @click="jumpTo(target)" x-text="target.name"></button>
+                </template>
+            </nav>
+        @endif
+
         {{-- Song sound: YouTube player kept small and visible, synced with the section timer --}}
         <div class="yt-mini" x-show="settings.youtubeSound && videoId" x-cloak>
-            <button type="button" class="yt-mini-close" @click="settings.youtubeSound = false" aria-label="{{ __('Turn off YouTube sound') }}" title="{{ __('Turn off YouTube sound') }}">✕</button>
+            <button type="button" class="yt-mini-close" @click="settings.youtubeSound = false" aria-label="{{ __('Turn off YouTube sound') }}" title="{{ __('Turn off YouTube sound') }}"><i class="fa-solid fa-xmark"></i></button>
             <div id="yt-sound"></div>
         </div>
 
@@ -593,8 +584,7 @@
         // Per-viewer display preferences; the page works the same when storage is unavailable.
         // Toggles are shared by every song; size settings are stored per song_id.
         const SETTINGS_KEY = 'setlist-view-settings';
-        const DEFAULT_SETTINGS = { showDetails: true, showAnchors: true, showLyrics: false, twoColumns: true, viewMode: 'map', colorRepeats: true, youtubeSound: false };
-        const SECTION_COLORS = 7;
+        const DEFAULT_SETTINGS = { showDetails: true, showAnchors: true, showLyrics: false, twoColumns: true, viewMode: 'map', youtubeSound: false };
 
         // YouTube player for the song sound, outside Alpine's reactive state.
         let soundPlayer = null;
@@ -603,215 +593,10 @@
             return match ? match[1] : null;
         };
 
-        // Splits a section's chords into display lines (rules described on chordLines). Each line is a list of steps,
-        // each step { family, chords, positions } where positions are the chord indexes in the section.
+        // Chords of a chord sheet line ("{c: ...}" comments have none). Line splitting and repeat colors: chord-lines.js.
         const sheetChords = (line) => /^\s*\{/.test(String(line)) ? [] : [...String(line).matchAll(/\[([^\]]+)\]/g)].map(match => match[1]);
-
-        // `songCycles`: cycles (lists of families) found anywhere in the song, also recognized when played once here.
-        function chordSegments(chords, songCycles = []) {
-            const STEPS_PER_LINE = 4;
-
-            const steps = [];
-            chords.forEach((chord, position) => {
-                const family = ChordTransposer.chordFamily(chord) ?? chord;
-                const last = steps[steps.length - 1];
-                const variation = last && last.family === family && last.chords[last.chords.length - 1] !== chord && last.chords.length < 2;
-                if (variation) {
-                    last.chords.push(chord);
-                    last.positions.push(position);
-                } else {
-                    steps.push({ family, chords: [chord], positions: [position] });
-                }
-            });
-
-            const families = (from, length) => steps.slice(from, from + length).map(step => step.family).join('\u0000');
-            const same = (a, b, length) => families(a, length) === families(b, length);
-            const chordsOf = (list) => [...list];
-            // Shortest sequence (2+ steps) starting at `start` that is immediately repeated.
-            const repeatedLength = (start) => {
-                for (let length = 2; start + length * 2 <= steps.length; length++) {
-                    if (same(start, start + length, length)) return length;
-                }
-                return 0;
-            };
-            // How many steps from `start` follow the last cycle.
-            const followsCycle = (start) => {
-                let count = 0;
-                while (cycle && count < cycle.length && start + count < steps.length && steps[start + count].family === cycle[count]) count++;
-                return count;
-            };
-
-            const lines = [];
-            const foundCycles = [];
-            let pending = [];
-            let cycle = null;
-            const opening = (list, size) => list.slice(0, size).map(step => step.family).join('\u0000');
-            // Chords without repetition: a line ends where its opening (3+ steps) is played again later; what is
-            // left is split every 4 steps, and a single step left over stays on the line before.
-            const flush = () => {
-                if (!pending.length) return;
-                if (pending.length === 1 && lines.length) {
-                    lines[lines.length - 1].push(...chordsOf(pending));
-                    pending = [];
-                    return;
-                }
-
-                let rest = pending;
-                while (rest.length) {
-                    let boundary = 0;
-                    for (let size = Math.min(8, Math.floor(rest.length / 2)); size >= 3 && !boundary; size--) {
-                        for (let at = size; at + size <= rest.length; at++) {
-                            if (opening(rest.slice(at), size) === opening(rest, size)) {
-                                boundary = at;
-                                break;
-                            }
-                        }
-                    }
-                    if (boundary) {
-                        lines.push(chordsOf(rest.slice(0, boundary)));
-                        rest = rest.slice(boundary);
-                        continue;
-                    }
-
-                    const chunks = [];
-                    for (let i = 0; i < rest.length; i += STEPS_PER_LINE) chunks.push(rest.slice(i, i + STEPS_PER_LINE));
-                    if (chunks.length > 1 && chunks[chunks.length - 1].length === 1) chunks[chunks.length - 2].push(...chunks.pop());
-                    chunks.forEach(chunk => lines.push(chordsOf(chunk)));
-                    rest = [];
-                }
-                pending = [];
-            };
-
-            // A cycle of the song (3+ steps) played in full at `start`.
-            const songCycleAt = (start) => songCycles.find(known => known.length > 2
-                && start + known.length <= steps.length
-                && known.every((family, i) => steps[start + i].family === family));
-
-            let index = 0;
-            while (index < steps.length) {
-                const known = songCycleAt(index);
-                if (known && repeatedLength(index) === 0) {
-                    flush();
-                    cycle = known;
-                    lines.push(chordsOf(steps.slice(index, index + known.length)));
-                    index += known.length;
-                    continue;
-                }
-
-                // A real repetition comes first; otherwise a phrase following the last cycle; otherwise pending.
-                const length = repeatedLength(index);
-                if (!length) {
-                    const phrase = followsCycle(index);
-                    if (phrase >= 2) {
-                        flush();
-                        lines.push(chordsOf(steps.slice(index, index + phrase)));
-                        index += phrase;
-                    } else {
-                        pending.push(steps[index++]);
-                    }
-                    continue;
-                }
-                flush();
-                cycle = steps.slice(index, index + length).map(step => step.family);
-                foundCycles.push(cycle);
-                const start = index;
-                while (index + length <= steps.length && same(start, index, length)) {
-                    lines.push(chordsOf(steps.slice(index, index + length)));
-                    index += length;
-                }
-            }
-            flush();
-
-            lines.cycles = foundCycles;
-            return lines;
-        }
-
-        // Cycles repeated inside any section of the song.
-        function songCyclesOf(chordLists) {
-            return chordLists.flatMap(chords => chordSegments(chords).cycles);
-        }
-
-        // Progression for comparisons: chord families without consecutive repeats, reduced to its cycle when it is
-        // the same sequence played more than once (one difference allowed on sequences of 6+ steps).
-        function progression(chords) {
-            const families = [];
-            chords.forEach(chord => {
-                const family = ChordTransposer.chordFamily(chord) ?? chord;
-                if (families[families.length - 1] !== family) families.push(family);
-            });
-            const tolerance = families.length >= 6 ? 1 : 0;
-            for (let length = 1; length * 2 <= families.length; length++) {
-                const mismatches = families.filter((family, i) => family !== families[i % length]).length;
-                if (mismatches <= tolerance) return families.slice(0, length);
-            }
-            return families;
-        }
-
-        function editDistance(a, b) {
-            const row = Array.from({ length: b.length + 1 }, (_, j) => j);
-            for (let i = 1; i <= a.length; i++) {
-                let diagonal = row[0];
-                row[0] = i;
-                for (let j = 1; j <= b.length; j++) {
-                    const above = row[j];
-                    row[j] = Math.min(row[j] + 1, row[j - 1] + 1, diagonal + (a[i - 1] === b[j - 1] ? 0 : 1));
-                    diagonal = above;
-                }
-            }
-            return row[b.length];
-        }
-
-        // Same progression: equal by family; or one extra/missing chord (3+ steps); or, on long progressions,
-        // one difference (e.g. a replaced chord) per 6 steps.
-        function sameProgression(a, b) {
-            if (!a.length || !b.length) return false;
-            const distance = editDistance(a, b);
-            if (distance === 0) return true;
-            if (distance === 1 && Math.abs(a.length - b.length) === 1 && Math.min(a.length, b.length) >= 3) return true;
-            return distance <= Math.floor(Math.max(a.length, b.length) / 6);
-        }
-
-        // Colors of repeated progressions, per display line: every line (cycle, phrase or chunk) of every section is
-        // compared with all the others in the song; lines sharing a progression get the same color (1..SECTION_COLORS).
-        // Lines of a single step or appearing once stay uncolored.
-        // Returns { lines: [section][line] -> color, chords: [section][chord index] -> color }.
-        function repeatColors(chordLists) {
-            const items = [];
-            const result = { lines: [], chords: [] };
-
-            const cycles = songCyclesOf(chordLists);
-            chordLists.forEach((chords, section) => {
-                result.lines[section] = [];
-                result.chords[section] = [];
-                chordSegments(chords, cycles).forEach((line, lineIndex) => {
-                    const current = progression(line.flatMap(step => step.chords));
-                    if (line.length > 1 && current.length > 1) {
-                        items.push({ section, lineIndex, progression: current, positions: line.flatMap(step => step.positions) });
-                    }
-                });
-            });
-
-            const groups = [];
-            items.forEach(item => {
-                item.group = groups.find(group => sameProgression(group.progression, item.progression));
-                if (!item.group) {
-                    item.group = { progression: item.progression, size: 0 };
-                    groups.push(item.group);
-                }
-                item.group.size++;
-            });
-
-            const repeated = groups.filter(group => group.size > 1);
-            items.filter(item => item.group.size > 1).forEach(item => {
-                const color = (repeated.indexOf(item.group) % SECTION_COLORS) + 1;
-                result.lines[item.section][item.lineIndex] = color;
-                item.positions.forEach(position => result.chords[item.section][position] = color);
-            });
-
-            return result;
-        }
         const LAYOUT_KEY_PREFIX = 'song-layout:';
-        const DEFAULT_LAYOUT = { fontScale: 1, labelScale: 1, sectionGap: 1 };
+        const DEFAULT_LAYOUT = { fontScale: 1, labelScale: 1, lineGap: 1 };
 
         function readStorage(key, defaults) {
             try {
@@ -859,8 +644,8 @@
 
         const originalChords = (section) => Array.isArray(section?.chords) ? section.chords.map(String) : [];
         const sameChords = (a, b) => Array.isArray(a) && a.length === b.length && a.every((chord, i) => chord === b[i]);
-        // Chords separated by spaces or new lines; arrows and bars used as separators are ignored.
-        const parseChords = (text) => String(text).split(/\s+/).filter(token => token && !['->', '→', '|', '-'].includes(token));
+        // Chords separated by spaces or new lines; arrows used as separators are ignored, "|" keeps the line breaks.
+        const parseChords = (text) => String(text).split(/\s+/).filter(token => token && !['->', '→', '-'].includes(token));
 
         function setlistPage(config) {
             const setlist = config.setlist;
@@ -982,30 +767,28 @@
                     return typeof lyrics === 'string' ? lyrics.trim() : '';
                 },
                 sectionName(section) { return String(section?.section ?? '').replaceAll('_', ' '); },
-                // Display only: splits the chords into lines (each line a list of steps, each step a list of chords).
-                // - Chords are compared by family (Em = Em7, D = D/F#); consecutive variations of the same family
-                //   (E4 E, Bm7 Bm/A) form one step of at most 2 chords (A7 A7(4) A7 -> [A7 A7(4)] [A7]), while a
-                //   repeated identical chord (G G) is two steps, so cycles ending and starting on it are still found.
-                // - Display clean-up: an identical chord repeated in a line is shown once (G G -> G).
-                // - A repeated sequence (cycle) gets one line per repetition, whatever its size.
-                // - A repetition comes first; without one, a phrase that starts like the last cycle follows it while
-                //   the steps match (G D after the cycle G D Em C).
-                // - Chords without repetition end a line where their opening (3+ steps) is played again later;
-                //   the rest is split every 4 steps, and a single step left over stays on the line before.
+                // Display only: the section's lines (marked with "|" or automatic, see chord-lines.js), each a list
+                // of steps, each step a list of chords; an identical chord repeated in a line is shown once (G G -> G).
                 chordLines(section) {
                     const chords = Array.isArray(section?.chords) ? section.chords.map(String) : [];
-                    const lines = chordSegments(chords, this.mapSongCycles).map(line => line.map(step => step.chords));
+                    const passing = this.sectionPassing(section);
+                    const lines = chordSegments(chords, this.mapSongCycles, passing)
+                        .map(line => line.map(step => step.chords.map((name, i) => ({ name, passing: passing.includes(step.positions[i]) }))));
 
                     // Shows a chord repeated in a row once per line (G G -> G), dropping cells left empty.
                     return lines.map(line => {
                         const cells = [];
                         line.forEach(step => {
                             const previous = cells[cells.length - 1];
-                            const chords = step.filter((chord, i) => chord !== (i === 0 ? previous?.[previous.length - 1] : step[i - 1]));
+                            const chords = step.filter((chord, i) => chord.name !== (i === 0 ? previous?.[previous.length - 1]?.name : step[i - 1].name));
                             if (chords.length) cells.push(chords);
                         });
                         return cells;
                     }).filter(line => line.length);
+                },
+                // Passing chords of a map section (positions); none when this device changed its chords.
+                sectionPassing(section) {
+                    return !section?.edited && Array.isArray(section?.passing) ? section.passing : [];
                 },
 
                 init() {
@@ -1071,31 +854,65 @@
                 songCyclesCache: { key: null, value: [] },
                 get mapSongCycles() {
                     const lists = this.sections.map(section => Array.isArray(section?.chords) ? section.chords.map(String) : []);
-                    const key = JSON.stringify(lists);
-                    if (this.songCyclesCache.key !== key) this.songCyclesCache = { key, value: songCyclesOf(lists) };
+                    const passing = this.sections.map(section => this.sectionPassing(section));
+                    const key = JSON.stringify([lists, passing]);
+                    if (this.songCyclesCache.key !== key) this.songCyclesCache = { key, value: songCyclesOf(lists, passing) };
                     return this.songCyclesCache.value;
                 },
-                // Repeated progressions share a chord color, per line (map) or per chord (chord sheet).
-                repeatColorsCache: { key: null, value: null },
-                get repeatColorMap() {
-                    if (!this.settings.colorRepeats || !this.current) return null;
-                    const lists = this.sheetMode
-                        ? this.current.chord_sheet.map(section => (section.lines || []).flatMap(line => sheetChords(line)))
-                        : this.sections.map(section => Array.isArray(section?.chords) ? section.chords.map(String) : []);
-                    const key = JSON.stringify(lists);
-                    if (this.repeatColorsCache.key !== key) this.repeatColorsCache = { key, value: repeatColors(lists) };
-                    return this.repeatColorsCache.value;
+                // Passing chords of each chord sheet section (positions in the section), taken from the map when
+                // both have the same chords (chord n of the sheet is chord n of the map).
+                get sheetPassing() {
+                    const structure = Array.isArray(this.current?.structure) ? this.current.structure : [];
+                    const sheet = Array.isArray(this.current?.chord_sheet) ? this.current.chord_sheet : [];
+                    const mapChords = structure.flatMap(section => chordsOnly(Array.isArray(section?.chords) ? section.chords.map(String) : []));
+                    const sheetLists = sheet.map(section => (section.lines || []).flatMap(line => sheetChords(line)));
+                    if (JSON.stringify(mapChords) !== JSON.stringify(sheetLists.flat())) return sheetLists.map(() => []);
+                    const global = new Set();
+                    let offset = 0;
+                    structure.forEach(section => {
+                        (Array.isArray(section?.passing) ? section.passing : []).forEach(p => global.add(offset + p));
+                        offset += chordsOnly(Array.isArray(section?.chords) ? section.chords.map(String) : []).length;
+                    });
+                    offset = 0;
+                    return sheetLists.map(list => {
+                        const positions = list.map((chord, i) => i).filter(i => global.has(offset + i));
+                        offset += list.length;
+                        return positions;
+                    });
                 },
-                lineColor(sectionIndex, lineIndex) {
-                    const color = this.repeatColorMap?.lines[sectionIndex]?.[lineIndex];
-                    return color ? `--repeat-color: var(--group-${color})` : '';
-                },
-                // Chord of the chord sheet: `ordinal` is its position within the line.
-                sheetChordColor(sectionIndex, lineIndex, ordinal) {
+                sheetChordPassing(sectionIndex, lineIndex, ordinal) {
                     const lines = this.current?.chord_sheet?.[sectionIndex]?.lines || [];
                     const offset = lines.slice(0, lineIndex).reduce((total, line) => total + sheetChords(line).length, 0);
-                    const color = this.repeatColorMap?.chords[sectionIndex]?.[offset + ordinal];
-                    return color ? `color: var(--group-${color})` : '';
+                    return (this.sheetPassing[sectionIndex] || []).includes(offset + ordinal);
+                },
+                // Color of a block by its kind (see blockType in chord-lines.js).
+                typeStyle(name) { return `--type-color: var(--type-${blockType(name)})`; },
+                // Blocks bar: one button per block name of the current view, going to the last time that block is
+                // played: the first of its last run (a chorus split into consecutive parts starts at its first part).
+                get jumpTargets() {
+                    const names = this.sheetMode
+                        ? (this.current?.chord_sheet || []).map((section, index) => this.timedName(index))
+                        : this.sections.map(section => this.sectionName(section));
+                    const targets = [];
+                    names.forEach((name, index) => {
+                        const key = String(name).trim().toUpperCase();
+                        if (!key) return;
+                        const target = targets.find(item => item.key === key);
+                        if (target) target.index = index;
+                        else targets.push({ key, name, index });
+                    });
+                    const keyAt = (index) => String(names[index] ?? '').trim().toUpperCase();
+                    targets.forEach(target => {
+                        while (target.index > 0 && keyAt(target.index - 1) === target.key) target.index--;
+                    });
+                    return targets;
+                },
+                jumpTo(target) { this.selectSection(target.index); },
+                isCurrentTarget(target) {
+                    const names = this.sheetMode ? null : this.sections;
+                    if (this.currentSection === null) return false;
+                    const name = this.sheetMode ? this.timedName(this.currentSection) : this.sectionName(names[this.currentSection]);
+                    return String(name).trim().toUpperCase() === target.key;
                 },
                 // ChordPro line -> comment ("{c: Riff 2}") or units of [chord over text], split between words
                 // so long lines wrap on small screens without losing the chord position.

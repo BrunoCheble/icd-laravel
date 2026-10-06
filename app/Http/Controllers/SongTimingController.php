@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\SongTimingRequest;
 use App\Models\Song;
+use App\Services\UpdateSongLayoutService;
 use App\Services\UpdateSongSectionTimesService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Redirect;
@@ -21,7 +22,7 @@ class SongTimingController extends Controller
                 'index'  => $index,
                 'name'   => is_object($section) ? str_replace('_', ' ', (string) ($section->section ?? '')) : '',
                 'anchor' => is_object($section) ? ($section->anchor ?? null) : null,
-                'chords' => is_object($section) && is_array($section->chords ?? null) ? implode(' ', $section->chords) : '',
+                'chords' => is_object($section) && is_array($section->chords ?? null) ? implode(' ', UpdateSongLayoutService::chordSequence([['chords' => $section->chords]])) : '',
                 'lyrics' => Song::sectionLyrics($section),
                 'start'  => is_object($section) ? $this->startText($section->start ?? null) : '',
             ])

@@ -15,6 +15,9 @@
                             <p class="mt-2 text-sm text-gray-700">{{ __('Date') }}: {{ $setlist->event_date?->format('d/m/Y') ?? '—' }}</p>
                         </div>
                         <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex sm:flex-none sm:gap-4">
+                            @if ($setlist->songs->isNotEmpty())
+                                <a type="button" href="{{ route('setlists.practice', $setlist) }}" class="block rounded-md bg-white px-3 py-2 text-center text-sm font-semibold text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50"><i class="fa-solid fa-graduation-cap"></i> {{ __('Practice the setlist') }}</a>
+                            @endif
                             <a type="button" href="{{ route('site.setlist.show', $setlist) }}" target="_blank" rel="noopener" class="block rounded-md bg-white px-3 py-2 text-center text-sm font-semibold text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50">{{ __('Public page') }}</a>
                             <a type="button" href="{{ route('setlists.edit', $setlist) }}" class="block rounded-md bg-white px-3 py-2 text-center text-sm font-semibold text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50">{{ __('Edit') }}</a>
                             <a type="button" href="{{ route('setlists.index') }}" class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{{ __('Back') }}</a>
@@ -39,6 +42,8 @@
                                         @if ($song->pivot->minister_name)
                                             <span class="text-gray-500">· {{ __('Minister') }}: {{ $song->pivot->minister_name }}</span>
                                         @endif
+                                        <a href="{{ route('setlists.practice', [$setlist, $song]) }}" class="ml-2 font-semibold text-gray-500 hover:text-indigo-600"
+                                            title="{{ __('Practice') }}"><i class="fa-solid fa-graduation-cap"></i> {{ __('Practice') }}</a>
                                     </li>
                                 @endforeach
                             </ol>

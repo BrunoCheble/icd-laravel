@@ -55,6 +55,10 @@
                                                             class="text-gray-600 font-bold hover:text-gray-900 mr-2">{{ __('Show') }}</a>
                                                         <a href="{{ route('setlists.edit', $setlist) }}"
                                                             class="text-indigo-600 font-bold hover:text-indigo-900 mr-2">{{ __('Edit') }}</a>
+                                                        @if ($setlist->songs_count)
+                                                            <a href="{{ route('setlists.practice', $setlist) }}"
+                                                                class="text-gray-600 font-bold hover:text-gray-900 mr-2"><i class="fa-solid fa-graduation-cap"></i> {{ __('Practice') }}</a>
+                                                        @endif
                                                         @csrf
                                                         @method('DELETE')
                                                         <a href="{{ route('setlists.destroy', $setlist) }}"

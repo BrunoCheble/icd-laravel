@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Song extends Model
 {
@@ -25,7 +26,17 @@ class Song extends Model
             'video_lesson' => 'array',
             'structure' => 'object',
             'chord_sheet' => 'array',
+            'reviewed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Setlists with this song, with its key, position and minister in each one.
+     */
+    public function setlists(): BelongsToMany
+    {
+        return $this->belongsToMany(Setlist::class, 'setlist_songs')
+            ->withPivot('musical_key', 'position', 'minister_name');
     }
 
     /**
@@ -43,18 +54,16 @@ class Song extends Model
     }
 
     /**
-     * Sections that have lyrics, in order, as [name, lyrics] for reading.
+     * Section times status: [sections with a start, all sections] of the chord map.
      */
-    public function lyricsBlocks(): array
+    public function timedSections(): array
     {
-        return collect(is_array($this->structure) ? $this->structure : [])
-            ->map(fn ($section) => [
-                'name'   => is_object($section) ? str_replace('_', ' ', (string) ($section->section ?? '')) : '',
-                'lyrics' => self::sectionLyrics($section),
-            ])
-            ->filter(fn (array $block) => $block['lyrics'] !== '')
-            ->values()
-            ->all();
+        $sections = collect(is_array($this->structure) ? $this->structure : [])->filter(fn ($section) => is_object($section));
+
+        return [
+            $sections->filter(fn ($section) => ($section->start ?? '') !== '' && $section->start !== null)->count(),
+            $sections->count(),
+        ];
     }
 
     /**

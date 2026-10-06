@@ -42,6 +42,7 @@
             @endforeach
         </select>
         <x-input-error class="mt-2" :messages="$errors->get('musical_key')" />
+        <p id="key-transpose-notice" class="mt-2 text-sm" style="display: none; color: #4338ca;"></p>
     </div>
 
     <div>
@@ -310,3 +311,83 @@
     })();
 </script>
 
+<script src="{{ asset('js/chord-transposer.js') }}?v={{ filemtime(public_path('js/chord-transposer.js')) }}"></script>
+<script>
+    // Changing the key transposes the chords of the structure and of the chord sheet fields (only the chords:
+    // lyrics, names, times and the rest of the JSON stay as they are). Nothing is saved until the form is.
+    // A minor key counts as its relative major (see chord-transposer.js): Am -> C changes no chord.
+    (function () {
+        const select = document.getElementById('musical_key');
+        const notice = document.getElementById('key-transpose-notice');
+        if (!select || !window.ChordTransposer) return;
+        let previous = select.value;
+
+        // Rewrites a JSON field; returns how many chords changed, or null when the field is empty or not valid JSON.
+        const transposeField = (id, transpose) => {
+            const field = document.getElementById(id);
+            if (!field || !field.value.trim()) return null;
+            let data;
+            try {
+                data = JSON.parse(field.value);
+            } catch (e) {
+                return null;
+            }
+            const count = transpose(data);
+            if (count) field.value = JSON.stringify(data, null, 4);
+            return count;
+        };
+
+        select.addEventListener('change', () => {
+            const from = previous;
+            const to = select.value;
+            previous = to;
+            if (!from || !to || from === to || !ChordTransposer.parseKey(from) || !ChordTransposer.parseKey(to)) return;
+            const chord = (name) => ChordTransposer.transposeChord(name, from, to);
+
+            // Structure: each section's "chords" (line breaks "|" kept).
+            const inStructure = transposeField('structure', (data) => {
+                let count = 0;
+                (Array.isArray(data) ? data : []).forEach(section => {
+                    if (!section || !Array.isArray(section.chords)) return;
+                    section.chords = section.chords.map(name => {
+                        if (typeof name !== 'string' || name === '|') return name;
+                        const moved = chord(name);
+                        if (moved !== name) count++;
+                        return moved;
+                    });
+                });
+                return count;
+            });
+
+            // Chord sheet: the [Chord] marks of each line ("{c: ...}" notes untouched).
+            const inSheet = transposeField('chord_sheet', (data) => {
+                let count = 0;
+                (Array.isArray(data?.sections) ? data.sections : []).forEach(section => {
+                    if (!Array.isArray(section?.lines)) return;
+                    section.lines = section.lines.map(line => {
+                        if (typeof line !== 'string' || /^\s*\{/.test(line)) return line;
+                        return line.replace(/\[([^\]]+)\]/g, (match, name) => {
+                            const moved = chord(name);
+                            if (moved !== name) count++;
+                            return `[${moved}]`;
+                        });
+                    });
+                });
+                return count;
+            });
+
+            notice.style.display = '';
+            if (!inStructure && !inSheet) {
+                // Relative keys (Am / C): same scale, only the key name changes.
+                notice.textContent = ChordTransposer.parseKey(from).minor !== ChordTransposer.parseKey(to).minor
+                    ? @js(__(':from and :to are relative keys (same chords): only the key changes.')).replace(':from', from).replace(':to', to)
+                    : '';
+                notice.style.display = notice.textContent ? '' : 'none';
+                return;
+            }
+            notice.textContent = @js(__('Chords transposed from :from to :to (structure: :structure, chord sheet: :sheet). Review and save.'))
+                .replace(':from', from).replace(':to', to)
+                .replace(':structure', inStructure ?? 0).replace(':sheet', inSheet ?? 0);
+        });
+    })();
+</script>

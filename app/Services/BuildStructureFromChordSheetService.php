@@ -3,7 +3,8 @@
 namespace App\Services;
 
 /**
- * Builds an initial chord map (structure) from chord sheet sections, for songs that have no structure yet.
+ * Builds a chord map (structure) from chord sheet sections: one block per section and one map line per
+ * chord sheet line, so the map reads like the song is sung (line breaks are stored as "|" among the chords).
  */
 class BuildStructureFromChordSheetService
 {
@@ -28,14 +29,23 @@ class BuildStructureFromChordSheetService
     }
 
     /**
-     * Chords of ChordPro lines, in order ("{c: ...}" comments are ignored).
+     * Chords of ChordPro lines, in order, with a line break between lines ("{c: ...}" comments are ignored).
      */
     public static function chords(array $lines): array
     {
-        $text = collect($lines)->reject(fn ($line) => self::isComment($line))->implode(' ');
-        preg_match_all('/\[([^\]]+)\]/u', $text, $matches);
+        $chords = [];
 
-        return $matches[1];
+        foreach ($lines as $line) {
+            if (self::isComment($line) || ! preg_match_all('/\[([^\]]+)\]/u', (string) $line, $matches)) {
+                continue;
+            }
+            if ($chords !== []) {
+                $chords[] = UpdateSongLayoutService::LINE_BREAK;
+            }
+            array_push($chords, ...$matches[1]);
+        }
+
+        return $chords;
     }
 
     /**

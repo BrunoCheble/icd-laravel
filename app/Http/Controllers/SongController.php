@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Enums\MusicalKey;
 use App\Enums\SongInstrument;
+use App\Http\Requests\ListSongsRequest;
 use App\Http\Requests\SongRequest;
 use App\Models\Song;
+use App\Services\GetSongOverviewService;
+use App\Services\ListSongsService;
 use App\Services\SaveSongService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Redirect;
@@ -13,10 +16,11 @@ use Illuminate\View\View;
 
 class SongController extends Controller
 {
-    public function index(): View
+    public function index(ListSongsRequest $request, ListSongsService $service): View
     {
-        $songs = Song::orderBy('title')->paginate();
-        return view('songs.index', compact('songs'));
+        $filters = $request->validated();
+        $songs = $service->execute($filters);
+        return view('songs.index', compact('songs', 'filters'));
     }
 
     public function create(): View
@@ -40,10 +44,11 @@ class SongController extends Controller
             ->with('success', __('Song created successfully.'));
     }
 
-    public function show(Song $song): View
+    public function show(Song $song, GetSongOverviewService $service): View
     {
         $instrumentOptions = SongInstrument::options();
-        return view('songs.show', compact('song', 'instrumentOptions'));
+        $overview = $service->execute($song);
+        return view('songs.show', compact('song', 'instrumentOptions', 'overview'));
     }
 
     public function edit(Song $song): View

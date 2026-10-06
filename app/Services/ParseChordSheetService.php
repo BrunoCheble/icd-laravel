@@ -66,7 +66,8 @@ class ParseChordSheetService
                 $current = array_key_last($sections);
                 $riff = null;
             }
-            if ($current === null) {
+            // Lyrics right after an intro's chords start a new block, named later like an unmarked stanza.
+            if ($current === null || ($this->isIntro($sections, $current) && $this->startsLyrics($sections[$current]['lines'], $line))) {
                 $sections[] = ['section' => 'PART', 'label' => null, 'lines' => []];
                 $current = array_key_last($sections);
             }
@@ -138,7 +139,7 @@ class ParseChordSheetService
         }
 
         $sections = array_values(array_filter($sections, fn (array $section) => $section['lines'] !== []));
-        $sections = $hasMarkers ? $sections : $this->nameStanzas($sections);
+        $sections = $this->nameStanzas($sections);
 
         return [
             'sections' => array_map(function (array $section) {
@@ -149,9 +150,28 @@ class ParseChordSheetService
     }
 
     /**
-     * Names unlabeled stanzas by how their lyrics repeat: the most repeated one is the chorus, another
-     * repeated one first seen after the chorus is the bridge, the others are parts; chord-only stanzas are
-     * intro (first), final (last) or interlude.
+     * Intro block: marked "[Intro]", or the first unmarked block of the sheet.
+     */
+    private function isIntro(array $sections, int $index): bool
+    {
+        return $sections[$index]['section'] === 'INTRO'
+            || ($sections[$index]['label'] === null && $index === array_key_first($sections));
+    }
+
+    /**
+     * True when the line brings the first lyrics to a block that so far has only chords.
+     */
+    private function startsLyrics(array $lines, string $line): bool
+    {
+        return $lines !== []
+            && BuildStructureFromChordSheetService::lyrics($lines) === ''
+            && BuildStructureFromChordSheetService::lyrics([$line]) !== '';
+    }
+
+    /**
+     * Names unlabeled stanzas (those without a "[Section]" marker) by how their lyrics repeat: the most
+     * repeated one is the chorus, another repeated one first seen after the chorus is the bridge, the others
+     * are parts; chord-only stanzas are intro (first), final (last) or interlude.
      */
     private function nameStanzas(array $sections): array
     {
@@ -178,7 +198,7 @@ class ParseChordSheetService
         $last = count($sections) - 1;
 
         foreach ($sections as $index => $section) {
-            if (! empty($section['riff'])) {
+            if (! empty($section['riff']) || $section['label'] !== null) {
                 continue;
             }
             $key = $keys[$index];
@@ -305,7 +325,8 @@ class ParseChordSheetService
         foreach (preg_split('/(' . self::OPEN . '[^' . self::CLOSE . ']*' . self::CLOSE . ')/u', $line, -1, PREG_SPLIT_DELIM_CAPTURE) as $part) {
             if (str_starts_with($part, self::OPEN)) {
                 $name = mb_substr($part, 1, -1);
-                $chords[] = [$column, $name];
+                // Columns follow the name as written; the chord itself gets an easy spelling (E# -> F).
+                $chords[] = [$column, NormalizeChordSpellingService::chord($name)];
                 $column += mb_strlen($name);
             } else {
                 $column += mb_strlen($part);
@@ -344,7 +365,7 @@ class ParseChordSheetService
      */
     private function instrumentalLine(string $line): string
     {
-        $line = preg_replace_callback('/' . self::OPEN . '([^' . self::CLOSE . ']*)' . self::CLOSE . '/u', fn (array $m) => '[' . $m[1] . ']', $line);
+        $line = preg_replace_callback('/' . self::OPEN . '([^' . self::CLOSE . ']*)' . self::CLOSE . '/u', fn (array $m) => '[' . NormalizeChordSpellingService::chord($m[1]) . ']', $line);
 
         return trim(preg_replace('/\s+/u', ' ', $line));
     }

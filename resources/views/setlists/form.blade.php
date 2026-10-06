@@ -97,8 +97,8 @@
                             <span class="block text-sm text-gray-500" x-text="song.artist + (song.original_key ? ` · {{ __('Original key') }}: ${song.original_key}` : '')"></span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <x-secondary-button type="button" @click="move(index, -1)" x-bind:disabled="index === 0" :title="__('Move up')">↑</x-secondary-button>
-                            <x-secondary-button type="button" @click="move(index, 1)" x-bind:disabled="index === songs.length - 1" :title="__('Move down')">↓</x-secondary-button>
+                            <x-secondary-button type="button" @click="move(index, -1)" x-bind:disabled="index === 0" :title="__('Move up')"><i class="fa-solid fa-arrow-up"></i></x-secondary-button>
+                            <x-secondary-button type="button" @click="move(index, 1)" x-bind:disabled="index === songs.length - 1" :title="__('Move down')"><i class="fa-solid fa-arrow-down"></i></x-secondary-button>
                         </div>
                     </div>
 

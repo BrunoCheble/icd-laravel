@@ -39,9 +39,12 @@ class GetPublicSetlistService
             'position'     => $song->pivot?->position,
             'structure'    => $song->structure,
             'youtube_url'  => $song->youtube_url,
-            // Chord sheet blocks take the section times of the matching chord map blocks.
+            // Chord sheet split like the chord map's blocks, which give it their section times.
             'chord_sheet'  => isset($song->chord_sheet['sections'])
-                ? app(AlignSectionStartsService::class)->execute($song->chord_sheet['sections'], $song->structure)
+                ? app(AlignSectionStartsService::class)->execute(
+                    app(SyncChordSheetWithStructureService::class)->execute($song->chord_sheet['sections'], $song->structure),
+                    $song->structure,
+                )
                 : null,
         ];
     }
