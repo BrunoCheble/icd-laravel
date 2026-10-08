@@ -9,6 +9,7 @@ use App\Http\Requests\ReorderSetlistSongsRequest;
 use App\Http\Requests\UpdateSetlistSongKeyRequest;
 use App\Models\Setlist;
 use App\Models\Song;
+use App\Services\GetSongCatalogService;
 use App\Services\AddSongToSetlistService;
 use App\Services\GetPublicSetlistService;
 use App\Services\ListPublicSetlistsService;
@@ -37,6 +38,12 @@ class SetlistController extends Controller
     public function searchSongs(Request $request, SearchSongsService $service): JsonResponse
     {
         return response()->json($service->execute($request->query('q')));
+    }
+
+    // Every song with its chords, saved with the offline copy of the app.
+    public function catalog(GetSongCatalogService $service): JsonResponse
+    {
+        return response()->json($service->execute());
     }
 
     public function addSong(AddSongToSetlistRequest $request, Setlist $setlist, AddSongToSetlistService $service): JsonResponse

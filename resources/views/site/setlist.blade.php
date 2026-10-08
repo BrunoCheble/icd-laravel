@@ -291,6 +291,7 @@
         'urls' => [
             'setlist' => url('/repertoire'),
             'search' => route('site.setlist.songs.search'),
+            'catalog' => route('site.setlist.songs.catalog'),
         ],
         'messages' => [
             'confirmRemove' => __('Remove ":title" from this setlist?'),
@@ -299,6 +300,8 @@
             'added' => __('Song added to the setlist.'),
             'removed' => __('Song removed from the setlist.'),
             'sessionExpired' => __('Your session expired. Please reload the page.'),
+            'offlineOnly' => __('No connection: changed only on this device, not saved.'),
+            'offlineNoCatalog' => __('No connection: download the setlist for offline to add songs.'),
         ],
     ]))" @keydown.window="onKeydown($event)" :class="{ 'has-jump-bar': current && jumpTargets.length > 1 }">
 
@@ -787,6 +790,8 @@
                     return [
                         ...this.offlinePages().map(url => ['repertoire-pages-v1', url]),
                         ...assets.map(url => ['repertoire-assets-v1', url]),
+                        // Songs that can be added to the setlist without a connection.
+                        ...(withAudio ? [['repertoire-pages-v1', config.urls.catalog]] : []),
                         ...(withAudio ? this.offlineAudio().map(url => ['repertoire-audio-v1', url]) : []),
                     ];
                 },
@@ -1415,16 +1420,26 @@
                     if (id) window.location.href = `${config.urls.setlist}/${id}`;
                 },
 
+                // Without a connection it throws an error with `offline`: the change is then made only on this
+                // device (nothing is saved).
                 async request(method, url, body) {
-                    const response = await fetch(url, {
-                        method,
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        },
-                        body: body === undefined ? undefined : JSON.stringify(body),
-                    });
+                    let response;
+                    try {
+                        if (!navigator.onLine) throw new Error();
+                        response = await fetch(url, {
+                            method,
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: body === undefined ? undefined : JSON.stringify(body),
+                        });
+                    } catch (e) {
+                        const error = new Error(this.messages.offlineOnly);
+                        error.offline = true;
+                        throw error;
+                    }
 
                     if (!response.ok) {
                         let message = response.status === 419 ? this.messages.sessionExpired : this.messages.saveError;
@@ -1453,8 +1468,8 @@
                         await this.request('PATCH', this.songUrl(song, '/key'), { musical_key: song.setlist_key });
                         this.notify(this.messages.saved);
                     } catch (error) {
-                        song.setlist_key = previous;
-                        this.notify(error.message, true);
+                        if (!error.offline) song.setlist_key = previous;
+                        this.notify(error.message, !error.offline);
                     } finally {
                         this.savingKey = false;
                     }
@@ -1472,12 +1487,27 @@
                 },
                 async search() {
                     try {
+                        if (!navigator.onLine) throw new Error();
                         const response = await fetch(`${config.urls.search}?q=${encodeURIComponent(this.term)}`, { headers: { Accept: 'application/json' } });
                         this.results = await response.json();
                     } catch (error) {
-                        this.results = [];
+                        // Without a connection: the songs of the offline copy (see "Download for offline").
+                        const plain = (text) => String(text ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                        const term = plain(this.term.trim());
+                        this.results = (await this.offlineCatalog())
+                            .filter(song => !term || plain(song.title).includes(term) || plain(song.artist).includes(term))
+                            .slice(0, 20);
                     }
                     this.searched = true;
+                },
+                // Every song with its chords, from the offline copy (empty when it was never downloaded).
+                async offlineCatalog() {
+                    try {
+                        const response = await caches.match(config.urls.catalog);
+                        return response ? await response.json() : [];
+                    } catch (e) {
+                        return [];
+                    }
                 },
                 isInSetlist(song) { return this.songs.some(item => item.id === song.id); },
                 async addSong(song) {
@@ -1489,7 +1519,12 @@
                         if (!this.currentId) this.currentId = added.id;
                         this.notify(this.messages.added);
                     } catch (error) {
-                        this.notify(error.message, true);
+                        const saved = error.offline ? (await this.offlineCatalog()).find(item => item.id === song.id) : null;
+                        if (saved) {
+                            this.songs.push({ ...saved, position: this.songs.length + 1 });
+                            if (!this.currentId) this.currentId = saved.id;
+                        }
+                        this.notify(error.offline && !saved ? this.messages.offlineNoCatalog : error.message, !saved);
                     } finally {
                         this.adding = false;
                     }
@@ -1500,14 +1535,19 @@
                     const song = this.removing;
                     this.removing = null;
                     try {
-                        await this.request('DELETE', this.songUrl(song));
+                        try {
+                            await this.request('DELETE', this.songUrl(song));
+                        } catch (error) {
+                            if (!error.offline) throw error;
+                            this.notify(error.message);
+                        }
                         const index = this.songs.findIndex(item => item.id === song.id);
                         this.songs.splice(index, 1);
                         this.renumber();
                         if (this.currentId === song.id) {
                             this.currentId = (this.songs[index] ?? this.songs[index - 1])?.id ?? null;
                         }
-                        this.notify(this.messages.removed);
+                        if (navigator.onLine) this.notify(this.messages.removed);
                     } catch (error) {
                         this.notify(error.message, true);
                     }
@@ -1556,9 +1596,11 @@
                             this.songs.map(song => ({ song_id: song.id, position: song.position })));
                         this.notify(this.messages.saved);
                     } catch (error) {
-                        this.songs.sort((a, b) => previousOrder.indexOf(a.id) - previousOrder.indexOf(b.id));
-                        this.renumber();
-                        this.notify(error.message, true);
+                        if (!error.offline) {
+                            this.songs.sort((a, b) => previousOrder.indexOf(a.id) - previousOrder.indexOf(b.id));
+                            this.renumber();
+                        }
+                        this.notify(error.message, !error.offline);
                     }
                 },
             };

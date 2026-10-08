@@ -38,6 +38,7 @@ Route::get('/today-prayers', [SiteController::class, 'todayPrayer'])->name('site
 Route::prefix('repertoire')->name('site.setlist')->controller(SiteSetlistController::class)->group(function () {
     Route::get('/', 'index');
     Route::get('/songs/search', 'searchSongs')->name('.songs.search');
+    Route::get('/songs/catalog', 'catalog')->name('.songs.catalog');
     Route::get('/{setlist}', 'show')->whereNumber('setlist')->name('.show');
     Route::post('/{setlist}/songs', 'addSong')->whereNumber('setlist')->name('.songs.add');
     Route::delete('/{setlist}/songs/{song}', 'removeSong')->whereNumber(['setlist', 'song'])->name('.songs.remove');
