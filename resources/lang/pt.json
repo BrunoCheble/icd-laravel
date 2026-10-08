@@ -457,5 +457,9 @@
     "Key set to :key. Save to keep it.": "Tom definido como :key. Salve para manter.",
     "Changing the key transposes the chords of the map and of the chord sheet. Save to keep it.": "Mudar o tom transpõe os acordes do mapa e da cifra. Salve para manter.",
     "Every block has a start time": "Todos os blocos têm tempo",
-    "Mark the times of every block": "Marque o tempo de todos os blocos"
+    "Mark the times of every block": "Marque o tempo de todos os blocos",
+    "Install app": "Instalar app",
+    "Open this page in Safari.": "Abra esta página no Safari.",
+    "Tap :icon Share.": "Toque em :icon Compartilhar.",
+    "Choose \"Add to Home Screen\" and then \"Add\".": "Escolha \"Adicionar à Tela de Início\" e depois \"Adicionar\"."
 }

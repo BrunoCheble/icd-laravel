@@ -8,6 +8,26 @@
 
     <title>{{ $data['title'] ?? __('Setlist') }} · {{ config('app.name', 'Laravel') }}</title>
 
+    {{-- Installable app (PWA): manifest, icons and the service worker registered below --}}
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#111318">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="{{ __('Setlist') }}">
+    <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
+    <script>
+        // The install offer (Android / desktop Chrome) can come before the page is ready: kept for the install button.
+        window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            window.installPrompt = event;
+            window.dispatchEvent(new CustomEvent('install-available'));
+        });
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register(@js(asset('sw.js')), { scope: @js(url('repertoire')) }).catch(() => {}));
+        }
+    </script>
+
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
 
@@ -179,6 +199,9 @@
         }
         .panel-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .75rem 1rem; border-bottom: 1px solid var(--border); }
         .panel-header h2 { margin: 0; font-size: 1.1rem; }
+        .install { margin: .75rem 0; }
+        .install .btn { width: 100%; justify-content: center; }
+        .install-steps { margin: .5rem 0 1rem; padding-left: 1.25rem; line-height: 1.6; list-style: decimal; }
         .panel-body { flex: 1; overflow-y: auto; padding: .75rem 1rem 1rem; }
 
         .song-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; }
@@ -538,6 +561,11 @@
                         </template>
                     </ol>
 
+                    {{-- Install as an app (hidden when already opened as the app) --}}
+                    <div class="install" x-show="canInstall" x-cloak>
+                        <button type="button" class="btn" @click="install()"><i class="fa-solid fa-mobile-screen-button"></i> {{ __('Install app') }}</button>
+                    </div>
+
                     <div class="search">
                         <button type="button" class="btn btn-accent" x-show="!searchOpen" @click="openSearch()">+ {{ __('Add song') }}</button>
                         <div x-show="searchOpen">
@@ -558,6 +586,22 @@
                     </div>
                 </div>
             </aside>
+
+            {{-- Installing on iPhone / iPad: only by hand, from Safari's share menu --}}
+            <div class="modal" x-show="installHelp" x-cloak @keydown.escape.window="installHelp = false">
+                <div class="overlay" @click="installHelp = false"></div>
+                <div class="modal-box" role="dialog" aria-modal="true" aria-label="{{ __('Install app') }}">
+                    <p><strong>{{ __('Install app') }}</strong></p>
+                    <ol class="install-steps">
+                        <li>{{ __('Open this page in Safari.') }}</li>
+                        <li>{!! __('Tap :icon Share.', ['icon' => '<i class="fa-solid fa-arrow-up-from-bracket"></i>']) !!}</li>
+                        <li>{{ __('Choose "Add to Home Screen" and then "Add".') }}</li>
+                    </ol>
+                    <div class="modal-actions">
+                        <button type="button" class="btn" @click="installHelp = false">{{ __('Close') }}</button>
+                    </div>
+                </div>
+            </div>
 
             {{-- Remove confirmation --}}
             <div class="modal" x-show="removing" x-cloak>
@@ -697,6 +741,21 @@
                 chordEdits: {},
                 savingKey: false,
                 panelOpen: false,
+                // Installing as an app: the browser's offer (Android / desktop) or the steps for iPhone.
+                installPrompt: window.installPrompt ?? null,
+                installHelp: false,
+                get isApp() { return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; },
+                get isIos() { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); },
+                get canInstall() { return !this.isApp && (!!this.installPrompt || this.isIos); },
+                async install() {
+                    if (!this.installPrompt) {
+                        this.installHelp = true;
+                        return;
+                    }
+                    this.installPrompt.prompt();
+                    const { outcome } = await this.installPrompt.userChoice;
+                    if (outcome === 'accepted') this.installPrompt = null;
+                },
                 searchOpen: false,
                 term: '',
                 results: [],
@@ -855,6 +914,8 @@
                 },
 
                 init() {
+                    window.addEventListener('install-available', () => this.installPrompt = window.installPrompt);
+                    window.addEventListener('appinstalled', () => this.installPrompt = null);
                     this.$watch('settings', value => saveSettings(value), { deep: true });
                     // Each song opens with its own saved layout.
                     this.layout = this.currentId ? loadLayout(this.currentId) : { ...DEFAULT_LAYOUT };
