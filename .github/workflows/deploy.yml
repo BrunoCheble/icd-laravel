@@ -1,0 +1,30 @@
+name: Deploy to cPanel
+
+# On every push to master, does what the cPanel "Git Version Control" page does by hand: "Update from Remote".
+# The repository on the server is the site folder itself, so pulling is the deploy (.env and other ignored
+# files on the server are never touched).
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: cpanel-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      API: https://${{ secrets.CPANEL_HOST }}:2083/execute
+      AUTH: "Authorization: cpanel ${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_TOKEN }}"
+      REPO: ${{ secrets.CPANEL_REPO_ROOT }}
+
+    steps:
+      - name: Update from Remote
+        run: |
+          response=$(curl -sS --fail -H "$AUTH" -G "$API/VersionControl/update" \
+            --data-urlencode "repository_root=$REPO" --data-urlencode "branch=master")
+          echo "$response" | jq '{status, errors, head: .data.last_update}'
+          [ "$(echo "$response" | jq -r '.status')" = "1" ]
