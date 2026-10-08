@@ -24,8 +24,10 @@
     <div>
         <x-input-label for="musical_key" :value="__('Key')" />
         @php
+            // One option per pair of relative keys ("C / Am"), storing the key of the song's mode (new songs: major).
             $selectedKey = old('musical_key', $song?->musical_key);
-            $isListedKey = collect($keyOptions)->flatten()->contains($selectedKey);
+            $minorSong = \App\Enums\MusicalKey::isMinor($selectedKey);
+            $isListedKey = collect($keyOptions)->contains(fn ($pair) => $pair[$minorSong ? 'minor' : 'major'] === $selectedKey);
         @endphp
         <select id="musical_key" name="musical_key"
             class="block w-full bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-10 py-2 mt-1">
@@ -33,12 +35,8 @@
             @if ($selectedKey && ! $isListedKey)
                 <option value="{{ $selectedKey }}" selected>{{ $selectedKey }}</option>
             @endif
-            @foreach ($keyOptions as $group => $keys)
-                <optgroup label="{{ $group }}">
-                    @foreach ($keys as $key)
-                        <option value="{{ $key }}" @selected($key === $selectedKey)>{{ $key }}</option>
-                    @endforeach
-                </optgroup>
+            @foreach ($keyOptions as $pair)
+                <option value="{{ $pair[$minorSong ? 'minor' : 'major'] }}" @selected($pair[$minorSong ? 'minor' : 'major'] === $selectedKey)>{{ $pair['label'] }}</option>
             @endforeach
         </select>
         <x-input-error class="mt-2" :messages="$errors->get('musical_key')" />

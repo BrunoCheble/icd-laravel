@@ -29,7 +29,7 @@
         .ws-note { font-size: .8rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         /* Phones: icons only and tighter buttons */
         @media (max-width: 639px) {
-            .ws-toolbar { gap: .25rem; }
+            .ws-toolbar { gap: .25rem; flex-wrap: wrap; }
             .ws-label { display: none; }
             .ws-btn { min-width: 34px; min-height: 36px; padding: 0 .5rem; }
             .ws-seg button { padding: 0 .5rem; }

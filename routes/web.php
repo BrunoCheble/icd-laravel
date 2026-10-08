@@ -17,8 +17,6 @@ use App\Http\Controllers\SongChordSheetController;
 use App\Http\Controllers\SongController;
 use App\Http\Controllers\SongLayoutController;
 use App\Http\Controllers\SongPracticeController;
-use App\Http\Controllers\SongReviewController;
-use App\Http\Controllers\SongTimingController;
 use App\Http\Controllers\Site\SetlistController as SiteSetlistController;
 use App\Http\Controllers\Site\SiteController;
 use Illuminate\Support\Facades\Route;
@@ -84,11 +82,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/songs/chord-sheet/structure', [SongChordSheetController::class, 'structure'])->name('songs.chord-sheet.structure');
     Route::post('/songs/chord-sheet/parse', [SongChordSheetController::class, 'parse'])->name('songs.chord-sheet.parse');
     Route::resource('songs', SongController::class);
-    Route::get('/songs/{song}/timing', [SongTimingController::class, 'edit'])->name('songs.timing.edit');
-    Route::put('/songs/{song}/timing', [SongTimingController::class, 'update'])->name('songs.timing.update');
     Route::get('/songs/{song}/layout', [SongLayoutController::class, 'edit'])->name('songs.layout.edit');
     Route::put('/songs/{song}/layout', [SongLayoutController::class, 'update'])->name('songs.layout.update');
-    Route::patch('/songs/{song}/review', [SongReviewController::class, 'update'])->name('songs.review.update');
     Route::get('/songs/{song}/practice', [SongPracticeController::class, 'show'])->name('songs.practice');
 
     Route::get('/setlists/songs/search', [SetlistController::class, 'searchSongs'])->name('setlists.songs.search');

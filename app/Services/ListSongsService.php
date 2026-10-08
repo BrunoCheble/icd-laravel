@@ -18,12 +18,15 @@ class ListSongsService
     private const BLOCK_COUNT = "(SELECT COUNT(*) FROM JSON_TABLE(songs.structure, '$[*]' COLUMNS (jump VARCHAR(20) PATH '$.jump')) AS blocks"
         . " WHERE blocks.jump IS NULL OR blocks.jump <> 'start')";
 
+    // Reviewed: every block of the chord map has a start time (see Song::isReviewed).
+    private const REVIEWED = '(' . self::BLOCK_COUNT . ' > 0 AND ' . self::TIMED_COUNT . ' = ' . self::BLOCK_COUNT . ')';
+
     // Sort options (request value => SQL expressions, all in the chosen direction; fixed values, never user input).
     public const SORTS = [
         'title'    => ['title'],
         'artist'   => ['artist'],
         'key'      => ['musical_key'],
-        'reviewed' => ['reviewed_at'],
+        'reviewed' => [self::REVIEWED],
         // Share of blocks with a start time, then how many.
         'times'    => [self::TIMED_COUNT . ' / NULLIF(' . self::BLOCK_COUNT . ', 0)', self::TIMED_COUNT],
         'youtube'  => ["(youtube_url IS NOT NULL AND youtube_url <> '')"],
@@ -53,7 +56,7 @@ class ListSongsService
             $query->where(fn ($q) => $q->where('title', 'like', "%{$search}%")->orWhere('artist', 'like', "%{$search}%"));
         }
 
-        $this->filter($query, $filters['reviewed'] ?? null, fn ($q) => $q->whereNotNull('reviewed_at'), fn ($q) => $q->whereNull('reviewed_at'));
+        $this->filter($query, $filters['reviewed'] ?? null, fn ($q) => $q->whereRaw(self::REVIEWED), fn ($q) => $q->whereRaw('NOT ' . self::REVIEWED));
         $this->filter(
             $query,
             $filters['times'] ?? null,

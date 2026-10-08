@@ -69,24 +69,19 @@
 
                 {{-- Status: what is done and what is missing --}}
                 <h3 class="overview-title">{{ __('Status') }}</h3>
-                <form id="review-form" method="POST" action="{{ route('songs.review.update', $song) }}" hidden>
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="reviewed" value="{{ $status['reviewed_at'] ? 0 : 1 }}">
-                </form>
                 <div class="status-grid">
-                    <button type="submit" form="review-form" @class(['status-card', 'is-done' => $status['reviewed_at']])
-                        title="{{ $status['reviewed_at'] ? __('Remove the review mark') : __('Mark as reviewed') }}">
+                    {{-- Reviewed once every block has a start time --}}
+                    <a href="{{ route('songs.layout.edit', ['song' => $song, 'mode' => 'time']) }}" @class(['status-card', 'is-done' => $status['reviewed']])>
                         <span class="status-label">{{ __('Reviewed') }}</span>
-                        <span class="status-value">{{ $status['reviewed_at'] ? $status['reviewed_at']->format('d/m/Y') : __('No') }}</span>
-                        <span class="status-action">{{ $status['reviewed_at'] ? __('Remove the review mark') : __('Mark as reviewed') }}</span>
-                    </button>
-                    <a href="{{ route('songs.timing.edit', $song) }}" class="status-card {{ $timesState }}">
+                        <span class="status-value">{{ $status['reviewed'] ? __('Yes') : __('No') }}</span>
+                        <span class="status-action">{{ $status['reviewed'] ? __('Every block has a start time') : __('Mark the times of every block') }}</span>
+                    </a>
+                    <a href="{{ route('songs.layout.edit', ['song' => $song, 'mode' => 'time']) }}" class="status-card {{ $timesState }}">
                         <span class="status-label">{{ __('Times') }}</span>
                         <span class="status-value">{{ $status['blocks'] ? $status['timed'] . '/' . $status['blocks'] : '—' }}</span>
                         <span class="status-action">{{ __('Section times') }}</span>
                     </a>
-                    <a href="{{ $song->youtube_url ? route('songs.timing.edit', $song) : route('songs.edit', $song) }}" @class(['status-card', 'is-done' => $status['youtube']])>
+                    <a href="{{ $song->youtube_url ? route('songs.layout.edit', ['song' => $song, 'mode' => 'time']) : route('songs.edit', $song) }}" @class(['status-card', 'is-done' => $status['youtube']])>
                         <span class="status-label">YouTube</span>
                         <span class="status-value">{{ $status['youtube'] ? __('Yes') : __('No') }}</span>
                         <span class="status-action">{{ $status['youtube'] ? __('Listen on YouTube') : __('Add the link') }}</span>

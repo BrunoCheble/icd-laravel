@@ -64,7 +64,6 @@
                         <div class="song-modal-actions" x-show="!confirmDelete">
                             <a :href="actions?.show"><i class="fa-solid fa-eye"></i> {{ __('Show') }}</a>
                             <a :href="actions?.edit"><i class="fa-solid fa-pen"></i> {{ __('Edit') }}</a>
-                            <a :href="actions?.timing"><i class="fa-solid fa-stopwatch"></i> {{ __('Section times') }}</a>
                             <a :href="actions?.layout"><i class="fa-solid fa-layer-group"></i> {{ __('Layout') }}</a>
                             <a :href="actions?.practice"><i class="fa-solid fa-graduation-cap"></i> {{ __('Practice') }}</a>
                             <button type="button" class="is-danger" @click="confirmDelete = true"><i class="fa-solid fa-trash"></i> {{ __('Delete') }}</button>
@@ -188,22 +187,17 @@
                                                 <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $song->artist }}</td>
                                                 <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $song->musical_key }}</td>
                                                 <td class="whitespace-nowrap px-3 py-4 text-sm">
-                                                    <form method="POST" action="{{ route('songs.review.update', $song) }}">
-                                                        @csrf
-                                                        @method('PATCH')
-                                                        <input type="hidden" name="reviewed" value="{{ $song->reviewed_at ? 0 : 1 }}">
-                                                        @if ($song->reviewed_at)
-                                                            <button type="submit" class="font-semibold" style="color: #15803d;" title="{{ __('Remove the review mark') }}"><i class="fa-solid fa-check"></i> {{ $song->reviewed_at->format('d/m/Y') }}</button>
-                                                        @else
-                                                            <button type="submit" class="font-semibold text-indigo-600 hover:text-indigo-900" title="{{ __('Mark as reviewed') }}">{{ __('Mark') }}</button>
-                                                        @endif
-                                                    </form>
+                                                    @if ($song->isReviewed())
+                                                        <span class="font-semibold" style="color: #15803d;" title="{{ __('Every block has a start time') }}"><i class="fa-solid fa-check"></i> {{ __('Yes') }}</span>
+                                                    @else
+                                                        <span style="color: #9ca3af;">—</span>
+                                                    @endif
                                                 </td>
                                                 @php
                                                     [$timed, $sections] = $song->timedSections();
                                                 @endphp
                                                 <td class="whitespace-nowrap px-3 py-4 text-sm">
-                                                    <a href="{{ route('songs.timing.edit', $song) }}" class="font-semibold"
+                                                    <a href="{{ route('songs.layout.edit', ['song' => $song, 'mode' => 'time']) }}" class="font-semibold"
                                                         style="color: {{ $sections && $timed === $sections ? '#15803d' : ($timed ? '#b45309' : '#9ca3af') }};"
                                                         title="{{ __(':timed of :total blocks have a start time', ['timed' => $timed, 'total' => $sections]) }}">{{ $sections ? "$timed/$sections" : '—' }}</a>
                                                 </td>
@@ -222,7 +216,6 @@
                                                         'artist' => $song->artist,
                                                         'show' => route('songs.show', $song),
                                                         'edit' => route('songs.edit', $song),
-                                                        'timing' => route('songs.timing.edit', $song),
                                                         'layout' => route('songs.layout.edit', $song),
                                                         'practice' => route('songs.practice', $song),
                                                         'destroy' => route('songs.destroy', $song),

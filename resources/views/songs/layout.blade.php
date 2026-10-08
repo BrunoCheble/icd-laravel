@@ -32,6 +32,12 @@
         .layout-time { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .5rem; border: 1px solid #fcd34d; border-radius: 999px; background: #fffbeb; color: #92400e; font-size: .75rem; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
         .layout-time:hover { background: #fef3c7; }
         .layout-block.is-selected { border-color: #4f46e5; background: #f5f7ff; box-shadow: 0 0 0 2px #c7d2fe; }
+        .key-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; }
+        .key-chip { min-height: 38px; border: 1px solid #d1d5db; border-radius: .5rem; background: #fff; color: #374151; font-weight: 700; font-size: .9rem; cursor: pointer; }
+        .key-chip:hover { background: #f3f4f6; }
+        .key-chip.is-active { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+        .layout-timing { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-bottom: .5rem; }
+        .layout-time-input { width: 4.75rem; padding: .25rem .4rem; text-align: center; font-variant-numeric: tabular-nums; }
         .layout-block-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .5rem; }
         .layout-name { width: 12rem; max-width: 100%; padding: .3rem .5rem; font-size: .85rem; font-weight: 700; text-transform: uppercase; }
         .layout-suggest { padding: .25rem .55rem; border: 1px dashed #a5b4fc; border-radius: .375rem; background: #eef2ff; font-size: .75rem; font-weight: 700; color: #4338ca; text-transform: uppercase; }
@@ -96,29 +102,25 @@
                 <div class="ws-desktop">
                     <h1 class="text-base font-semibold leading-6 text-gray-900">
                         {{ $song->title }}
-                        @if ($song->reviewed_at)
-                            <span class="ml-2 text-sm font-semibold" style="color: #15803d;"><i class="fa-solid fa-check"></i> {{ __('Reviewed on :date', ['date' => $song->reviewed_at->format('d/m/Y')]) }}</span>
+                        @if ($song->isReviewed())
+                            <span class="ml-2 text-sm font-semibold" style="color: #15803d;" title="{{ __('Every block has a start time') }}"><i class="fa-solid fa-check"></i> {{ __('Reviewed') }}</span>
                         @endif
                     </h1>
                     <p class="mt-2 text-sm text-gray-700">{{ __('Choose where the chord map breaks lines and blocks, and fix its chords. The lines are shown as in the public page.') }}</p>
                 </div>
 
-                {{-- Review mark: submitted by a button of the options panel (forms cannot be nested) --}}
-                <form id="review-form" method="POST" action="{{ route('songs.review.update', $song) }}" hidden>
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="reviewed" value="{{ $song->reviewed_at ? 0 : 1 }}">
-                </form>
 
                 @if ($blocks === [] && $sheet === [])
                     <p class="mt-6 text-sm text-gray-500">{{ __('No structure available for this song.') }}</p>
                 @else
                     <form method="POST" action="{{ route('songs.layout.update', $song) }}" class="mt-2 sm:mt-6 space-y-4"
-                        x-data="songLayout(@js(['structure' => $blocks, 'sheet' => $sheet, 'structureUrl' => route('songs.chord-sheet.structure'), 'youtubeUrl' => $song->youtube_url]))"
+                        x-data="songLayout(@js(['structure' => $blocks, 'sheet' => $sheet, 'key' => $song->musical_key, 'keyPairs' => $keyOptions, 'structureUrl' => route('songs.chord-sheet.structure'), 'youtubeUrl' => $song->youtube_url]))"
                         @submit="submitting = true">
                         @csrf
                         @method('PUT')
                         <input type="hidden" name="structure" :value="output">
+                        <input type="hidden" name="mode" :value="mode">
+                        <input type="hidden" name="musical_key" :value="key ?? ''">
                         <input type="hidden" name="chord_sheet" :value="sheetChanged ? JSON.stringify({ sections: syncedSheet }) : ''">
 
                         {{-- Toolbar: what a click on a chord does, undo, player, save, options --}}
@@ -133,15 +135,42 @@
                                 <button type="button" :class="{ 'is-active': mode === 'block' }" @click="mode = 'block'" title="{{ __('Split block') }}"><i class="fa-solid fa-layer-group"></i><span class="ws-label"> {{ __('Split block') }}</span></button>
                                 <button type="button" :class="{ 'is-active': mode === 'passing' }" @click="mode = 'passing'" title="{{ __('Passing chord') }}"><i class="fa-solid fa-water"></i><span class="ws-label"> {{ __('Passing chord') }}</span></button>
                                 <button type="button" :class="{ 'is-active': mode === 'edit' }" @click="mode = 'edit'" title="{{ __('Edit chord') }}"><i class="fa-solid fa-pen"></i><span class="ws-label"> {{ __('Edit chord') }}</span></button>
+                                <button type="button" :class="{ 'is-active': mode === 'time' }" @click="mode = 'time'" title="{{ __('Times') }}"><i class="fa-solid fa-stopwatch"></i><span class="ws-label"> {{ __('Times') }}</span></button>
                             </span>
                             <button type="button" class="ws-btn" @click="addReturn()" title="{{ __('Add "back to the start" after the selected block (or at the end)') }}" aria-label="{{ __('Back to the start') }}"><i class="fa-solid fa-rotate-left"></i><span class="ws-label"> {{ __('Back to the start') }}</span></button>
                             <button type="button" class="ws-btn" @click="undo()" :disabled="!history.length" title="{{ __('Undo') }}" aria-label="{{ __('Undo') }}"><i class="fa-solid fa-rotate-left"></i><span class="ws-label">{{ __('Undo') }}</span></button>
                             <span class="ws-spacer"></span>
+                            {{-- Song key: changing it transposes the chords of the map and of the chord sheet --}}
+                            <button type="button" class="ws-btn" :class="{ 'is-active': keyOpen }" @click="keyOpen = !keyOpen" title="{{ __('Key') }}">
+                                <i class="fa-solid fa-music"></i><span class="ws-label">{{ __('Key') }}:</span> <strong x-text="keyLabel(key)"></strong>
+                            </button>
                             @include('songs.partials.play-button', ['toggle' => 'toggleVideo()', 'time' => 'formatVideoTime(videoTime)', 'show' => 'videoId'])
                             <button type="submit" class="ws-btn ws-btn-primary" title="{{ __('Save') }}"><i class="fa-solid fa-floppy-disk"></i><span class="ws-label">{{ __('Save') }}</span></button>
                             <button type="button" class="ws-btn" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" title="{{ __('Options') }}" aria-label="{{ __('Options') }}"><i class="fa-solid fa-gear"></i></button>
                         </div>
                         <p class="ws-note ws-desktop" style="white-space: normal;" x-text="modeHelp"></p>
+
+                        {{-- Song key: one button per key --}}
+                        <x-song-options :title="__('Key')" open="keyOpen">
+                            @php
+                                // One button per pair of relative keys ("C / Am"), storing the key of the song's mode.
+                                $minorSong = \App\Enums\MusicalKey::isMinor($song->musical_key);
+                                $isListedKey = collect($keyOptions)->contains(fn ($pair) => $pair[$minorSong ? 'minor' : 'major'] === $song->musical_key);
+                            @endphp
+                            <div class="ws-panel-section">
+                                <div class="key-grid">
+                                    @if ($song->musical_key && ! $isListedKey)
+                                        <button type="button" class="key-chip" :class="{ 'is-active': key === @js($song->musical_key) }" @click="changeKey(@js($song->musical_key)); keyOpen = false">{{ $song->musical_key }}</button>
+                                    @endif
+                                    @foreach ($keyOptions as $pair)
+                                                                <button type="button" class="key-chip" :class="{ 'is-active': key === @js($pair[$minorSong ? 'minor' : 'major']) }" @click="changeKey(@js($pair[$minorSong ? 'minor' : 'major'])); keyOpen = false">{{ $pair['label'] }}</button>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <div class="ws-panel-section">
+                                <p class="ws-panel-help">{{ __('Changing the key transposes the chords of the map and of the chord sheet. Save to keep it.') }}</p>
+                            </div>
+                        </x-song-options>
 
                         {{-- Editing one chord (map and, when they match, chord sheet) --}}
                         <x-song-options :title="__('Edit chord')" open="chordEdit">
@@ -171,14 +200,6 @@
                             <div class="ws-panel-section">
                                 <div class="ws-panel-label"><i class="fa-solid fa-tag"></i> {{ __('Block names') }}</div>
                                 <button type="button" class="ws-btn" @click="suggestAll(); optionsOpen = false" :disabled="!hasSuggestions"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('Suggest names') }}</button>
-                            </div>
-                            <div class="ws-panel-section">
-                                <div class="ws-panel-label"><i class="fa-solid fa-circle-check"></i> {{ __('Review') }}</div>
-                                @if ($song->reviewed_at)
-                                    <button type="submit" form="review-form" class="ws-btn" style="color: #15803d;" title="{{ __('Remove the review mark') }}"><i class="fa-solid fa-check"></i> {{ __('Reviewed on :date', ['date' => $song->reviewed_at->format('d/m/Y')]) }}</button>
-                                @else
-                                    <button type="submit" form="review-form" class="ws-btn"><i class="fa-regular fa-circle-check"></i> {{ __('Mark as reviewed') }}</button>
-                                @endif
                             </div>
                             @include('songs.partials.video-options')
                             <div class="ws-panel-section">
@@ -277,6 +298,18 @@
                                             <button type="button" class="layout-btn" style="color: #dc2626;" @click="removeBlock(b)" :title="@js(__('Remove block'))" :aria-label="@js(__('Remove block'))"><i class="fa-solid fa-trash"></i></button>
                                         </div>
 
+                                        {{-- Times mode: start of the block (from the video) --}}
+                                        <div class="layout-timing" x-show="mode === 'time'" @click.stop>
+                                            <button type="button" class="layout-btn" @click="markStart(b)" :title="@js(__('Mark the start of this block now'))"><i class="fa-solid fa-stopwatch"></i> {{ __('Mark now') }}</button>
+                                            <button type="button" class="layout-btn" @click="nudgeStart(b, -1)" :aria-label="@js(__('Minus one second'))">−1s</button>
+                                            <input type="text" inputmode="numeric" class="layout-time-input border-gray-300 rounded-md shadow-sm" placeholder="m:ss"
+                                                :value="block.data?.start ?? ''" @change="setStart(b, $event.target.value)" :aria-label="`{{ __('Start') }}: ${block.section}`">
+                                            <button type="button" class="layout-btn" @click="nudgeStart(b, 1)" :aria-label="@js(__('Plus one second'))">+1s</button>
+                                            <button type="button" class="layout-btn" x-show="videoId" @click="seekVideo(blockStart(block))" :disabled="blockStart(block) === null"
+                                                :title="@js(__('Play from here'))" :aria-label="@js(__('Play from here'))"><i class="fa-solid fa-play"></i></button>
+                                            <button type="button" class="layout-btn" @click="setStart(b, '')" :disabled="blockStart(block) === null"
+                                                :title="@js(__('Clear'))" :aria-label="@js(__('Clear'))"><i class="fa-solid fa-xmark"></i></button>
+                                        </div>
                                         <div class="layout-lines">
                                             <template x-for="(line, l) in lines(block)" :key="line.join(',')">
                                                 <div class="layout-line">
@@ -323,6 +356,8 @@
         // its chords without them and `breaks`: positions where a line starts, or null for automatic lines.
         // The chord sheet view relies on the map having the same chords, in order, as the chord sheet: chord n
         // of the sheet is chord n of the map.
+        const MODES = ['line', 'block', 'passing', 'edit', 'time'];
+
         function songLayout(config) {
             let nextId = 0;
             const toBlock = (data) => {
@@ -647,11 +682,14 @@
 
             return withYoutubeMini({
                 blocks,
+                // Song key (changing it transposes the chords).
+                key: config.key || null,
+                keyOpen: false,
                 // Chord sheet sections as stored (ChordPro lines); only removing a block changes them.
                 sheet,
                 hasSheet,
                 view: hasSheet ? 'sheet' : 'chords',
-                mode: 'line',
+                mode: MODES.includes(new URLSearchParams(location.search).get('mode')) ? new URLSearchParams(location.search).get('mode') : 'line',
                 history: [],
                 // Bumped on undo, so the restored blocks are drawn again instead of reusing the elements.
                 revision: 0,
@@ -781,6 +819,7 @@
                 get modeHelp() {
                     return {
                         edit: @js(__('Click a chord to rename it, add a chord after it or remove it.')),
+                        time: @js(__('Play the video and press "Mark now" on a block when it starts; adjust with −1s / +1s.')),
                         line: @js(__('Click a chord to start a new line on it; click the first chord of a line to join it to the line above.')),
                         block: @js(__('Click a chord to start a new block on it; click the first chord of a block to join it to the block above.')),
                         passing: @js(__('Click a chord to mark it as a passing chord (underlined); click it again to unmark it. Passing chords do not count when looking for repetitions.')),
@@ -790,7 +829,7 @@
                 // The first chord of the song does nothing; the first chord of a block only joins blocks (any chord
                 // can be marked as passing).
                 canClick(b, position) {
-                    if (b === undefined) return false;
+                    if (b === undefined || this.mode === 'time') return false;
                     return position > 0 || this.mode === 'passing' || this.mode === 'edit' || (this.mode === 'block' && b > 0 && !this.isReturn(this.blocks[b - 1]));
                 },
                 chordTitle(b, position, isLineStart) {
@@ -820,7 +859,7 @@
                 },
 
                 remember() {
-                    this.history.push(JSON.stringify({ blocks: this.blocks, sheet: this.sheet }));
+                    this.history.push(JSON.stringify({ blocks: this.blocks, sheet: this.sheet, key: this.key }));
                     if (this.history.length > 50) this.history.shift();
                     this.message = '';
                 },
@@ -829,7 +868,51 @@
                     const state = JSON.parse(this.history.pop());
                     this.blocks = state.blocks;
                     this.sheet = state.sheet;
+                    this.key = state.key;
                     this.revision++;
+                },
+
+                // "C / Am" for C or Am (see MusicalKey::pairs); other keys as they are.
+                keyLabel(key) {
+                    const pair = config.keyPairs.find(item => item.major === key || item.minor === key);
+                    return pair ? pair.label : (key || '—');
+                },
+                // New key for the song: the chords of the map and the [Chord] marks of the chord sheet are transposed
+                // (a minor key counts as its relative major, so Am -> C changes no chord; see chord-transposer.js).
+                // Saved with the layout.
+                changeKey(to) {
+                    const from = this.key;
+                    if (!to || to === from) return;
+                    this.remember();
+                    this.key = to;
+                    this.chordEdit = false;
+                    if (!from || !ChordTransposer.parseKey(from) || !ChordTransposer.parseKey(to)) {
+                        this.message = @js(__('Key set to :key. Save to keep it.')).replace(':key', to);
+                        return;
+                    }
+                    const chord = (name) => ChordTransposer.transposeChord(name, from, to);
+                    let inMap = 0;
+                    this.blocks.forEach(block => {
+                        block.chords = block.chords.map(name => {
+                            const moved = chord(name);
+                            if (moved !== name) inMap++;
+                            return moved;
+                        });
+                    });
+                    let inSheet = 0;
+                    this.sheet = this.sheet.map(section => ({
+                        ...section,
+                        lines: (section.lines || []).map(line => isDirective(line) ? line : String(line ?? '').replace(/\[([^\]]+)\]/g, (match, name) => {
+                            const moved = chord(name);
+                            if (moved !== name) inSheet++;
+                            return `[${moved}]`;
+                        })),
+                    }));
+                    this.revision++;
+                    this.message = inMap || inSheet
+                        ? @js(__('Chords transposed from :from to :to (structure: :structure, chord sheet: :sheet). Review and save.'))
+                            .replace(':from', from).replace(':to', to).replace(':structure', inMap).replace(':sheet', inSheet)
+                        : @js(__(':from and :to are relative keys (same chords): only the key changes.')).replace(':from', from).replace(':to', to);
                 },
 
                 toggleBreak(b, position, isLineStart) {
@@ -1113,6 +1196,37 @@
                     }
                     this.blocks.splice(b, 1);
                     this.revision++;
+                },
+                // ---- Times mode: the start of each block ("start" of the structure, "m:ss"), as on the Times page ----
+                // Marks the block's start at the video time.
+                markStart(b) {
+                    if (b < 0 || !this.blocks[b] || this.isReturn(this.blocks[b])) return;
+                    if (!this.playerReady) {
+                        this.message = @js(__('Turn on the video to mark the times.'));
+                        return;
+                    }
+                    this.setStart(b, this.formatVideoTime(this.videoCurrentTime()));
+                },
+                nudgeStart(b, delta) {
+                    const current = this.blockStart(this.blocks[b]) ?? (this.playerReady ? this.videoCurrentTime() : 0);
+                    this.setStart(b, this.formatVideoTime(Math.max(0, current + delta)));
+                },
+                // Typed or marked start: "m:ss" (or seconds), empty to clear it.
+                setStart(b, value) {
+                    const block = this.blocks[b];
+                    const text = String(value ?? '').trim();
+                    const valid = /^\d+(:\d{1,2}){0,2}(\.\d+)?$/.test(text);
+                    if (text !== '' && !valid) {
+                        this.message = @js(__('Use the m:ss format (e.g. 1:05).'));
+                        this.revision++;
+                        return;
+                    }
+                    const start = text === '' ? null : this.formatVideoTime(text.split(':').reduce((total, part) => total * 60 + Number(part), 0));
+                    if ((block.data?.start ?? null) === start) return;
+                    this.remember();
+                    const data = { ...block.data };
+                    if (start === null) delete data.start; else data.start = start;
+                    block.data = data;
                 },
                 // "Back to the start": a block without chords marking that the song goes back to its first block.
                 isReturn(block) { return block?.data?.jump === 'start'; },

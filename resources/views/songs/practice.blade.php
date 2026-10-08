@@ -469,14 +469,16 @@
                     const marks = [];
                     if (option === this.setlistKey) marks.push(song.minister_name || @js(__('setlist')));
                     if (option === this.originalKey) marks.push(@js(__('original')));
-                    return marks.length ? `${option} (${marks.join(', ')})` : option;
+                    const pair = data.keys.find(item => item.major === option || item.minor === option);
+                    const label = pair ? pair.label : option;
+                    return marks.length ? `${label} (${marks.join(', ')})` : label;
                 },
                 // The setlist's key when practicing a setlist.
                 key: song.setlist_key || song.original_key || '',
-                // Keys of the song's mode (major or minor), to practice in another key.
+                // One key per pair of relative keys ("C / Am"), in the song's mode (major or minor), to practice in another key.
                 get keyOptions() {
                     const original = ChordTransposer.parseKey(this.originalKey);
-                    const keys = data.keys.filter(key => !original || ChordTransposer.parseKey(key)?.minor === original.minor);
+                    const keys = data.keys.map(pair => (original?.minor ? pair.minor : pair.major));
                     return this.originalKey && !keys.includes(this.originalKey) ? [this.originalKey, ...keys] : keys;
                 },
                 time: 0,

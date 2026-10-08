@@ -21,7 +21,7 @@ class GetSongOverviewService
 
         return [
             'status' => [
-                'reviewed_at'   => $song->reviewed_at,
+                'reviewed'      => $song->isReviewed(),
                 'timed'         => $timed,
                 'blocks'        => $total,
                 'youtube'       => (bool) $song->youtube_url,

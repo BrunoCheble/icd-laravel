@@ -13,8 +13,13 @@ class UpdateSongLayoutService
      * Saves the chord map (structure) with the blocks and line breaks set on the layout page, and the chord sheet
      * when blocks were removed from it too. Each block keeps its other fields; "order" follows the new position.
      */
-    public function execute(Song $song, array $blocks, ?array $sheetSections = null): Song
+    public function execute(Song $song, array $blocks, ?array $sheetSections = null, ?string $key = null): Song
     {
+        // Key changed on the layout page (the chords come already transposed to it).
+        if ($key !== null && $key !== '') {
+            $song->musical_key = $key;
+        }
+
         if ($sheetSections !== null) {
             // Chords spelled E#, B#, Cb, Fb or F## get their simple name, as in the chord map below.
             $sheetSections = array_map(fn ($section) => array_merge($section, ['lines' => array_map(
@@ -45,6 +50,13 @@ class UpdateSongLayoutService
             } else {
                 unset($block['passing']);
             }
+            // Start time set on the page: stored as "m:ss"; empty means none (other values are kept to be fixed).
+            $start = self::toSeconds($block['start'] ?? null);
+            if ($start !== null) {
+                $block['start'] = self::format($start);
+            } elseif (trim((string) ($block['start'] ?? '')) === '') {
+                unset($block['start']);
+            }
             $block['lyrics'] = $lyrics === '' ? null : $lyrics;
             // A new block gets the first line of its lyrics as anchor.
             if (($block['anchor'] ?? null) === null || $block['anchor'] === '') {
@@ -69,6 +81,34 @@ class UpdateSongLayoutService
             ->reject(fn ($chord) => $chord === self::LINE_BREAK)
             ->values()
             ->all();
+    }
+
+    /**
+     * "1:05" / "0:01:05" / "65" / 65 -> 65; null when empty or invalid.
+     */
+    public static function toSeconds(mixed $value): ?float
+    {
+        if (is_int($value) || is_float($value)) {
+            return $value >= 0 ? (float) $value : null;
+        }
+
+        $value = trim((string) $value);
+
+        if (! preg_match('/^\d+(:\d{1,2}){0,2}(\.\d+)?$/', $value)) {
+            return null;
+        }
+
+        return array_reduce(explode(':', $value), fn (float $total, string $part) => $total * 60 + (float) $part, 0.0);
+    }
+
+    /**
+     * 65 -> "1:05"
+     */
+    public static function format(float $seconds): string
+    {
+        $total = (int) round($seconds);
+
+        return intdiv($total, 60) . ':' . str_pad((string) ($total % 60), 2, '0', STR_PAD_LEFT);
     }
 
     /**

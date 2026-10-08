@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MusicalKey;
 use App\Http\Requests\SongLayoutRequest;
 use App\Models\Song;
 use App\Services\UpdateSongLayoutService;
@@ -21,19 +22,24 @@ class SongLayoutController extends Controller
 
         $sheet = $song->chord_sheet['sections'] ?? [];
 
-        return view('songs.layout', compact('song', 'blocks', 'sheet'));
+        $keyOptions = MusicalKey::pairs();
+
+        return view('songs.layout', compact('song', 'blocks', 'sheet', 'keyOptions'));
     }
 
     public function update(SongLayoutRequest $request, Song $song, UpdateSongLayoutService $service): RedirectResponse
     {
         try {
-            $service->execute($song, $request->blocks(), $request->sheetSections());
+            $service->execute($song, $request->blocks(), $request->sheetSections(), $request->input('musical_key'));
         } catch (\Exception $e) {
             return Redirect::route('songs.layout.edit', $song)
                 ->with('error', __('Something went wrong'));
         }
 
-        return Redirect::route('songs.layout.edit', $song)
+        // Back in the same mode (e.g. times) the page was in.
+        $mode = in_array($request->input('mode'), ['block', 'passing', 'edit', 'time'], true) ? $request->input('mode') : null;
+
+        return Redirect::route('songs.layout.edit', array_filter(['song' => $song, 'mode' => $mode]))
             ->with('success', __('Layout saved.'));
     }
 }

@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\MusicalKey;
 use App\Services\BuildStructureFromChordSheetService;
 use App\Services\UpdateSongLayoutService;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class SongLayoutRequest extends FormRequest
@@ -20,6 +22,8 @@ class SongLayoutRequest extends FormRequest
             'structure'   => ['required', 'string', 'json'],
             // Sent only when blocks were removed from the chord sheet too.
             'chord_sheet' => ['nullable', 'string', 'json'],
+            // Key changed on the page (its chords come transposed); the song's current key is always accepted.
+            'musical_key' => ['nullable', 'string', 'max:20', Rule::in(array_values(array_filter([...MusicalKey::values(), $this->route('song')?->musical_key])))],
         ];
     }
 

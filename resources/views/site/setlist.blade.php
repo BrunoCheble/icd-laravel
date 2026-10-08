@@ -334,12 +334,8 @@
                         <template x-for="key in extraKeys" :key="'extra-' + key">
                             <option :value="key" x-text="key" :selected="key === selectedKey"></option>
                         </template>
-                        <template x-for="(keys, group) in availableKeyOptions" :key="group">
-                            <optgroup :label="group">
-                                <template x-for="key in keys" :key="key">
-                                    <option :value="key" x-text="key" :selected="key === selectedKey"></option>
-                                </template>
-                            </optgroup>
+                        <template x-for="choice in keyChoices" :key="choice.value">
+                            <option :value="choice.value" x-text="choice.label" :selected="choice.value === selectedKey"></option>
                         </template>
                     </select>
                     <span class="hint" x-show="current?.original_key && current.original_key !== selectedKey">
@@ -414,12 +410,12 @@
                                     <small x-show="current.original_key && current.original_key !== selectedKey" x-text="`(${current.original_key})`"></small>
                                 </button>
                                 <div class="key-picker" x-show="keyPickerOpen" x-cloak @click.stop role="listbox" :aria-label="@js(__('Key'))">
-                                    <template x-for="key in [...extraKeys, ...Object.values(availableKeyOptions).flat()]" :key="key">
+                                    <template x-for="choice in [...extraKeys.map(key => ({ value: key, label: key })), ...keyChoices]" :key="choice.value">
                                         <button type="button" class="key-option" role="option"
-                                            :class="{ 'is-selected': key === selectedKey, 'is-original': key === current.original_key }"
-                                            :aria-selected="key === selectedKey" :disabled="savingKey"
-                                            :title="key === current.original_key ? @js(__('Original key')) : ''"
-                                            @click="pickKey(key)" x-text="key"></button>
+                                            :class="{ 'is-selected': choice.value === selectedKey, 'is-original': choice.value === current.original_key }"
+                                            :aria-selected="choice.value === selectedKey" :disabled="savingKey"
+                                            :title="choice.value === current.original_key ? @js(__('Original key')) : ''"
+                                            @click="pickKey(choice.value)" x-text="choice.label"></button>
                                     </template>
                                 </div>
                             </span>
@@ -757,19 +753,17 @@
 
                 // Key used in this setlist, falling back to the song's original key.
                 get selectedKey() { return this.current?.setlist_key ?? this.current?.original_key ?? ''; },
-                // Only keys of the song's mode: major songs list major keys, minor songs list minor keys.
+                // One option per pair of relative keys ("C / Am"): major songs pick the major key of the pair,
+                // minor songs the minor one.
                 get songIsMinor() {
                     const key = ChordTransposer.parseKey(this.current?.original_key || this.selectedKey);
                     return key ? key.minor : null;
                 },
-                get availableKeyOptions() {
-                    if (this.songIsMinor === null) return this.keyOptions;
-                    return Object.fromEntries(Object.entries(this.keyOptions)
-                        .map(([group, keys]) => [group, keys.filter(key => ChordTransposer.parseKey(key)?.minor === this.songIsMinor)])
-                        .filter(([, keys]) => keys.length));
+                get keyChoices() {
+                    return this.keyOptions.map(pair => ({ value: this.songIsMinor ? pair.minor : pair.major, label: pair.label }));
                 },
                 get extraKeys() {
-                    const listed = Object.values(this.availableKeyOptions).flat();
+                    const listed = this.keyChoices.map(choice => choice.value);
                     return [...new Set([this.selectedKey, this.current?.original_key])].filter(key => key && !listed.includes(key));
                 },
 

@@ -73,7 +73,7 @@ class SetlistController extends Controller
     {
         $data = $setlist ? $getService->execute($setlist) : null;
         $setlistOptions = $listService->execute();
-        $keyOptions = MusicalKey::options();
+        $keyOptions = MusicalKey::pairs();
 
         return view('site.setlist', compact('data', 'setlistOptions', 'keyOptions'));
     }

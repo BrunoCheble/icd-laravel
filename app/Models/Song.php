@@ -78,6 +78,17 @@ class Song extends Model
     }
 
     /**
+     * Reviewed: every block of the chord map has a start time (section times are only marked once the song was
+     * checked against the video).
+     */
+    public function isReviewed(): bool
+    {
+        [$timed, $total] = $this->timedSections();
+
+        return $total > 0 && $timed === $total;
+    }
+
+    /**
      * Chord sheet as pretty-printed JSON text for editing; empty when the song has none.
      */
     public function chordSheetAsJson(): string

@@ -24,7 +24,7 @@ class GetPracticeSongService
         return [
             'setlist'  => $setlist ? ['id' => $setlist->id, 'title' => $setlist->title] : null,
             'song'     => GetPublicSetlistService::songPayload($songs[$index]),
-            'keys'     => MusicalKey::values(),
+            'keys'     => MusicalKey::pairs(),
             'position' => $index + 1,
             'total'    => $songs->count(),
             // To jump straight to another song.

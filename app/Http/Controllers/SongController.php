@@ -28,7 +28,7 @@ class SongController extends Controller
     {
         $song = new Song();
         $instrumentOptions = SongInstrument::options();
-        $keyOptions = MusicalKey::options();
+        $keyOptions = MusicalKey::pairs();
         $existingSources = $sources->all();
         return view('songs.create', compact('song', 'instrumentOptions', 'keyOptions', 'existingSources'));
     }
@@ -56,7 +56,7 @@ class SongController extends Controller
     public function edit(Song $song, FindSongBySourceService $sources): View
     {
         $instrumentOptions = SongInstrument::options();
-        $keyOptions = MusicalKey::options();
+        $keyOptions = MusicalKey::pairs();
         $existingSources = $sources->all($song->id);
         return view('songs.edit', compact('song', 'instrumentOptions', 'keyOptions', 'existingSources'));
     }

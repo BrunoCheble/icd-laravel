@@ -30,7 +30,7 @@ class SetlistController extends Controller
     {
         $setlist = new Setlist();
         $selectedSongs = $this->selectedSongs($setlist);
-        $keyOptions = MusicalKey::options();
+        $keyOptions = MusicalKey::pairs();
         return view('setlists.create', compact('setlist', 'selectedSongs', 'keyOptions'));
     }
 
@@ -56,7 +56,7 @@ class SetlistController extends Controller
     public function edit(Setlist $setlist): View
     {
         $selectedSongs = $this->selectedSongs($setlist);
-        $keyOptions = MusicalKey::options();
+        $keyOptions = MusicalKey::pairs();
         return view('setlists.edit', compact('setlist', 'selectedSongs', 'keyOptions'));
     }
 

@@ -48,17 +48,15 @@
                 this.songs.splice(target, 0, this.songs.splice(index, 1)[0]);
                 this.errors = {};
             },
-            // Only keys of the song's mode (major/minor), based on its original key.
-            keyGroups(song) {
+            // One option per pair of relative keys (C / Am), storing the key of the song's mode (major/minor),
+            // based on its original key.
+            keyChoices(song) {
                 const base = song.original_key || song.musical_key;
-                if (!base) return this.keyOptions;
-                const minor = base.endsWith('m');
-                return Object.fromEntries(Object.entries(this.keyOptions)
-                    .map(([group, keys]) => [group, keys.filter(key => key.endsWith('m') === minor)])
-                    .filter(([, keys]) => keys.length));
+                const minor = !!base && base.endsWith('m');
+                return this.keyOptions.map(pair => ({ value: minor ? pair.minor : pair.major, label: pair.label }));
             },
             extraKeys(song) {
-                const listed = Object.values(this.keyGroups(song)).flat();
+                const listed = this.keyChoices(song).map(choice => choice.value);
                 return [...new Set([song.musical_key, song.original_key])].filter(key => key && !listed.includes(key));
             },
             error(index, field) { return (this.errors[`songs.${index}.${field}`] || [])[0]; },
@@ -117,12 +115,8 @@
                                 <template x-for="key in extraKeys(song)" :key="'extra-' + key">
                                     <option :value="key" x-text="key" :selected="key === song.musical_key"></option>
                                 </template>
-                                <template x-for="(keys, group) in keyGroups(song)" :key="group">
-                                    <optgroup :label="group">
-                                        <template x-for="key in keys" :key="key">
-                                            <option :value="key" x-text="key" :selected="key === song.musical_key"></option>
-                                        </template>
-                                    </optgroup>
+                                <template x-for="choice in keyChoices(song)" :key="choice.value">
+                                    <option :value="choice.value" x-text="choice.label" :selected="choice.value === song.musical_key"></option>
                                 </template>
                             </select>
                             <p class="text-sm text-red-600 mt-2" x-show="error(index, 'musical_key')" x-text="error(index, 'musical_key')"></p>
