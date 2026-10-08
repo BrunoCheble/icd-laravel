@@ -1,5 +1,6 @@
 // Service worker of the repertoire app (/repertoire): keeps what the app needs to work offline.
-// - Pages of the app: from the network when online (the copy is updated), from the copy when offline.
+// - Pages of the app: from the network when online (the copy is updated), from the copy when offline or
+//   when the server fails.
 // - Scripts, styles, fonts and icons: from the copy when there is one (updated in the background).
 // - Audio files: from the copy saved by "Download for offline", otherwise from the network. Audio players ask for
 //   parts of the file (ranges), so the copy is served in parts too.
@@ -34,15 +35,18 @@ self.addEventListener('fetch', (event) => {
 
 async function page(request) {
     const cache = await caches.open(PAGES);
+    const saved = async () => (await cache.match(request, { ignoreSearch: true })) || (await cache.match(LAST_PAGE));
     try {
         const response = await fetch(request);
         if (response.ok && !response.redirected) {
             cache.put(request, response.clone());
             cache.put(LAST_PAGE, response.clone());
         }
+        // The server is reachable but failing (e.g. 502): the saved copy is more useful than the error page.
+        if (response.status >= 500) return (await saved()) || response;
         return response;
     } catch (error) {
-        return (await cache.match(request, { ignoreSearch: true })) || (await cache.match(LAST_PAGE)) || Response.error();
+        return (await saved()) || Response.error();
     }
 }
 

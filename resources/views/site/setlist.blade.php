@@ -767,6 +767,57 @@
                 offline: { busy: false, ready: false, error: false, done: 0, total: 0 },
                 // Connection state, shown as a crossed-out wifi icon in the top bar when there is none.
                 online: navigator.onLine,
+
+                // ---- Changes made without a connection: only on this device, never sent (so musicians do not
+                // overwrite each other). They survive closing the app while there is no connection; opening it with a
+                // connection shows the setlist as saved. Only the final result is kept: keys by song, songs added
+                // (with their data) and removed, and the order. ----
+                pending: { keys: {}, added: {}, removed: [], order: null },
+                pendingKey() { return `setlist-pending-${setlist.id}`; },
+                get hasPending() {
+                    const p = this.pending;
+                    return Object.keys(p.keys).length > 0 || Object.keys(p.added).length > 0 || p.removed.length > 0 || !!p.order;
+                },
+                savePending() { writeStorage(this.pendingKey(), this.hasPending ? this.pending : null); },
+                // Shows the setlist (as saved, or as copied for offline use) with the changes still to be sent.
+                loadPending() {
+                    if (!setlist) return;
+                    if (navigator.onLine) return this.forgetPending();
+                    let saved = null;
+                    try { saved = JSON.parse(localStorage.getItem(this.pendingKey()) || 'null'); } catch (e) {}
+                    if (!saved) return;
+                    this.pending = { keys: saved.keys || {}, added: saved.added || {}, removed: saved.removed || [], order: saved.order || null };
+                    this.songs = this.songs.filter(song => !this.pending.removed.includes(song.id));
+                    Object.values(this.pending.added).forEach(song => { if (!this.isInSetlist(song)) this.songs.push(song); });
+                    this.songs.forEach(song => { if (song.id in this.pending.keys) song.setlist_key = this.pending.keys[song.id]; });
+                    if (this.pending.order) {
+                        const order = this.pending.order;
+                        const at = (song) => (order.includes(song.id) ? order.indexOf(song.id) : order.length);
+                        this.songs.sort((a, b) => at(a) - at(b));
+                    }
+                    this.renumber();
+                    if (!this.songs.some(song => song.id === this.currentId)) this.currentId = this.songs[0]?.id ?? null;
+                },
+                forgetPending() {
+                    this.pending = { keys: {}, added: {}, removed: [], order: null };
+                    this.savePending();
+                },
+                rememberOffline(change) {
+                    const p = this.pending;
+                    if (change.key !== undefined) p.keys[change.song.id] = change.key;
+                    if (change.add) {
+                        p.removed = p.removed.filter(id => id !== change.add.id);
+                        p.added[change.add.id] = change.add;
+                    }
+                    if (change.remove) {
+                        if (change.remove.id in p.added) delete p.added[change.remove.id];
+                        else if (!p.removed.includes(change.remove.id)) p.removed.push(change.remove.id);
+                        delete p.keys[change.remove.id];
+                    }
+                    if (change.order || change.add || change.remove) p.order = this.songs.map(song => song.id);
+                    this.pending = { ...p };
+                    this.savePending();
+                },
                 get offlineSupported() { return 'caches' in window && 'serviceWorker' in navigator && !!setlist; },
                 offlinePages() { return [...new Set([location.pathname, new URL(`${config.urls.setlist}/${setlist.id}`).pathname])]; },
                 offlineAudio() { return [...new Set(this.songs.map(song => song.audio_url).filter(Boolean))]; },
@@ -1020,7 +1071,9 @@
                     window.addEventListener('install-available', () => this.installPrompt = window.installPrompt);
                     this.setupAudio();
                     this.checkOffline();
-                    window.addEventListener('online', () => { this.online = true; this.saveOfflineShell(); });
+                    this.loadPending();
+                    // Back online: the changes stay on screen until the app is opened again, but are no longer kept.
+                    window.addEventListener('online', () => { this.online = true; this.forgetPending(); this.saveOfflineShell(); });
                     window.addEventListener('offline', () => this.online = false);
                     // After the page finished loading (so every script and style is listed).
                     window.addEventListener('load', () => setTimeout(() => this.saveOfflineShell(), 1500), { once: true });
@@ -1469,6 +1522,7 @@
                         this.notify(this.messages.saved);
                     } catch (error) {
                         if (!error.offline) song.setlist_key = previous;
+                        else this.rememberOffline({ song, key: song.setlist_key });
                         this.notify(error.message, !error.offline);
                     } finally {
                         this.savingKey = false;
@@ -1521,8 +1575,10 @@
                     } catch (error) {
                         const saved = error.offline ? (await this.offlineCatalog()).find(item => item.id === song.id) : null;
                         if (saved) {
-                            this.songs.push({ ...saved, position: this.songs.length + 1 });
+                            const added = { ...saved, position: this.songs.length + 1 };
+                            this.songs.push(added);
                             if (!this.currentId) this.currentId = saved.id;
+                            this.rememberOffline({ add: added });
                         }
                         this.notify(error.offline && !saved ? this.messages.offlineNoCatalog : error.message, !saved);
                     } finally {
@@ -1535,10 +1591,12 @@
                     const song = this.removing;
                     this.removing = null;
                     try {
+                        let offline = false;
                         try {
                             await this.request('DELETE', this.songUrl(song));
                         } catch (error) {
                             if (!error.offline) throw error;
+                            offline = true;
                             this.notify(error.message);
                         }
                         const index = this.songs.findIndex(item => item.id === song.id);
@@ -1547,7 +1605,8 @@
                         if (this.currentId === song.id) {
                             this.currentId = (this.songs[index] ?? this.songs[index - 1])?.id ?? null;
                         }
-                        if (navigator.onLine) this.notify(this.messages.removed);
+                        if (offline) this.rememberOffline({ remove: song });
+                        else this.notify(this.messages.removed);
                     } catch (error) {
                         this.notify(error.message, true);
                     }
@@ -1599,6 +1658,8 @@
                         if (!error.offline) {
                             this.songs.sort((a, b) => previousOrder.indexOf(a.id) - previousOrder.indexOf(b.id));
                             this.renumber();
+                        } else {
+                            this.rememberOffline({ order: true });
                         }
                         this.notify(error.message, !error.offline);
                     }
