@@ -14,6 +14,10 @@ class ListSongsService
     private const TIMED_COUNT = "(SELECT COUNT(*) FROM JSON_TABLE(songs.structure, '$[*]' COLUMNS (start VARCHAR(20) PATH '$.start')) AS sections"
         . " WHERE sections.start IS NOT NULL AND sections.start <> '')";
 
+    // Blocks of the chord map that can have a start time ("back to the start" markers cannot).
+    private const BLOCK_COUNT = "(SELECT COUNT(*) FROM JSON_TABLE(songs.structure, '$[*]' COLUMNS (jump VARCHAR(20) PATH '$.jump')) AS blocks"
+        . " WHERE blocks.jump IS NULL OR blocks.jump <> 'start')";
+
     // Sort options (request value => SQL expressions, all in the chosen direction; fixed values, never user input).
     public const SORTS = [
         'title'    => ['title'],
@@ -21,7 +25,7 @@ class ListSongsService
         'key'      => ['musical_key'],
         'reviewed' => ['reviewed_at'],
         // Share of blocks with a start time, then how many.
-        'times'    => [self::TIMED_COUNT . ' / NULLIF(JSON_LENGTH(structure), 0)', self::TIMED_COUNT],
+        'times'    => [self::TIMED_COUNT . ' / NULLIF(' . self::BLOCK_COUNT . ', 0)', self::TIMED_COUNT],
         'youtube'  => ["(youtube_url IS NOT NULL AND youtube_url <> '')"],
         'lessons'  => ['COALESCE(JSON_LENGTH(video_lesson), 0)'],
         'updated'  => ['updated_at'],

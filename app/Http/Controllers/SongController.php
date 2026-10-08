@@ -7,6 +7,7 @@ use App\Enums\SongInstrument;
 use App\Http\Requests\ListSongsRequest;
 use App\Http\Requests\SongRequest;
 use App\Models\Song;
+use App\Services\FindSongBySourceService;
 use App\Services\GetSongOverviewService;
 use App\Services\ListSongsService;
 use App\Services\SaveSongService;
@@ -23,12 +24,13 @@ class SongController extends Controller
         return view('songs.index', compact('songs', 'filters'));
     }
 
-    public function create(): View
+    public function create(FindSongBySourceService $sources): View
     {
         $song = new Song();
         $instrumentOptions = SongInstrument::options();
         $keyOptions = MusicalKey::options();
-        return view('songs.create', compact('song', 'instrumentOptions', 'keyOptions'));
+        $existingSources = $sources->all();
+        return view('songs.create', compact('song', 'instrumentOptions', 'keyOptions', 'existingSources'));
     }
 
     public function store(SongRequest $request, SaveSongService $service): RedirectResponse
@@ -51,11 +53,12 @@ class SongController extends Controller
         return view('songs.show', compact('song', 'instrumentOptions', 'overview'));
     }
 
-    public function edit(Song $song): View
+    public function edit(Song $song, FindSongBySourceService $sources): View
     {
         $instrumentOptions = SongInstrument::options();
         $keyOptions = MusicalKey::options();
-        return view('songs.edit', compact('song', 'instrumentOptions', 'keyOptions'));
+        $existingSources = $sources->all($song->id);
+        return view('songs.edit', compact('song', 'instrumentOptions', 'keyOptions', 'existingSources'));
     }
 
     public function update(SongRequest $request, Song $song, SaveSongService $service): RedirectResponse

@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Song;
 use App\Services\BuildStructureFromChordSheetService;
 use App\Services\UpdateSongLayoutService;
 use Illuminate\Foundation\Http\FormRequest;
@@ -25,9 +24,8 @@ class SongLayoutRequest extends FormRequest
     }
 
     /**
-     * The layout page moves line breaks and block boundaries and removes blocks: the chords, in order, must be
-     * those of the current chord map, or of the chord sheet when the map was built again from it, with at most some
-     * of them removed. A chord sheet sent along must have exactly the map's chords and come from the current one.
+     * The layout page moves line breaks and block boundaries, removes, repeats and edits blocks and chords: each
+     * chord must be a chord name, and a chord sheet sent along must have exactly the map's chords.
      */
     public function after(): array
     {
@@ -47,16 +45,10 @@ class SongLayoutRequest extends FormRequest
                     return;
                 }
 
-                /** @var Song $song */
-                $song = $this->route('song');
-                $current = json_decode(json_encode(is_array($song->structure) ? $song->structure : []), true) ?? [];
-
                 $chords = UpdateSongLayoutService::chordSequence($blocks);
-                $sheetChords = self::sheetChords($song->chord_sheet['sections'] ?? []);
-
-                if (! UpdateSongLayoutService::isSubsequence($chords, UpdateSongLayoutService::chordSequence($current))
-                    && ! UpdateSongLayoutService::isSubsequence($chords, $sheetChords)) {
-                    $validator->errors()->add('structure', __('The chords of the song changed meanwhile. Reload the page and try again.'));
+                $invalid = collect($chords)->first(fn (string $chord) => trim($chord) === '' || preg_match('/[\s\[\]|]/u', $chord));
+                if ($invalid !== null) {
+                    $validator->errors()->add('structure', __('The layout is invalid.'));
                     return;
                 }
 
@@ -67,7 +59,7 @@ class SongLayoutRequest extends FormRequest
                             && collect($section['lines'])->every(fn ($line) => is_string($line)),
                     );
 
-                    if (! $validSheet || self::sheetChords($sections) !== $chords || ! UpdateSongLayoutService::isSubsequence($chords, $sheetChords)) {
+                    if (! $validSheet || self::sheetChords($sections) !== $chords) {
                         $validator->errors()->add('structure', __('The chords of the song changed meanwhile. Reload the page and try again.'));
                     }
                 }

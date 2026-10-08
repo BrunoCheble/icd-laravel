@@ -47,6 +47,8 @@
         .layout-chord:not(:disabled):hover::before { content: ''; position: absolute; left: -.25rem; top: .15rem; bottom: .15rem; width: 3px; border-radius: 2px; background: #4f46e5; }
         /* Passing chords: dotted underline (here and wherever the map is shown) */
         .layout-chord.is-passing, .sheet-chord.is-passing > span:last-child { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .25em; }
+        /* Phones: play without its time, so the toolbar fits in one line */
+        @media (max-width: 639px) { .layout-page .ws-play .ws-time { display: none; } }
         .layout-empty { font-size: .85rem; color: #9ca3af; }
         .layout-lyrics { margin-top: .5rem; }
         .layout-lyrics textarea { width: 100%; font-size: .85rem; line-height: 1.4; }
@@ -55,6 +57,10 @@
 
         /* Chord sheet: each chord over the lyric it starts on; clicking a chord acts on the map. */
         .sheet-section + .sheet-section { margin-top: 1.25rem; }
+        /* "Back to the start" marker */
+        .layout-block.is-return { display: flex; align-items: center; gap: .4rem; padding: .4rem .75rem; border-style: dashed; background: #f9fafb; }
+        .return-name { font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
+        .sheet-return { padding: .25rem .5rem; border-left: 3px dashed #9ca3af; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
         .sheet-label { font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
         .sheet-line { display: flex; flex-wrap: wrap; align-items: flex-start; margin-top: 1.35rem; font-size: .95rem; line-height: 1.3; }
         /* A line belongs to a block of the map: clicking it (not a chord) highlights both. */
@@ -94,7 +100,7 @@
                             <span class="ml-2 text-sm font-semibold" style="color: #15803d;"><i class="fa-solid fa-check"></i> {{ __('Reviewed on :date', ['date' => $song->reviewed_at->format('d/m/Y')]) }}</span>
                         @endif
                     </h1>
-                    <p class="mt-2 text-sm text-gray-700">{{ __('Choose where the chord map breaks lines and blocks. The lines are shown as in the public page; the chords themselves do not change here.') }}</p>
+                    <p class="mt-2 text-sm text-gray-700">{{ __('Choose where the chord map breaks lines and blocks, and fix its chords. The lines are shown as in the public page.') }}</p>
                 </div>
 
                 {{-- Review mark: submitted by a button of the options panel (forms cannot be nested) --}}
@@ -126,7 +132,9 @@
                                 <button type="button" :class="{ 'is-active': mode === 'line' }" @click="mode = 'line'" title="{{ __('Break line') }}"><i class="fa-solid fa-scissors"></i><span class="ws-label"> {{ __('Break line') }}</span></button>
                                 <button type="button" :class="{ 'is-active': mode === 'block' }" @click="mode = 'block'" title="{{ __('Split block') }}"><i class="fa-solid fa-layer-group"></i><span class="ws-label"> {{ __('Split block') }}</span></button>
                                 <button type="button" :class="{ 'is-active': mode === 'passing' }" @click="mode = 'passing'" title="{{ __('Passing chord') }}"><i class="fa-solid fa-water"></i><span class="ws-label"> {{ __('Passing chord') }}</span></button>
+                                <button type="button" :class="{ 'is-active': mode === 'edit' }" @click="mode = 'edit'" title="{{ __('Edit chord') }}"><i class="fa-solid fa-pen"></i><span class="ws-label"> {{ __('Edit chord') }}</span></button>
                             </span>
+                            <button type="button" class="ws-btn" @click="addReturn()" title="{{ __('Add "back to the start" after the selected block (or at the end)') }}" aria-label="{{ __('Back to the start') }}"><i class="fa-solid fa-rotate-left"></i><span class="ws-label"> {{ __('Back to the start') }}</span></button>
                             <button type="button" class="ws-btn" @click="undo()" :disabled="!history.length" title="{{ __('Undo') }}" aria-label="{{ __('Undo') }}"><i class="fa-solid fa-rotate-left"></i><span class="ws-label">{{ __('Undo') }}</span></button>
                             <span class="ws-spacer"></span>
                             @include('songs.partials.play-button', ['toggle' => 'toggleVideo()', 'time' => 'formatVideoTime(videoTime)', 'show' => 'videoId'])
@@ -134,6 +142,23 @@
                             <button type="button" class="ws-btn" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" title="{{ __('Options') }}" aria-label="{{ __('Options') }}"><i class="fa-solid fa-gear"></i></button>
                         </div>
                         <p class="ws-note ws-desktop" style="white-space: normal;" x-text="modeHelp"></p>
+
+                        {{-- Editing one chord (map and, when they match, chord sheet) --}}
+                        <x-song-options :title="__('Edit chord')" open="chordEdit">
+                            <template x-if="chordEdit"><div>
+                            <div class="ws-panel-section">
+                                <input type="text" x-ref="chordInput" x-model="chordEdit.value" class="w-full border-gray-300 rounded-md shadow-sm text-lg font-bold"
+                                    autocapitalize="off" autocomplete="off" spellcheck="false" @keydown.enter.prevent="renameChord()" :aria-label="@js(__('Chord'))">
+                                <p class="mt-1 text-sm" style="color: #dc2626;" x-show="chordEdit && chordEdit.value.trim() && !validChord(chordEdit.value)">{{ __('This is not a chord name.') }}</p>
+                                <p class="mt-1 ws-panel-help" x-show="chordEdit && chordEdit.withSheet">{{ __('The chord sheet changes too.') }}</p>
+                            </div>
+                            <div class="ws-panel-row">
+                                <button type="button" class="ws-btn ws-btn-primary" @click="renameChord()" :disabled="!validChord(chordEdit?.value)"><i class="fa-solid fa-check"></i> {{ __('Save') }}</button>
+                                <button type="button" class="ws-btn" @click="insertChord()" :disabled="!validChord(chordEdit?.value)"><i class="fa-solid fa-plus"></i> {{ __('Insert after') }}</button>
+                                <button type="button" class="ws-btn" style="color: #dc2626;" @click="removeChord()"><i class="fa-solid fa-trash"></i> {{ __('Remove') }}</button>
+                            </div>
+                            </div></template>
+                        </x-song-options>
 
                         <x-song-options>
                             <div class="ws-panel-section" x-show="hasSheet">
@@ -158,7 +183,7 @@
                             @include('songs.partials.video-options')
                             <div class="ws-panel-section">
                                 <div class="ws-panel-label"><i class="fa-solid fa-circle-info"></i> {{ __('How it works') }}</div>
-                                <p class="ws-panel-help">{{ __('Choose where the chord map breaks lines and blocks. The lines are shown as in the public page; the chords themselves do not change here.') }}</p>
+                                <p class="ws-panel-help">{{ __('Choose where the chord map breaks lines and blocks, and fix its chords. The lines are shown as in the public page.') }}</p>
                                 <p class="ws-panel-help mt-2" x-text="modeHelp"></p>
                             </div>
                         </x-song-options>
@@ -182,7 +207,8 @@
                                 <div x-show="sheetMatches">
                                     <template x-for="(section, s) in sheetSections" :key="s">
                                         <div class="sheet-section">
-                                            <div class="sheet-label" x-text="section.label" @click="selectFromSheet(section.lines[0], $event)"
+                                            <div class="sheet-return" x-show="section.jump"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</div>
+                                            <div class="sheet-label" x-show="!section.jump" x-text="section.label" @click="selectFromSheet(section.lines[0], $event)"
                                                 :class="{ 'is-selected': selected !== null && lineBlockId(section.lines[0]) === selected, 'is-playing': playingBlockId !== null && lineBlockId(section.lines[0]) === playingBlockId }"></div>
                                             <template x-for="(line, l) in section.lines" :key="l">
                                                 <div :class="(line.comment !== undefined ? 'sheet-comment' : 'sheet-line') + (line.onlyChords ? ' only-chords' : '') + (selected !== null && lineBlockId(line) === selected ? ' is-selected' : '') + (playingBlockId !== null && lineBlockId(line) === playingBlockId ? ' is-playing' : '')"
@@ -214,7 +240,18 @@
                             {{-- Chord map, as the public page shows it --}}
                             <div class="layout-map space-y-3">
                                 <template x-for="(block, b) in blocks" :key="`${block.id}:${revision}`">
-                                    <div class="layout-block" :style="typeStyle(block.section)" :class="{ 'is-selected': selected === block.id, 'is-playing': playingBlockId === block.id }" :data-block-card="block.id" @click="selectFromMap(block, $event)">
+                                    <div class="layout-block" :style="typeStyle(block.section)" :class="{ 'is-selected': selected === block.id, 'is-playing': playingBlockId === block.id, 'is-return': isReturn(block) }" :data-block-card="block.id" @click="selectFromMap(block, $event)">
+                                        <template x-if="isReturn(block)">
+                                            <div class="flex items-center gap-1" style="flex: 1;">
+                                                <span class="return-name" style="flex: 1;"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</span>
+                                                <button type="button" class="layout-btn" :disabled="b === 0" @click="moveBlock(b, -1)"
+                                                    :title="@js(__('Move up'))" :aria-label="@js(__('Move up'))"><i class="fa-solid fa-arrow-up"></i></button>
+                                                <button type="button" class="layout-btn" :disabled="b === blocks.length - 1" @click="moveBlock(b, 1)"
+                                                    :title="@js(__('Move down'))" :aria-label="@js(__('Move down'))"><i class="fa-solid fa-arrow-down"></i></button>
+                                                <button type="button" class="layout-btn" style="color: #dc2626;" @click="removeBlock(b)" :title="@js(__('Remove'))" :aria-label="@js(__('Remove'))"><i class="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </template>
+                                        <template x-if="!isReturn(block)"><div>
                                         <div class="layout-block-head">
                                             <input type="text" class="layout-name border-gray-300 rounded-md shadow-sm" x-model="block.section" required
                                                 list="block-names" :aria-label="@js(__('Block name'))">
@@ -226,10 +263,17 @@
                                                 @click="suggest(b)" :title="@js(__('Use the suggested name'))">
                                                 <i class="fa-solid fa-wand-magic-sparkles"></i> <span x-text="suggestedNames[b]"></span>
                                             </button>
-                                            <span class="layout-tag" x-text="block.breaks ? @js(__('Lines set by hand')) : @js(__('Automatic lines'))"></span>
+                                            <span class="layout-tag" x-show="block.breaks">{{ __('Lines set by hand') }}</span>
                                             <button type="button" class="layout-link" x-show="block.breaks" @click="automatic(b)">{{ __('Back to automatic') }}</button>
                                             <span style="flex: 1"></span>
-                                            <button type="button" class="layout-btn" x-show="b > 0" @click="mergeWithPrevious(b)"><i class="fa-solid fa-arrow-up"></i> {{ __('Join to the block above') }}</button>
+                                            <button type="button" class="layout-btn" @click="duplicateBlock(b)"
+                                                :title="@js(__('Duplicate block'))" :aria-label="@js(__('Duplicate block'))"><i class="fa-solid fa-clone"></i></button>
+                                            <button type="button" class="layout-btn" :disabled="b === 0" @click="moveBlock(b, -1)"
+                                                :title="@js(__('Move up'))" :aria-label="@js(__('Move up'))"><i class="fa-solid fa-arrow-up"></i></button>
+                                            <button type="button" class="layout-btn" :disabled="b === blocks.length - 1" @click="moveBlock(b, 1)"
+                                                :title="@js(__('Move down'))" :aria-label="@js(__('Move down'))"><i class="fa-solid fa-arrow-down"></i></button>
+                                            <button type="button" class="layout-btn" x-show="b > 0 && !isReturn(blocks[b - 1])" @click="mergeWithPrevious(b)"
+                                                :title="@js(__('Join to the block above'))" :aria-label="@js(__('Join to the block above'))"><i class="fa-solid fa-object-group"></i></button>
                                             <button type="button" class="layout-btn" style="color: #dc2626;" @click="removeBlock(b)" :title="@js(__('Remove block'))" :aria-label="@js(__('Remove block'))"><i class="fa-solid fa-trash"></i></button>
                                         </div>
 
@@ -251,8 +295,10 @@
                                             <button type="button" class="layout-link" @click="block.showLyrics = !block.showLyrics"
                                                 x-text="(block.showLyrics ? @js(__('Hide lyrics')) : @js(__('Show lyrics'))) + (block.lyrics.trim() ? '' : ' (' + @js(__('empty')) + ')')"></button>
                                             <textarea x-show="block.showLyrics" rows="4" class="mt-1 border-gray-300 rounded-md shadow-sm" x-model="block.lyrics"
+                                                @focus="lyricsBefore = block.lyrics" @change="changeLyrics(block, lyricsBefore); lyricsBefore = block.lyrics"
                                                 :aria-label="@js(__('Lyrics'))"></textarea>
                                         </div>
+                                        </div></template>
                                     </div>
                                 </template>
                                 <p class="text-sm text-gray-500" x-show="!blocks.length">{{ __('No structure available for this song.') }}</p>
@@ -405,6 +451,17 @@
                 });
             };
 
+            // Chord sheet with chord number `g` (counted over the whole sheet, notes left out) replaced by what
+            // `replace(name)` returns: "[New]" to rename it, "" to remove it, "[Old][New]" to add one after it.
+            const editSheetChord = (sheet, g, replace) => {
+                let number = 0;
+                return sheet.map(section => ({
+                    ...section,
+                    lines: (section.lines || []).map(line => isDirective(line) ? line
+                        : String(line ?? '').replace(/\[([^\]]+)\]/g, (match, name) => (number++ === g ? replace(name) : match))),
+                }));
+            };
+
             const removeFromSheet = (sheet, start, end) => {
                 const inRange = (n) => n >= start && n < end;
                 let chordNumber = 0;
@@ -434,6 +491,152 @@
                 }).filter(section => section.lines.some(line => !isDirective(line) && String(line).trim() !== ''));
             };
 
+            // A chord sheet line with another lyric: each chord stays over the same part of the text (the text before
+            // and after what changed keeps its chords; chords inside the changed part are spread over the new text).
+            const relyricLine = (line, lyric) => {
+                const marks = [];
+                let removed = 0;
+                for (const match of line.matchAll(/\[([^\]]+)\]/g)) {
+                    marks.push({ chord: match[0], at: match.index - removed });
+                    removed += match[0].length;
+                }
+                const old = line.replace(/\[[^\]]+\]/g, '');
+                const text = old.match(/^\s*/)[0] + lyric.trim() + old.match(/\s*$/)[0];
+                let prefix = 0;
+                while (prefix < old.length && prefix < text.length && old[prefix] === text[prefix]) prefix++;
+                let suffix = 0;
+                while (suffix < old.length - prefix && suffix < text.length - prefix && old[old.length - 1 - suffix] === text[text.length - 1 - suffix]) suffix++;
+                const oldMiddle = old.length - prefix - suffix;
+                const newMiddle = text.length - prefix - suffix;
+                const moved = marks.map(mark => ({
+                    chord: mark.chord,
+                    at: mark.at <= prefix ? mark.at
+                        : mark.at >= old.length - suffix ? mark.at + text.length - old.length
+                        : prefix + Math.round((mark.at - prefix) * newMiddle / Math.max(oldMiddle, 1)),
+                }));
+                let result = '';
+                let last = 0;
+                moved.forEach(mark => {
+                    const at = Math.min(Math.max(mark.at, last), text.length);
+                    result += text.slice(last, at) + mark.chord;
+                    last = at;
+                });
+                return result + text.slice(last);
+            };
+
+            // Changes [old, new] between two lists of lyric lines: { kind: 'same' | 'remove' | 'add' | 'change', from, to }
+            // (`from` an index in the old list, `to` in the new one); removed and added lines next to each other are
+            // changed lines.
+            const lyricChanges = (before, after) => {
+                const lcs = before.map(() => after.map(() => 0));
+                const at = (i, j) => (i < before.length && j < after.length ? lcs[i][j] : 0);
+                for (let i = before.length - 1; i >= 0; i--) {
+                    for (let j = after.length - 1; j >= 0; j--) {
+                        lcs[i][j] = before[i] === after[j] ? at(i + 1, j + 1) + 1 : Math.max(at(i + 1, j), at(i, j + 1));
+                    }
+                }
+                const changes = [];
+                let removed = [];
+                let added = [];
+                const flush = () => {
+                    removed.forEach((from, k) => changes.push(k < added.length ? { kind: 'change', from, to: added[k] } : { kind: 'remove', from }));
+                    added.slice(removed.length).forEach(to => changes.push({ kind: 'add', from: removed.length ? removed[removed.length - 1] : null, to }));
+                    removed = [];
+                    added = [];
+                };
+                let i = 0;
+                let j = 0;
+                while (i < before.length || j < after.length) {
+                    if (i < before.length && j < after.length && before[i] === after[j]) {
+                        flush();
+                        changes.push({ kind: 'same', from: i, to: j });
+                        i++;
+                        j++;
+                    } else if (j >= after.length || (i < before.length && at(i + 1, j) >= at(i, j + 1))) {
+                        removed.push(i++);
+                    } else {
+                        added.push(j++);
+                    }
+                }
+                flush();
+                // Added lines with no removed line before them go after the last unchanged line.
+                let previous = null;
+                return changes.map(change => {
+                    if (change.kind === 'add' && change.from === null) change.from = previous;
+                    if (change.kind !== 'add') previous = change.from;
+                    return change;
+                });
+            };
+
+            // Chord sheet with the lyrics of the block of chords [start, end) changed from `before` to `after` (texts
+            // with one lyric line per line): changed lines keep their chords, removed lines keep only their chords (or
+            // go, without chords), added lines come after the line before them. Each old line is looked for, in order,
+            // among the block's lyric lines of the chord sheet; `missed` counts the changes that found no place.
+            const editSheetLyrics = (sheet, start, end, before, after) => {
+                const lines = (text) => String(text).split('\n').map(lyricText).filter(hasLyric);
+                const oldLines = lines(before);
+                const newLines = String(after).split('\n').map(line => line.trim()).filter(line => hasLyric(lyricText(line)));
+
+                // The block's lines in the chord sheet, as "section:line" keys.
+                let chordNumber = 0;
+                let lastChord = -1;
+                const inBlock = [];
+                sheet.forEach((section, s) => (section.lines || []).forEach((line, i) => {
+                    const text = String(line ?? '');
+                    if (isDirective(text)) return;
+                    const count = [...text.matchAll(/\[([^\]]+)\]/g)].length;
+                    const at = count ? chordNumber : lastChord + 0.5;
+                    if (at > start - 1 && at < end) inBlock.push({ key: `${s}:${i}`, count, lyric: lyricText(text.replace(/\[[^\]]+\]/g, '')) });
+                    chordNumber += count;
+                    if (count) lastChord = chordNumber - 1;
+                }));
+                const lyricLines = inBlock.filter(line => hasLyric(line.lyric));
+                let pointer = 0;
+                const placeOf = oldLines.map(text => {
+                    const index = lyricLines.findIndex((line, k) => k >= pointer && line.lyric === text);
+                    if (index === -1) return null;
+                    pointer = index + 1;
+                    return lyricLines[index];
+                });
+                // A line added before every old line goes after the block's chord lines before its first lyric line,
+                // or, when the block has no lyrics yet, after its last line.
+                const firstLyric = inBlock.indexOf(placeOf.find(Boolean) ?? lyricLines[0]);
+                const top = firstLyric === -1 ? inBlock[inBlock.length - 1] : (firstLyric > 0 ? inBlock[firstLyric - 1] : null);
+
+                const replaced = {};
+                const removed = new Set();
+                const added = {};
+                let missed = 0;
+                lyricChanges(oldLines, newLines.map(lyricText)).forEach(change => {
+                    if (change.kind === 'same') return;
+                    if (change.kind === 'add') {
+                        const place = change.from === null ? top : placeOf[change.from];
+                        if (!place) return missed++;
+                        (added[place.key] ??= []).push(newLines[change.to]);
+                        return;
+                    }
+                    const place = placeOf[change.from];
+                    if (!place) return missed++;
+                    if (change.kind === 'change') replaced[place.key] = newLines[change.to];
+                    else if (place.count) replaced[place.key] = null;
+                    else removed.add(place.key);
+                });
+
+                const edited = sheet.map((section, s) => ({
+                    ...section,
+                    lines: (section.lines || []).flatMap((line, i) => {
+                        const key = `${s}:${i}`;
+                        const text = String(line ?? '');
+                        const result = removed.has(key) ? []
+                            : !(key in replaced) ? [line]
+                            : replaced[key] === null ? [(text.match(/\[[^\]]+\]/g) || []).join(' ')]
+                            : [relyricLine(text, replaced[key])];
+                        return [...result, ...(added[key] ?? [])];
+                    }),
+                })).filter(section => section.lines.length);
+                return { sheet: edited, missed };
+            };
+
             // Lines and colors of the whole map, recalculated only when the map changes.
             let mapCache = { key: null, value: null };
 
@@ -456,11 +659,13 @@
                 building: false,
                 message: '',
                 // Usual block names, offered while typing a name.
-                commonNames: ['INTRO', 'VERSE', 'FIRST PART', 'SECOND PART', 'THIRD PART', 'PRE CHORUS', 'CHORUS', 'BRIDGE',
-                    'INTERLUDE', 'SOLO', 'RIFF', 'TAG', 'FINAL', 'OUTRO'],
+                commonNames: ['INTRO', 'PRIMEIRA PARTE', 'SEGUNDA PARTE', 'PRÉ-REFRÃO', 'REFRÃO', 'PONTE', 'INTERLÚDIO', 'SOLO', 'RIFF', 'FINAL',
+                    'VERSE', 'FIRST PART', 'SECOND PART', 'PRE CHORUS', 'CHORUS', 'BRIDGE', 'INTERLUDE', 'TAG', 'OUTRO'],
                 // Block highlighted in the map and in the chord sheet (its id).
                 selected: null,
                 optionsOpen: false,
+                // Lyrics of the block being typed, as they were when the field got focus.
+                lyricsBefore: '',
                 // Narrow screens: the chord sheet or the map.
                 pane: 'sheet',
 
@@ -509,7 +714,20 @@
 
                 // The chord sheet as it will be saved: following the map's blocks when both have the same chords.
                 get syncedSheet() { return this.sheetMatches ? sheetByBlocks(this.sheet, this.blocks) : this.sheet; },
-                get sheetSections() { return parsedSheet(this.syncedSheet).sections; },
+                // Sections shown, with the "back to the start" markers after the blocks before them.
+                get sheetSections() {
+                    const sections = parsedSheet(this.syncedSheet).sections;
+                    if (!this.sheetMatches) return sections;
+                    const markers = this.blocks.map((block, b) => (this.isReturn(block) ? b : null)).filter(b => b !== null);
+                    const result = [];
+                    sections.forEach(section => {
+                        const b = this.mapInfo.info[section.lines[0]?.ref]?.b ?? -1;
+                        while (markers.length && markers[0] < b) result.push({ jump: 'start', label: '', lines: [], marker: markers.shift() });
+                        result.push(section);
+                    });
+                    markers.forEach(() => result.push({ jump: 'start', label: '', lines: [] }));
+                    return result;
+                },
                 get sheetMatches() {
                     return this.hasSheet && JSON.stringify(this.blocks.flatMap(block => block.chords)) === JSON.stringify(parsedSheet(this.sheet).sequence);
                 },
@@ -562,6 +780,7 @@
 
                 get modeHelp() {
                     return {
+                        edit: @js(__('Click a chord to rename it, add a chord after it or remove it.')),
                         line: @js(__('Click a chord to start a new line on it; click the first chord of a line to join it to the line above.')),
                         block: @js(__('Click a chord to start a new block on it; click the first chord of a block to join it to the block above.')),
                         passing: @js(__('Click a chord to mark it as a passing chord (underlined); click it again to unmark it. Passing chords do not count when looking for repetitions.')),
@@ -572,16 +791,18 @@
                 // can be marked as passing).
                 canClick(b, position) {
                     if (b === undefined) return false;
-                    return position > 0 || this.mode === 'passing' || (this.mode === 'block' && b > 0);
+                    return position > 0 || this.mode === 'passing' || this.mode === 'edit' || (this.mode === 'block' && b > 0 && !this.isReturn(this.blocks[b - 1]));
                 },
                 chordTitle(b, position, isLineStart) {
                     if (!this.canClick(b, position)) return '';
                     if (this.mode === 'passing') return this.isPassing(this.blocks[b], position) ? @js(__('Not a passing chord')) : @js(__('Mark as passing chord'));
+                    if (this.mode === 'edit') return @js(__('Edit chord'));
                     if (this.mode === 'block') return position === 0 ? @js(__('Join to the block above')) : @js(__('Start a new block here'));
                     return isLineStart ? @js(__('Join to the line above')) : @js(__('Start a new line here'));
                 },
                 clickPosition(b, position) {
                     if (!this.canClick(b, position)) return;
+                    if (this.mode === 'edit') return this.openChordEdit(b, position);
                     if (this.mode === 'passing') {
                         this.remember();
                         const block = this.blocks[b];
@@ -696,33 +917,62 @@
                         ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
                 },
 
-                // Names by how the lyrics repeat (same rules as the chord sheet import): the most repeated lyrics are
-                // the chorus; repeated lyrics always right before the chorus, the pre-chorus; other repeated lyrics first
-                // heard after the chorus, the bridge; other lyrics are parts in order (same lyrics, same name); blocks
-                // without lyrics are intro (first), final (last) or interlude.
+                // Names that follow the ones already given: a block with the same content (lyrics, or chords when it
+                // has no lyrics) as an earlier block gets that block's name; a block keeps its own name unless the block
+                // right before it has that name with different content (a block just split). Only those get an automatic name,
+                // in the language of the song's names: the most repeated lyrics are the chorus; repeated lyrics always
+                // right before it, the pre-chorus; other repeated lyrics first heard after it, the bridge; other lyrics,
+                // parts in order; no lyrics: intro (first), final (last) or interlude.
                 get suggestedNames() {
-                    const keys = this.blocks.map(block => lyricText(block.lyrics).toLowerCase());
+                    const all = this.blocks;
+                    const blocks = all.filter(block => !this.isReturn(block));
+                    const nameKey = (name) => String(name ?? '').trim().toUpperCase();
+                    const plain = (name) => String(name ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                    const portuguese = blocks.some(block => /refrao|parte|ponte|estrofe|verso|interludio|primeira|segunda|terceira/.test(plain(block.section)));
+                    const words = portuguese
+                        ? { intro: 'INTRO', final: 'FINAL', interlude: 'INTERLÚDIO', chorus: 'REFRÃO', prechorus: 'PRÉ-REFRÃO', bridge: 'PONTE',
+                            parts: ['PRIMEIRA PARTE', 'SEGUNDA PARTE', 'TERCEIRA PARTE'], part: n => `PARTE ${n}` }
+                        : { intro: 'INTRO', final: 'FINAL', interlude: 'INTERLUDE', chorus: 'CHORUS', prechorus: 'PRE CHORUS', bridge: 'BRIDGE',
+                            parts: ['FIRST PART', 'SECOND PART', 'THIRD PART'], part: n => `PART ${n}` };
+
+                    // Automatic names by how the lyrics repeat.
+                    const lyrics = blocks.map(block => lyricText(block.lyrics).toLowerCase());
                     const counts = {};
-                    keys.filter(Boolean).forEach(key => counts[key] = (counts[key] ?? 0) + 1);
+                    lyrics.filter(Boolean).forEach(key => counts[key] = (counts[key] ?? 0) + 1);
                     const repeated = Object.keys(counts).filter(key => counts[key] > 1).sort((a, b) => counts[b] - counts[a]);
                     const chorus = repeated[0] ?? null;
-                    const firstChorus = chorus === null ? -1 : keys.indexOf(chorus);
+                    const firstChorus = chorus === null ? -1 : lyrics.indexOf(chorus);
                     const preChorus = repeated.find(key => key !== chorus
-                        && keys.every((item, i) => item !== key || keys[i + 1] === chorus)) ?? null;
-                    const bridge = repeated.find(key => key !== chorus && key !== preChorus && keys.indexOf(key) > firstChorus) ?? null;
-                    const partNames = ['FIRST PART', 'SECOND PART', 'THIRD PART'];
+                        && lyrics.every((item, i) => item !== key || lyrics[i + 1] === chorus)) ?? null;
+                    const bridge = repeated.find(key => key !== chorus && key !== preChorus && lyrics.indexOf(key) > firstChorus) ?? null;
                     const parts = [];
-                    const last = this.blocks.length - 1;
-
-                    return keys.map((key, i) => {
-                        if (key === '') return i === 0 ? 'INTRO' : (i === last ? 'FINAL' : 'INTERLUDE');
-                        if (key === chorus) return 'CHORUS';
-                        if (key === preChorus) return 'PRE CHORUS';
-                        if (key === bridge) return 'BRIDGE';
+                    const last = blocks.length - 1;
+                    const automatic = lyrics.map((key, i) => {
+                        if (key === '') return i === 0 ? words.intro : (i === last ? words.final : words.interlude);
+                        if (key === chorus) return words.chorus;
+                        if (key === preChorus) return words.prechorus;
+                        if (key === bridge) return words.bridge;
                         if (!parts.includes(key)) parts.push(key);
                         const n = parts.indexOf(key);
-                        return partNames[n] ?? `PART ${n + 1}`;
+                        return words.parts[n] ?? words.part(n + 1);
                     });
+
+                    const contents = blocks.map((block, i) => lyrics[i] ? 'l:' + lyrics[i] : (block.chords.length ? 'c:' + block.chords.join(' ') : ''));
+                    const result = [];
+                    blocks.forEach((block, i) => {
+                        const content = contents[i];
+                        const first = content ? contents.indexOf(content) : -1;
+                        if (first !== -1 && first < i) {
+                            result.push(result[first]);
+                            return;
+                        }
+                        // A name repeated right after a block with different content (a block just split in two).
+                        const own = String(block.section ?? '').trim();
+                        const taken = own && i > 0 && nameKey(blocks[i - 1].section) === nameKey(own) && contents[i - 1] !== content;
+                        result.push(!own || taken ? automatic[i] : own);
+                    });
+                    let next = 0;
+                    return all.map(block => (this.isReturn(block) ? block.section : result[next++]));
                 },
                 get hasSuggestions() { return this.suggestedNames.some((name, i) => name !== this.blocks[i].section); },
                 suggest(b) {
@@ -735,9 +985,121 @@
                     this.blocks.forEach((block, i) => block.section = names[i]);
                 },
 
+                // ---- Editing a chord: rename, add one after it, remove it ----
+                // When the map and the chord sheet have the same chords, the chord sheet changes in the same place.
+                chordEdit: false,
+                validChord(name) {
+                    const text = String(name ?? '').trim();
+                    return text !== '' && !/[\s\[\]|]/.test(text) && ChordTransposer.chordFamily(text) !== null;
+                },
+                openChordEdit(b, position) {
+                    const g = this.blocks.slice(0, b).reduce((total, item) => total + item.chords.length, 0) + position;
+                    this.chordEdit = { b, position, g, value: this.blocks[b].chords[position], withSheet: this.sheetMatches };
+                    this.$nextTick(() => this.$refs.chordInput?.select());
+                },
+                // Positions after `position` move by `delta` (line breaks and passing chords follow their chords).
+                shiftMarks(block, position, delta) {
+                    const shift = (list) => list.map(p => p > position ? p + delta : p);
+                    if (block.breaks) block.breaks = normalize(shift(block.breaks), block.chords.length);
+                    block.passing = shift(block.passing || []).filter(p => p >= 0 && p < block.chords.length);
+                },
+                renameChord() {
+                    const edit = this.chordEdit;
+                    const name = String(edit?.value ?? '').trim();
+                    if (!this.validChord(name)) return;
+                    this.remember();
+                    this.blocks[edit.b].chords[edit.position] = name;
+                    if (edit.withSheet) this.sheet = editSheetChord(this.sheet, edit.g, () => `[${name}]`);
+                    this.chordEdit = false;
+                },
+                insertChord() {
+                    const edit = this.chordEdit;
+                    const name = String(edit?.value ?? '').trim();
+                    if (!this.validChord(name)) return;
+                    this.remember();
+                    const block = this.blocks[edit.b];
+                    block.chords.splice(edit.position + 1, 0, name);
+                    this.shiftMarks(block, edit.position, 1);
+                    if (edit.withSheet) this.sheet = editSheetChord(this.sheet, edit.g, (old) => `[${old}][${name}]`);
+                    this.chordEdit = false;
+                },
+                removeChord() {
+                    const edit = this.chordEdit;
+                    const block = this.blocks[edit.b];
+                    if (block.chords.length === 1) {
+                        this.message = @js(__('A block needs at least one chord: remove the block instead.'));
+                        this.chordEdit = false;
+                        return;
+                    }
+                    this.remember();
+                    block.passing = (block.passing || []).filter(p => p !== edit.position);
+                    block.chords.splice(edit.position, 1);
+                    this.shiftMarks(block, edit.position, -1);
+                    if (edit.withSheet) this.sheet = editSheetChord(this.sheet, edit.g, () => '');
+                    this.chordEdit = false;
+                },
+
+                // ---- Duplicating a block (e.g. a chorus played again), then moving it with the arrows ----
+                // Chord sheet split into the map's blocks (one section per block), or null when that is not possible.
+                // Blocks without chords (as a "back to the start" marker) have no lines: null.
+                sheetPerBlock() {
+                    if (!this.sheetMatches) return null;
+                    const sections = sheetByBlocks(this.sheet, this.blocks);
+                    if (sections.length !== this.blocks.filter(block => block.chords.length).length) return null;
+                    let next = 0;
+                    return this.blocks.map(block => (block.chords.length ? sections[next++] : null));
+                },
+                // The copy goes right below: chords, lines, passing chords, name and lyrics (not the start time) and, when
+                // the chord sheet has the same chords as the map, the chord sheet lines of the block too.
+                duplicateBlock(b) {
+                    const block = this.blocks[b];
+                    const sheet = this.sheetPerBlock();
+                    this.remember();
+                    if (sheet) {
+                        sheet.splice(b + 1, 0, JSON.parse(JSON.stringify(sheet[b])));
+                        this.sheet = sheet.filter(Boolean);
+                    }
+                    this.blocks.splice(b + 1, 0, {
+                        id: nextId++,
+                        data: { anchor: block.data?.anchor ?? null },
+                        section: block.section,
+                        chords: [...block.chords],
+                        breaks: block.breaks ? [...block.breaks] : null,
+                        passing: [...(block.passing || [])],
+                        lyrics: block.lyrics,
+                        showLyrics: false,
+                    });
+                    this.revision++;
+                    this.message = sheet || !this.hasSheet ? @js(__('Block duplicated below: move it with the arrows.'))
+                        : @js(__('Block duplicated in the map only: the chord sheet did not change.'));
+                },
+
+                // Moves a block up (-1) or down (1), with its chord sheet lines when map and chord sheet match block by block.
+                moveBlock(b, delta) {
+                    const to = b + delta;
+                    if (to < 0 || to >= this.blocks.length) return;
+                    const sheet = this.sheetPerBlock();
+                    this.remember();
+                    if (sheet) {
+                        [sheet[b], sheet[to]] = [sheet[to], sheet[b]];
+                        this.sheet = sheet.filter(Boolean);
+                    }
+                    [this.blocks[b], this.blocks[to]] = [this.blocks[to], this.blocks[b]];
+                    this.revision++;
+                    this.message = sheet || !this.hasSheet ? '' : @js(__('Block moved in the map only: the chord sheet did not change.'));
+                    const id = this.blocks[to].id;
+                    this.$nextTick(() => document.querySelector(`[data-block-card="${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+                },
+
                 // Removes the block from the map and, when the chord sheet has the same chords, its part of the chord sheet.
                 removeBlock(b) {
                     const block = this.blocks[b];
+                    if (this.isReturn(block)) {
+                        this.remember();
+                        this.blocks.splice(b, 1);
+                        this.revision++;
+                        return;
+                    }
                     const withSheet = this.sheetMatches && block.chords.length > 0;
                     const question = withSheet
                         ? @js(__('Remove the block ":name" from the map and the chord sheet?'))
@@ -752,8 +1114,46 @@
                     this.blocks.splice(b, 1);
                     this.revision++;
                 },
+                // "Back to the start": a block without chords marking that the song goes back to its first block.
+                isReturn(block) { return block?.data?.jump === 'start'; },
+                addReturn() {
+                    const selected = this.blocks.findIndex(block => block.id === this.selected);
+                    const at = selected === -1 ? this.blocks.length : selected + 1;
+                    this.remember();
+                    const marker = toBlock({ section: @js(mb_strtoupper(__('Back to the start'))), jump: 'start', chords: [] });
+                    this.blocks.splice(at, 0, marker);
+                    this.revision++;
+                    this.$nextTick(() => document.querySelector(`[data-block-card="${marker.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+                },
+                // Lyrics typed in a block (applied when the field loses focus): the block's lines of the chord sheet
+                // get the same lyrics, with their chords, when the chord sheet has the same chords as the map. An anchor
+                // that was the first lyric line follows it.
+                changeLyrics(block, before) {
+                    const after = block.lyrics;
+                    if (after === before) return;
+                    block.lyrics = before;
+                    this.remember();
+                    block.lyrics = after;
+
+                    const firstLine = (text) => String(text).split('\n').map(lyricText).find(hasLyric) ?? null;
+                    if ((block.data?.anchor ?? null) !== null && lyricText(block.data.anchor) === firstLine(before)) {
+                        block.data = { ...block.data, anchor: firstLine(after) };
+                    }
+
+                    if (!this.hasSheet) return;
+                    if (!this.sheetMatches) {
+                        this.message = @js(__('Lyrics changed in the map only: the chord sheet has other chords.'));
+                        return;
+                    }
+                    const b = this.blocks.indexOf(block);
+                    const start = this.blocks.slice(0, b).reduce((total, item) => total + item.chords.length, 0);
+                    const { sheet, missed } = editSheetLyrics(this.sheet, start, start + block.chords.length, before, after);
+                    this.sheet = sheet;
+                    this.message = missed ? @js(__('Some lyric lines were not found in the chord sheet: change them there by hand.')) : '';
+                },
                 // The joined block keeps the lines both had, with a line break where they meet.
                 mergeWithPrevious(b) {
+                    if (this.isReturn(this.blocks[b]) || this.isReturn(this.blocks[b - 1])) return;
                     this.remember();
                     const first = this.blocks[b - 1];
                     const second = this.blocks[b];

@@ -17,7 +17,9 @@ class SongTimingController extends Controller
      */
     public function edit(Song $song): View
     {
+        // "Back to the start" markers have no time; the others keep their index in the structure.
         $sections = collect(is_array($song->structure) ? $song->structure : [])
+            ->reject(fn ($section) => Song::isReturnMarker($section))
             ->map(fn ($section, $index) => [
                 'index'  => $index,
                 'name'   => is_object($section) ? str_replace('_', ' ', (string) ($section->section ?? '')) : '',

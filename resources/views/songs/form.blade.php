@@ -55,6 +55,7 @@
         <x-input-label for="source_url" :value="__('Source')" />
         <x-text-input id="source_url" name="source_url" type="url" class="mt-1 block w-full" :value="old('source_url', $song?->source_url)" />
         <x-input-error class="mt-2" :messages="$errors->get('source_url')" />
+        <p id="source-duplicate" class="mt-2 text-sm font-semibold" style="display: none; color: #b45309;"></p>
     </div>
 
     <div x-data="{
@@ -389,5 +390,45 @@
                 .replace(':from', from).replace(':to', to)
                 .replace(':structure', inStructure ?? 0).replace(':sheet', inSheet ?? 0);
         });
+    })();
+</script>
+
+<script>
+    // Warns, while filling the form, when another song already has this chord sheet address (the server refuses to
+    // save it too). Same comparison as FindSongBySourceService: no http/https, "www.", trailing slash, "?" or "#".
+    (function () {
+        const sources = @js($existingSources ?? []);
+        const field = document.getElementById('source_url');
+        const notice = document.getElementById('source-duplicate');
+        if (!field || !notice) return;
+
+        const normalize = (url) => {
+            const text = String(url || '').trim();
+            if (!text) return '';
+            try {
+                const parsed = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : 'http://' + text);
+                return parsed.hostname.toLowerCase().replace(/^www\./, '') + parsed.pathname.toLowerCase().replace(/\/+$/, '');
+            } catch (e) {
+                return text.toLowerCase();
+            }
+        };
+
+        const check = () => {
+            const existing = sources[normalize(field.value)];
+            notice.replaceChildren();
+            notice.style.display = existing ? '' : 'none';
+            if (!existing) return;
+            notice.append(@js(__('There is already a song with this source:')) + ' "' + existing.title + '" — ');
+            const link = document.createElement('a');
+            link.href = existing.url;
+            link.textContent = @js(__('Open the existing song'));
+            link.style.textDecoration = 'underline';
+            notice.append(link);
+        };
+
+        field.addEventListener('input', check);
+        // After the "Send to ICD" import has filled the fields (it runs on the same event, registered before).
+        document.addEventListener('alpine:initialized', () => setTimeout(check, 0));
+        check();
     })();
 </script>

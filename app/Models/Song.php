@@ -54,11 +54,22 @@ class Song extends Model
     }
 
     /**
+     * Whether a chord map block is a "back to the start" marker (no chords, no time; shown between blocks).
+     */
+    public static function isReturnMarker(mixed $block): bool
+    {
+        $jump = is_object($block) ? ($block->jump ?? null) : (is_array($block) ? ($block['jump'] ?? null) : null);
+
+        return $jump === 'start';
+    }
+
+    /**
      * Section times status: [sections with a start, all sections] of the chord map.
      */
     public function timedSections(): array
     {
-        $sections = collect(is_array($this->structure) ? $this->structure : [])->filter(fn ($section) => is_object($section));
+        $sections = collect(is_array($this->structure) ? $this->structure : [])
+            ->filter(fn ($section) => is_object($section) && ! self::isReturnMarker($section));
 
         return [
             $sections->filter(fn ($section) => ($section->start ?? '') !== '' && $section->start !== null)->count(),

@@ -98,6 +98,10 @@
             padding: .2rem .5rem .2rem .6rem; margin: 0 -.5rem; transition: background-color .2s, opacity .2s, box-shadow .2s;
             border-left: 3px solid var(--type-color, transparent);
         }
+        /* "Back to the start" marker of the map: only its label */
+        .sections section.is-return > :not(.return-label) { display: none; }
+        .sections section.is-return { border-left: 3px dashed var(--muted, #9ca3af); cursor: pointer; }
+        .return-label { grid-column: 1 / -1; padding: .15rem 0; font-size: calc(.8rem * var(--label-scale, 1)); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted, #6b7280); }
         .sections section.is-current { background: var(--accent-soft); box-shadow: inset 4px 0 0 var(--accent); }
         .sections section.is-next { box-shadow: inset 4px 0 0 var(--border); }
         .sections section.is-past { opacity: .4; }
@@ -215,6 +219,14 @@
             border: 0; background: rgba(0, 0, 0, .65); color: #fff; font-size: .85rem; cursor: pointer;
         }
         @media (max-width: 480px) { .yt-mini { width: 200px; } }
+        /* Handle to move the video (the YouTube frame itself takes the pointer) */
+        .yt-mini-drag {
+            position: absolute; top: .25rem; left: .25rem; z-index: 1; width: 32px; height: 28px; border-radius: 999px;
+            border: 0; background: rgba(0, 0, 0, .65); color: #fff; font-size: .85rem; cursor: grab; touch-action: none;
+        }
+        .yt-mini.is-dragging { opacity: .85; }
+        .yt-mini.is-dragging iframe { pointer-events: none; }
+        .yt-mini.is-dragging .yt-mini-drag { cursor: grabbing; }
         /* Above the blocks bar when it is shown */
         .has-jump-bar .yt-mini { bottom: calc(3.4rem + max(.75rem, env(safe-area-inset-bottom))); }
 
@@ -427,6 +439,7 @@
                         <div class="sections" :class="{ 'two-columns': settings.twoColumns }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
                             <template x-for="(section, index) in current.chord_sheet" :key="`${current.id}-${index}`">
                                 <section :class="sectionState(index)" :style="typeStyle(timedName(index))" @click="selectSection(index)">
+                                    <div class="return-label" x-show="section.jump === 'start'"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</div>
                                     <div class="section-label">
                                         <div class="section-name">
                                             <span x-text="timedName(index)"></span><span class="section-time" x-show="sectionRange(index)" x-text="sectionRange(index)"></span><span class="next-badge" x-show="index === nextSection">{{ __('next') }}</span>
@@ -455,6 +468,7 @@
                         <div class="sections" :class="{ 'two-columns': settings.twoColumns }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
                             <template x-for="(section, index) in sections" :key="`${current.id}-${index}`">
                                 <section :class="sectionState(index)" :style="typeStyle(sectionName(section))" @click="selectSection(index)">
+                                    <div class="return-label" x-show="section?.jump === 'start'"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</div>
                                     <div class="section-label">
                                         <div class="section-name">
                                             <span x-text="sectionName(section)"></span><span class="section-time" x-show="sectionRange(index)" x-text="sectionRange(index)"></span><span class="next-badge" x-show="index === nextSection">{{ __('next') }}</span><span class="edited-badge" x-show="section.edited">{{ __('edited') }}</span>
@@ -572,7 +586,10 @@
         @endif
 
         {{-- Song sound: YouTube player kept small and visible, synced with the section timer --}}
-        <div class="yt-mini" x-show="settings.youtubeSound && videoId" x-cloak>
+        <div class="yt-mini" x-ref="video" x-show="settings.youtubeSound && videoId" x-cloak :class="{ 'is-dragging': draggingVideo }" :style="videoStyle"
+            @resize.window.debounce.200ms="keepVideoInView()">
+            <button type="button" class="yt-mini-drag" @pointerdown="dragVideo($event)" @dblclick="resetVideoPosition()"
+                title="{{ __('Drag to move; double-click to put it back') }}" aria-label="{{ __('Move video') }}"><i class="fa-solid fa-grip"></i></button>
             <button type="button" class="yt-mini-close" @click="settings.youtubeSound = false" aria-label="{{ __('Turn off YouTube sound') }}" title="{{ __('Turn off YouTube sound') }}"><i class="fa-solid fa-xmark"></i></button>
             <div id="yt-sound"></div>
         </div>
@@ -615,6 +632,16 @@
 
         const loadSettings = () => readStorage(SETTINGS_KEY, DEFAULT_SETTINGS);
         const saveSettings = (settings) => writeStorage(SETTINGS_KEY, settings);
+        // Where the video was dragged to (this browser); null keeps it in its corner.
+        const VIDEO_POSITION_KEY = 'setlist-video-position';
+        const loadVideoPosition = () => {
+            try {
+                const position = JSON.parse(localStorage.getItem(VIDEO_POSITION_KEY) || 'null');
+                return position && Number.isFinite(position.x) && Number.isFinite(position.y) ? position : null;
+            } catch (e) {
+                return null;
+            }
+        };
         const loadLayout = (songId) => readStorage(LAYOUT_KEY_PREFIX + songId, DEFAULT_LAYOUT);
         const saveLayout = (songId, layout) => writeStorage(LAYOUT_KEY_PREFIX + songId, layout);
 
@@ -682,6 +709,48 @@
                 removing: null,
                 dragId: null,
                 toast: { text: '', error: false },
+                videoPosition: loadVideoPosition(),
+                draggingVideo: false,
+
+                // ---- Moving the video: bottom right by default, or where it was dragged to ----
+                get videoStyle() {
+                    const position = this.videoPosition;
+                    return position ? `left: ${position.x}px; top: ${position.y}px; right: auto; bottom: auto;` : '';
+                },
+                clampVideo(x, y) {
+                    const box = this.$refs.video.getBoundingClientRect();
+                    return {
+                        x: Math.floor(Math.min(Math.max(0, x), window.innerWidth - box.width)),
+                        y: Math.floor(Math.min(Math.max(0, y), window.innerHeight - box.height)),
+                    };
+                },
+                dragVideo(event) {
+                    event.preventDefault();
+                    const box = this.$refs.video.getBoundingClientRect();
+                    const offset = { x: event.clientX - box.left, y: event.clientY - box.top };
+                    this.draggingVideo = true;
+                    const move = (moveEvent) => {
+                        this.videoPosition = this.clampVideo(moveEvent.clientX - offset.x, moveEvent.clientY - offset.y);
+                    };
+                    const end = () => {
+                        window.removeEventListener('pointermove', move);
+                        window.removeEventListener('pointerup', end);
+                        window.removeEventListener('pointercancel', end);
+                        this.draggingVideo = false;
+                        writeStorage(VIDEO_POSITION_KEY, this.videoPosition);
+                    };
+                    window.addEventListener('pointermove', move);
+                    window.addEventListener('pointerup', end);
+                    window.addEventListener('pointercancel', end);
+                },
+                keepVideoInView() {
+                    if (!this.videoPosition || !this.$refs.video.offsetWidth) return;
+                    this.videoPosition = this.clampVideo(this.videoPosition.x, this.videoPosition.y);
+                },
+                resetVideoPosition() {
+                    this.videoPosition = null;
+                    writeStorage(VIDEO_POSITION_KEY, null);
+                },
 
                 get currentIndex() { return this.songs.findIndex(song => song.id === this.currentId); },
                 get current() { return this.songs[this.currentIndex] ?? null; },
@@ -891,8 +960,8 @@
                 // played: the first of its last run (a chorus split into consecutive parts starts at its first part).
                 get jumpTargets() {
                     const names = this.sheetMode
-                        ? (this.current?.chord_sheet || []).map((section, index) => this.timedName(index))
-                        : this.sections.map(section => this.sectionName(section));
+                        ? (this.current?.chord_sheet || []).map((section, index) => this.isReturn(index) ? '' : this.timedName(index))
+                        : this.sections.map((section, index) => this.isReturn(index) ? '' : this.sectionName(section));
                     const targets = [];
                     names.forEach((name, index) => {
                         const key = String(name).trim().toUpperCase();
@@ -985,6 +1054,7 @@
                         'is-current': index === this.currentSection,
                         'is-next': index === this.nextSection,
                         'is-past': this.currentSection !== null && index < this.currentSection,
+                        'is-return': this.isReturn(index),
                     };
                 },
                 get currentProgress() {
@@ -1067,8 +1137,15 @@
                 },
 
                 // Tapping a block marks it as the current section and re-syncs the timer to its start time.
+                // "Back to the start" marker of the map (no chords): tapping it goes to the first block.
+                isReturn(index) { return this.timedList?.[index]?.jump === 'start'; },
                 selectSection(index) {
                     if (this.editingIndex !== null) return;
+                    if (this.isReturn(index)) {
+                        const first = this.timedList.findIndex((section, i) => !this.isReturn(i));
+                        if (first === -1) return;
+                        index = first;
+                    }
                     const start = this.sectionStart(index);
                     if (start !== null) this.seek(start);
                     this.showSection(index);

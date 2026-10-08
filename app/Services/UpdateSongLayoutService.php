@@ -16,7 +16,12 @@ class UpdateSongLayoutService
     public function execute(Song $song, array $blocks, ?array $sheetSections = null): Song
     {
         if ($sheetSections !== null) {
-            $song->chord_sheet = array_merge($song->chord_sheet ?? [], ['sections' => array_values($sheetSections)]);
+            // Chords spelled E#, B#, Cb, Fb or F## get their simple name, as in the chord map below.
+            $sheetSections = array_map(fn ($section) => array_merge($section, ['lines' => array_map(
+                fn ($line) => is_string($line) && ! str_starts_with(ltrim($line), '{') ? NormalizeChordSpellingService::line($line) : $line,
+                $section['lines'] ?? [],
+            )]), array_values($sheetSections));
+            $song->chord_sheet = array_merge($song->chord_sheet ?? [], ['sections' => $sheetSections]);
         }
 
         $song->structure = array_map(function (array $block, int $index) {
@@ -24,7 +29,10 @@ class UpdateSongLayoutService
 
             $block['order'] = $index + 1;
             $block['section'] = self::sectionKey($block['section']);
-            $block['chords'] = self::cleanBreaks($block['chords']);
+            $block['chords'] = array_map(
+                fn ($chord) => $chord === self::LINE_BREAK ? $chord : NormalizeChordSpellingService::chord(trim($chord)),
+                self::cleanBreaks($block['chords']),
+            );
             // Passing chords: valid positions only (line breaks not counted); none means no key at all.
             $count = count(self::chordSequence([$block]));
             $passing = array_values(array_unique(array_filter(
@@ -61,22 +69,6 @@ class UpdateSongLayoutService
             ->reject(fn ($chord) => $chord === self::LINE_BREAK)
             ->values()
             ->all();
-    }
-
-    /**
-     * True when $part is $whole with some items removed (same order, nothing added or changed).
-     */
-    public static function isSubsequence(array $part, array $whole): bool
-    {
-        $index = 0;
-
-        foreach ($whole as $item) {
-            if ($index < count($part) && $part[$index] === $item) {
-                $index++;
-            }
-        }
-
-        return $index === count($part);
     }
 
     /**

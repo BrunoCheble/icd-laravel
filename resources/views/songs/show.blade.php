@@ -41,6 +41,7 @@
         .preview-name small { margin-left: .4rem; font-weight: 500; letter-spacing: 0; color: #9ca3af; }
         .preview-anchor { font-size: .85rem; font-style: italic; color: #6b7280; }
         .preview-line .is-passing { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .22em; }
+        .preview-return { padding: .35rem .6rem; border-top: 1px solid #f3f4f6; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
         .preview-line { white-space: pre; display: flex; flex-wrap: wrap; gap: .1rem 1rem; font-weight: 700; color: var(--type-color, #111827); }
     </style>
 
@@ -140,7 +141,9 @@
                 @else
                     <div x-data="songPreview(@js($overview['blocks']))">
                         <template x-for="(block, b) in blocks" :key="b">
-                            <div class="preview-block" :style="`--type-color: var(--type-${blockType(block.name)})`">
+                            <div>
+                            <div class="preview-return" x-show="block.return"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</div>
+                            <div class="preview-block" x-show="!block.return" :style="`--type-color: var(--type-${blockType(block.name)})`">
                                 <div class="preview-name"><span x-text="block.name"></span><small x-show="block.start" x-text="block.start"></small></div>
                                 <div class="preview-anchor" x-show="block.anchor" x-text="block.anchor"></div>
                                 <template x-for="(line, l) in lines[b]" :key="l">
@@ -150,6 +153,7 @@
                                         </template>
                                     </div>
                                 </template>
+                            </div>
                             </div>
                         </template>
                     </div>

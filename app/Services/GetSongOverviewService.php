@@ -47,6 +47,7 @@ class GetSongOverviewService
                 'anchor' => $block['anchor'] ?? null,
                 'chords' => array_map('strval', $block['chords'] ?? []),
                 'passing' => array_values(array_filter($block['passing'] ?? [], 'is_int')),
+                'return' => Song::isReturnMarker($block),
             ], $blocks),
         ];
     }

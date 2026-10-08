@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\MusicalKey;
+use App\Services\FindSongBySourceService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -20,7 +21,7 @@ class SongRequest extends FormRequest
             'artist'      => ['required', 'string', 'max:255'],
             'musical_key' => ['nullable', 'string', 'max:20', Rule::in($this->allowedKeys())],
             'youtube_url' => ['nullable', 'url', 'max:500'],
-            'source_url'  => ['nullable', 'url', 'max:500'],
+            'source_url'  => ['nullable', 'url', 'max:500', $this->uniqueSourceRule()],
 
             'video_lesson'              => ['nullable', 'array'],
             'video_lesson.*'            => ['required', 'array'],
@@ -40,6 +41,20 @@ class SongRequest extends FormRequest
                 }
             }],
         ];
+    }
+
+    /**
+     * The same chord sheet address cannot be used by two songs (see FindSongBySourceService for how they compare).
+     */
+    private function uniqueSourceRule(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) {
+            $existing = app(FindSongBySourceService::class)->execute($value, $this->route('song')?->id);
+
+            if ($existing) {
+                $fail(__('There is already a song with this source: ":title" (:artist).', ['title' => $existing->title, 'artist' => $existing->artist]));
+            }
+        };
     }
 
     /**

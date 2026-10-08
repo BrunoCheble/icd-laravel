@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\Song;
+
 /**
  * Splits the chord sheet into the blocks of the chord map (structure) when both have the same chords, so a block
  * split, joined or renamed on the layout page shows the same way in the chord sheet (and gets its section time).
  * Each line goes to the block of its first chord; notes ("{c: ...}") go with the chord after them and lyrics without
  * chords with the chord before them. A section that did not change keeps its name in the chord sheet.
+ * "Back to the start" markers of the map show as sections without lines, after the blocks before them.
  * Same rules as the layout page (resources/views/songs/layout.blade.php, sheetByBlocks).
  */
 class SyncChordSheetWithStructureService
@@ -69,7 +72,7 @@ class SyncChordSheetWithStructureService
             }
         }
 
-        return array_map(function (array $group) use ($blocks) {
+        $sections = array_map(function (array $group) use ($blocks) {
             $name = (string) ($blocks[$group['block']]['section'] ?? '');
             $original = $group['from'];
             $unchanged = $original !== null
@@ -80,6 +83,29 @@ class SyncChordSheetWithStructureService
                 ? array_merge($original, ['lines' => $group['lines']])
                 : ['section' => self::key($name), 'label' => str_replace('_', ' ', $name), 'lines' => $group['lines']];
         }, $groups);
+
+        $markers = array_keys(array_filter($blocks, fn ($block) => Song::isReturnMarker($block)));
+        if ($markers === []) {
+            return $sections;
+        }
+        $marker = fn (int $index) => [
+            'section' => self::key((string) ($blocks[$index]['section'] ?? '')),
+            'label'   => str_replace('_', ' ', (string) ($blocks[$index]['section'] ?? '')),
+            'lines'   => [],
+            'jump'    => 'start',
+        ];
+        $result = [];
+        foreach ($sections as $index => $section) {
+            while ($markers !== [] && $markers[0] < $groups[$index]['block']) {
+                $result[] = $marker(array_shift($markers));
+            }
+            $result[] = $section;
+        }
+        foreach ($markers as $index) {
+            $result[] = $marker($index);
+        }
+
+        return $result;
     }
 
     private static function key(string $name): string

@@ -235,11 +235,16 @@
                             <h1 class="song-title ws-desktop">{{ $song['title'] }}</h1>
                             <select class="key-select" x-model="key" aria-label="{{ __('Key') }}" title="{{ __('Change key') }}">
                                 <template x-for="option in keyOptions" :key="option">
-                                    <option :value="option" x-text="option + (option === originalKey ? ' (' + @js(__('original')) + ')' : '')" :selected="option === key"></option>
+                                    <option :value="option" x-text="keyLabel(option)" :selected="option === key"></option>
                                 </template>
                             </select>
                         </div>
-                        <p class="meta">{{ $song['artist'] }}</p>
+                        <p class="meta">
+                            {{ $song['artist'] }}
+                            @if ($data['setlist'] && $song['setlist_key'])
+                                · {{ $song['minister_name'] ? __('Key of :minister', ['minister' => $song['minister_name']]) : __('Setlist key') }}: <strong>{{ $song['setlist_key'] }}</strong>
+                            @endif
+                        </p>
                         <p class="hint ws-desktop" x-show="settings.mode === 'practice'">{{ __('Each "?" is a hidden chord: hover it (or tap it on the phone) to see it.') }}</p>
                         <p class="hint ws-desktop" x-show="settings.mode === 'test'" x-cloak>{{ __('Tap a "?" and choose the chord (keys 1 to 4 also answer).') }}</p>
 
@@ -368,7 +373,8 @@
         // g numbering every chord of the song in order.
         function practiceSheet(sections) {
             let number = 0;
-            return (sections || []).map(section => ({
+            // "Back to the start" markers are not practiced.
+            return (sections || []).filter(section => section.jump !== 'start').map(section => ({
                 label: section.label || String(section.section ?? '').replaceAll('_', ' '),
                 start: toSeconds(section.start),
                 lines: (section.lines || []).map(line => {
@@ -457,6 +463,14 @@
                 loop: null,
                 loopCooldown: 0,
                 originalKey: song.original_key || '',
+                // In a setlist: the key chosen for it (the minister's), which the page opens in.
+                setlistKey: data.setlist ? (song.setlist_key || '') : '',
+                keyLabel(option) {
+                    const marks = [];
+                    if (option === this.setlistKey) marks.push(song.minister_name || @js(__('setlist')));
+                    if (option === this.originalKey) marks.push(@js(__('original')));
+                    return marks.length ? `${option} (${marks.join(', ')})` : option;
+                },
                 // The setlist's key when practicing a setlist.
                 key: song.setlist_key || song.original_key || '',
                 // Keys of the song's mode (major or minor), to practice in another key.
