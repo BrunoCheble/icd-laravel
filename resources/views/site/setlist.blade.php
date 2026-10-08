@@ -200,6 +200,8 @@
         .panel-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .75rem 1rem; border-bottom: 1px solid var(--border); }
         .panel-header h2 { margin: 0; font-size: 1.1rem; }
         .install { margin: .75rem 0; }
+        .offline-badge { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; flex-shrink: 0; color: var(--danger); }
+        .offline-badge::after { content: ''; position: absolute; width: 1.45rem; height: 2px; background: currentColor; border-radius: 1px; transform: rotate(-45deg); box-shadow: 0 0 0 2px var(--surface); }
         .install .btn { width: 100%; justify-content: center; }
         .install-steps { margin: .5rem 0 1rem; padding-left: 1.25rem; line-height: 1.6; list-style: decimal; }
         .panel-body { flex: 1; overflow-y: auto; padding: .75rem 1rem 1rem; }
@@ -312,6 +314,8 @@
             @else
                 <span class="setlist-name">{{ __('Setlist') }}</span>
             @endif
+            {{-- No connection: the page is the copy saved on this device --}}
+            <span class="offline-badge" x-show="!online" x-cloak title="{{ __('No connection: showing the copy saved on this device') }}" aria-label="{{ __('No connection') }}"><i class="fa-solid fa-wifi"></i></span>
             <button type="button" class="btn btn-icon" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" :aria-expanded="optionsOpen" aria-label="{{ __('Options') }}" title="{{ __('Options') }}"><i class="fa-solid fa-gear"></i></button>
         </header>
 
@@ -758,6 +762,8 @@
                 // ---- Offline copy (see public/sw.js, which serves it): this setlist's page, the scripts and styles it
                 // loaded and its songs' audio files. Same cache names as the service worker. ----
                 offline: { busy: false, ready: false, error: false, done: 0, total: 0 },
+                // Connection state, shown as a crossed-out wifi icon in the top bar when there is none.
+                online: navigator.onLine,
                 get offlineSupported() { return 'caches' in window && 'serviceWorker' in navigator && !!setlist; },
                 offlinePages() { return [...new Set([location.pathname, new URL(`${config.urls.setlist}/${setlist.id}`).pathname])]; },
                 offlineAudio() { return [...new Set(this.songs.map(song => song.audio_url).filter(Boolean))]; },
@@ -773,21 +779,42 @@
                         this.offline.ready = found.every(Boolean);
                     } catch (e) {}
                 },
-                async downloadOffline() {
-                    if (this.offline.busy) return;
+                // Pages, scripts, styles, fonts and icons of this setlist ([cache, url] pairs) and, with `withAudio`, its
+                // songs' audio files.
+                offlineJobs(withAudio) {
                     const assets = performance.getEntriesByType('resource').map(entry => entry.name)
                         .filter(url => /\/(build|js|icons|img)\//.test(new URL(url).pathname) || /cdnjs\.cloudflare\.com|fonts\.bunny\.net/.test(url));
-                    const jobs = [
+                    return [
                         ...this.offlinePages().map(url => ['repertoire-pages-v1', url]),
                         ...assets.map(url => ['repertoire-assets-v1', url]),
-                        ...this.offlineAudio().map(url => ['repertoire-audio-v1', url]),
+                        ...(withAudio ? this.offlineAudio().map(url => ['repertoire-audio-v1', url]) : []),
                     ];
-                    this.offline = { busy: true, ready: false, error: false, done: 0, total: jobs.length };
-                    for (const [name, url] of jobs) {
+                },
+                async saveOffline([name, url]) {
+                    const response = await fetch(url, { cache: 'reload' });
+                    if (!response.ok) throw new Error(response.status);
+                    await (await caches.open(name)).put(url, response);
+                },
+                // Every visit with a connection saves the page and what it loaded (not the audio, which only the
+                // button downloads), so the setlist opens again offline even before "Download for offline".
+                async saveOfflineShell() {
+                    if (!this.offlineSupported || !navigator.onLine) return;
+                    for (const job of this.offlineJobs(false)) {
                         try {
-                            const response = await fetch(url, { cache: 'reload' });
-                            if (!response.ok) throw new Error(response.status);
-                            await (await caches.open(name)).put(url, response);
+                            // Scripts and styles change name when they change: the ones already saved are skipped.
+                            if (job[0] === 'repertoire-assets-v1' && await (await caches.open(job[0])).match(job[1])) continue;
+                            await this.saveOffline(job);
+                        } catch (e) {}
+                    }
+                    this.checkOffline();
+                },
+                async downloadOffline() {
+                    if (this.offline.busy) return;
+                    const jobs = this.offlineJobs(true);
+                    this.offline = { busy: true, ready: false, error: false, done: 0, total: jobs.length };
+                    for (const job of jobs) {
+                        try {
+                            await this.saveOffline(job);
                         } catch (e) {
                             this.offline.error = true;
                         }
@@ -988,6 +1015,11 @@
                     window.addEventListener('install-available', () => this.installPrompt = window.installPrompt);
                     this.setupAudio();
                     this.checkOffline();
+                    window.addEventListener('online', () => { this.online = true; this.saveOfflineShell(); });
+                    window.addEventListener('offline', () => this.online = false);
+                    // After the page finished loading (so every script and style is listed).
+                    window.addEventListener('load', () => setTimeout(() => this.saveOfflineShell(), 1500), { once: true });
+                    if (document.readyState === 'complete') setTimeout(() => this.saveOfflineShell(), 1500);
                     window.addEventListener('appinstalled', () => this.installPrompt = null);
                     this.$watch('settings', value => saveSettings(value), { deep: true });
                     // Each song opens with its own saved layout.

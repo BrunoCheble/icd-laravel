@@ -473,5 +473,7 @@
     "Downloading :done of :total…": "Baixando :done de :total…",
     "Could not download everything. Check the connection and try again.": "Não foi possível baixar tudo. Verifique a conexão e tente de novo.",
     "Update offline copy": "Atualizar cópia offline",
-    "Offline": "Offline"
+    "Offline": "Offline",
+    "No connection": "Sem conexão",
+    "No connection: showing the copy saved on this device": "Sem conexão: mostrando a cópia guardada neste aparelho"
 }
