@@ -21,6 +21,9 @@ class SongRequest extends FormRequest
             'artist'      => ['required', 'string', 'max:255'],
             'musical_key' => ['nullable', 'string', 'max:20', Rule::in($this->allowedKeys())],
             'youtube_url' => ['nullable', 'url', 'max:500'],
+            // Audio file played instead of the YouTube video (and kept for offline use): up to 30 MB.
+            'audio'        => ['nullable', 'file', 'mimes:mp3,mpga,m4a,mp4,aac,ogg,oga,wav', 'max:30720'],
+            'remove_audio' => ['nullable', 'boolean'],
             'source_url'  => ['nullable', 'url', 'max:500', $this->uniqueSourceRule()],
 
             'video_lesson'              => ['nullable', 'array'],

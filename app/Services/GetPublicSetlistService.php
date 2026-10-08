@@ -39,6 +39,8 @@ class GetPublicSetlistService
             'position'     => $song->pivot?->position,
             'structure'    => $song->structure,
             'youtube_url'  => $song->youtube_url,
+            // Audio file played instead of the YouTube video (also offline).
+            'audio_url'    => $song->audioUrl(),
             // Chord sheet split like the chord map's blocks, which give it their section times.
             'chord_sheet'  => isset($song->chord_sheet['sections'])
                 ? app(AlignSectionStartsService::class)->execute(

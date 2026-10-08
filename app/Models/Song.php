@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\SaveSongAudioService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
@@ -75,6 +76,16 @@ class Song extends Model
             $sections->filter(fn ($section) => ($section->start ?? '') !== '' && $section->start !== null)->count(),
             $sections->count(),
         ];
+    }
+
+    /**
+     * Address of the song's audio file (played instead of the YouTube video), or null.
+     */
+    public function audioUrl(): ?string
+    {
+        return $this->audio_path && is_file(public_path(SaveSongAudioService::FOLDER . '/' . $this->audio_path))
+            ? asset(SaveSongAudioService::FOLDER . '/' . $this->audio_path)
+            : null;
     }
 
     /**

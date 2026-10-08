@@ -461,5 +461,17 @@
     "Install app": "Instalar app",
     "Open this page in Safari.": "Abra esta página no Safari.",
     "Tap :icon Share.": "Toque em :icon Compartilhar.",
-    "Choose \"Add to Home Screen\" and then \"Add\".": "Escolha \"Adicionar à Tela de Início\" e depois \"Adicionar\"."
+    "Choose \"Add to Home Screen\" and then \"Add\".": "Escolha \"Adicionar à Tela de Início\" e depois \"Adicionar\".",
+    "Audio (MP3)": "Áudio (MP3)",
+    "Remove audio": "Remover áudio",
+    "The audio will be removed when you save.": "O áudio será removido ao salvar.",
+    "Up to 30 MB. When the song has an audio file, the setlist app plays it instead of the YouTube video, also offline.": "Até 30 MB. Quando a música tem áudio, o app do repertório toca o arquivo no lugar do vídeo do YouTube, inclusive offline.",
+    "Song sound": "Som da música",
+    "This song has no audio or YouTube video.": "Esta música não tem áudio nem vídeo do YouTube.",
+    "Available offline": "Disponível offline",
+    "Download for offline": "Baixar para offline",
+    "Downloading :done of :total…": "Baixando :done de :total…",
+    "Could not download everything. Check the connection and try again.": "Não foi possível baixar tudo. Verifique a conexão e tente de novo.",
+    "Update offline copy": "Atualizar cópia offline",
+    "Offline": "Offline"
 }

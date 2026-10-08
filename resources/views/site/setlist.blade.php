@@ -372,7 +372,7 @@
                     <label class="switch"><input type="checkbox" x-model="settings.showAnchors"> {{ __('Anchors') }}</label>
                     <label class="switch"><input type="checkbox" x-model="settings.showLyrics"> {{ __('Lyrics') }}</label>
                     <label class="switch"><input type="checkbox" x-model="settings.twoColumns"> {{ __('Two columns') }}</label>
-                    <label class="switch" :title="videoId ? '' : @js(__('This song has no YouTube video.'))"><input type="checkbox" x-model="settings.youtubeSound"> {{ __('YouTube sound') }}</label>
+                    <label class="switch" :title="audioUrl || videoId ? '' : @js(__('This song has no audio or YouTube video.'))"><input type="checkbox" x-model="settings.youtubeSound"> {{ __('Song sound') }}</label>
                 </div>
 
                 <div class="option-row" x-show="current">
@@ -561,6 +561,17 @@
                         </template>
                     </ol>
 
+                    {{-- Offline copy of this setlist: the page (chords, maps, keys, times) and the songs' audio files --}}
+                    <div class="install" x-show="offlineSupported" x-cloak>
+                        <button type="button" class="btn" @click="downloadOffline()" :disabled="offline.busy">
+                            <i class="fa-solid" :class="offline.busy ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-down'"></i>
+                            <span x-text="offline.busy ? @js(__('Downloading :done of :total…')).replace(':done', offline.done).replace(':total', offline.total)
+                                : (offline.ready ? @js(__('Update offline copy')) : @js(__('Download for offline')))"></span>
+                        </button>
+                        <p class="hint" x-show="offline.ready && !offline.busy" style="margin-top: .35rem;"><i class="fa-solid fa-circle-check" style="color: #16a34a;"></i> {{ __('Available offline') }}</p>
+                        <p class="hint" x-show="offline.error" style="margin-top: .35rem; color: var(--danger);">{{ __('Could not download everything. Check the connection and try again.') }}</p>
+                    </div>
+
                     {{-- Install as an app (hidden when already opened as the app) --}}
                     <div class="install" x-show="canInstall" x-cloak>
                         <button type="button" class="btn" @click="install()"><i class="fa-solid fa-mobile-screen-button"></i> {{ __('Install app') }}</button>
@@ -626,7 +637,7 @@
         @endif
 
         {{-- Song sound: YouTube player kept small and visible, synced with the section timer --}}
-        <div class="yt-mini" x-ref="video" x-show="settings.youtubeSound && videoId" x-cloak :class="{ 'is-dragging': draggingVideo }" :style="videoStyle"
+        <div class="yt-mini" x-ref="video" x-show="settings.youtubeSound && videoId && !audioUrl" x-cloak :class="{ 'is-dragging': draggingVideo }" :style="videoStyle"
             @resize.window.debounce.200ms="keepVideoInView()">
             <button type="button" class="yt-mini-drag" @pointerdown="dragVideo($event)" @dblclick="resetVideoPosition()"
                 title="{{ __('Drag to move; double-click to put it back') }}" aria-label="{{ __('Move video') }}"><i class="fa-solid fa-grip"></i></button>
@@ -645,6 +656,9 @@
 
         // YouTube player for the song sound, outside Alpine's reactive state.
         let soundPlayer = null;
+        // Audio file of the song, played instead of the YouTube video when the song has one (works offline).
+        const audioPlayer = new Audio();
+        audioPlayer.preload = 'auto';
         const youtubeIdFrom = (url) => {
             const match = /(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/.exec(url || '');
             return match ? match[1] : null;
@@ -741,6 +755,63 @@
                 chordEdits: {},
                 savingKey: false,
                 panelOpen: false,
+                // ---- Offline copy (see public/sw.js, which serves it): this setlist's page, the scripts and styles it
+                // loaded and its songs' audio files. Same cache names as the service worker. ----
+                offline: { busy: false, ready: false, error: false, done: 0, total: 0 },
+                get offlineSupported() { return 'caches' in window && 'serviceWorker' in navigator && !!setlist; },
+                offlinePages() { return [...new Set([location.pathname, new URL(`${config.urls.setlist}/${setlist.id}`).pathname])]; },
+                offlineAudio() { return [...new Set(this.songs.map(song => song.audio_url).filter(Boolean))]; },
+                async checkOffline() {
+                    if (!this.offlineSupported) return;
+                    try {
+                        const pages = await caches.open('repertoire-pages-v1');
+                        const audio = await caches.open('repertoire-audio-v1');
+                        const found = await Promise.all([
+                            ...this.offlinePages().map(url => pages.match(url, { ignoreSearch: true })),
+                            ...this.offlineAudio().map(url => audio.match(url)),
+                        ]);
+                        this.offline.ready = found.every(Boolean);
+                    } catch (e) {}
+                },
+                async downloadOffline() {
+                    if (this.offline.busy) return;
+                    const assets = performance.getEntriesByType('resource').map(entry => entry.name)
+                        .filter(url => /\/(build|js|icons|img)\//.test(new URL(url).pathname) || /cdnjs\.cloudflare\.com|fonts\.bunny\.net/.test(url));
+                    const jobs = [
+                        ...this.offlinePages().map(url => ['repertoire-pages-v1', url]),
+                        ...assets.map(url => ['repertoire-assets-v1', url]),
+                        ...this.offlineAudio().map(url => ['repertoire-audio-v1', url]),
+                    ];
+                    this.offline = { busy: true, ready: false, error: false, done: 0, total: jobs.length };
+                    for (const [name, url] of jobs) {
+                        try {
+                            const response = await fetch(url, { cache: 'reload' });
+                            if (!response.ok) throw new Error(response.status);
+                            await (await caches.open(name)).put(url, response);
+                        } catch (e) {
+                            this.offline.error = true;
+                        }
+                        this.offline.done++;
+                    }
+                    this.offline.busy = false;
+                    this.forgetOldAudio();
+                    await this.checkOffline();
+                },
+                // Audio files saved for setlists of this device that are no longer used (replaced or removed) are
+                // deleted, so the copies do not keep growing.
+                async forgetOldAudio() {
+                    try {
+                        const saved = JSON.parse(localStorage.getItem('offline-audio') || '{}');
+                        saved[setlist.id] = this.offlineAudio();
+                        localStorage.setItem('offline-audio', JSON.stringify(saved));
+                        const used = new Set(Object.values(saved).flat());
+                        const audio = await caches.open('repertoire-audio-v1');
+                        for (const request of await audio.keys()) {
+                            if (!used.has(request.url)) await audio.delete(request);
+                        }
+                    } catch (e) {}
+                },
+
                 // Installing as an app: the browser's offer (Android / desktop) or the steps for iPhone.
                 installPrompt: window.installPrompt ?? null,
                 installHelp: false,
@@ -915,6 +986,8 @@
 
                 init() {
                     window.addEventListener('install-available', () => this.installPrompt = window.installPrompt);
+                    this.setupAudio();
+                    this.checkOffline();
                     window.addEventListener('appinstalled', () => this.installPrompt = null);
                     this.$watch('settings', value => saveSettings(value), { deep: true });
                     // Each song opens with its own saved layout.
@@ -1138,8 +1211,8 @@
                 play(fromVideo = false) {
                     if (this.playing) return;
                     if (this.soundActive && !fromVideo) {
-                        soundPlayer.seekTo(this.elapsed, true);
-                        soundPlayer.playVideo();
+                        this.sound.seek(this.elapsed);
+                        this.sound.play();
                     }
                     this.startedAt = performance.now() - this.elapsed * 1000;
                     this.playing = true;
@@ -1150,16 +1223,16 @@
                 },
                 pause(fromVideo = false) {
                     if (!this.playing) return;
-                    if (this.soundActive && !fromVideo) soundPlayer.pauseVideo();
-                    this.elapsed = this.soundActive ? soundPlayer.getCurrentTime() : (performance.now() - this.startedAt) / 1000;
+                    if (this.soundActive && !fromVideo) this.sound.pause();
+                    this.elapsed = this.soundActive ? this.sound.time() : (performance.now() - this.startedAt) / 1000;
                     this.playing = false;
                     clearInterval(this.ticker);
                     this.releaseWakeLock();
                 },
                 tick() {
-                    // With the song sound on, the clock follows the video time.
+                    // With the song sound on, the clock follows the audio / video time.
                     if (this.soundActive) {
-                        this.elapsed = soundPlayer.getCurrentTime();
+                        this.elapsed = this.sound.time();
                         this.startedAt = performance.now() - this.elapsed * 1000;
                     } else {
                         this.elapsed = (performance.now() - this.startedAt) / 1000;
@@ -1175,7 +1248,7 @@
                 // Moves the timer to `time` without changing play/pause.
                 seek(time) {
                     this.elapsed = time;
-                    if (this.soundActive) soundPlayer.seekTo(time, true);
+                    if (this.soundActive) this.sound.seek(time);
                     if (this.playing) this.startedAt = performance.now() - time * 1000;
                     this.clockSection = this.hasTimeline ? this.sectionAt(time) : null;
                 },
@@ -1215,12 +1288,36 @@
                     });
                 },
 
-                // ---- Song sound (YouTube) ----
+                // ---- Song sound: the song's audio file when it has one, otherwise its YouTube video ----
                 soundReady: false,
                 get videoId() { return youtubeIdFrom(this.current?.youtube_url); },
-                get soundActive() { return this.settings.youtubeSound && !!this.videoId && this.soundReady && !!soundPlayer; },
-                // Creates the player, or loads the current song's video in it (paused).
+                get audioUrl() { return this.current?.audio_url || null; },
+                get soundActive() {
+                    if (!this.settings.youtubeSound) return false;
+                    return this.audioUrl ? true : (!!this.videoId && this.soundReady && !!soundPlayer);
+                },
+                // The player in use, with the same commands for the audio file and the YouTube video.
+                get sound() {
+                    return this.audioUrl
+                        ? { seek: (time) => { audioPlayer.currentTime = time; }, play: () => audioPlayer.play().catch(() => this.pause(true)), pause: () => audioPlayer.pause(), time: () => audioPlayer.currentTime }
+                        : { seek: (time) => soundPlayer.seekTo(time, true), play: () => soundPlayer.playVideo(), pause: () => soundPlayer.pauseVideo(), time: () => soundPlayer.getCurrentTime() };
+                },
+                // Playing, pausing or reaching the end of the audio file also drives the section timer.
+                setupAudio() {
+                    audioPlayer.addEventListener('play', () => { if (this.audioUrl && !this.playing) this.play(true); });
+                    audioPlayer.addEventListener('pause', () => { if (this.audioUrl && this.playing) this.pause(true); });
+                },
+                // Loads the current song's audio file or YouTube video (paused).
                 setupSound() {
+                    if (!this.settings.youtubeSound || !this.audioUrl) audioPlayer.pause();
+                    if (this.settings.youtubeSound && this.audioUrl) {
+                        soundPlayer?.pauseVideo?.();
+                        if (audioPlayer.src !== this.audioUrl) {
+                            audioPlayer.src = this.audioUrl;
+                            audioPlayer.load();
+                        }
+                        return;
+                    }
                     if (!this.settings.youtubeSound || !this.videoId) {
                         soundPlayer?.pauseVideo?.();
                         return;

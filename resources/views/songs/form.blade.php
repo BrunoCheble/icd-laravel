@@ -49,6 +49,25 @@
         <x-input-error class="mt-2" :messages="$errors->get('youtube_url')" />
     </div>
 
+    {{-- Audio file: played instead of the YouTube video in the setlist app, also offline --}}
+    <div x-data="{ remove: false }">
+        <x-input-label for="audio" :value="__('Audio (MP3)')" />
+        @if ($song?->audioUrl())
+            <div class="mt-1 flex flex-wrap items-center gap-3" x-show="!remove">
+                <audio controls preload="none" src="{{ $song->audioUrl() }}" style="max-width: 100%;"></audio>
+                <button type="button" class="text-sm font-semibold" style="color: #dc2626;" @click="remove = true"><i class="fa-solid fa-trash"></i> {{ __('Remove audio') }}</button>
+            </div>
+            <p class="mt-1 text-sm" style="color: #dc2626;" x-show="remove" x-cloak>
+                {{ __('The audio will be removed when you save.') }}
+                <button type="button" class="font-semibold text-indigo-600" @click="remove = false">{{ __('Undo') }}</button>
+            </p>
+            <input type="hidden" name="remove_audio" :value="remove ? 1 : 0">
+        @endif
+        <input id="audio" name="audio" type="file" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" class="mt-2 block w-full text-sm">
+        <p class="mt-1 text-sm text-gray-500">{{ __('Up to 30 MB. When the song has an audio file, the setlist app plays it instead of the YouTube video, also offline.') }}</p>
+        <x-input-error class="mt-2" :messages="$errors->get('audio')" />
+    </div>
+
     <div>
         <x-input-label for="source_url" :value="__('Source')" />
         <x-text-input id="source_url" name="source_url" type="url" class="mt-1 block w-full" :value="old('source_url', $song?->source_url)" />

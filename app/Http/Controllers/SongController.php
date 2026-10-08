@@ -10,6 +10,7 @@ use App\Models\Song;
 use App\Services\FindSongBySourceService;
 use App\Services\GetSongOverviewService;
 use App\Services\ListSongsService;
+use App\Services\SaveSongAudioService;
 use App\Services\SaveSongService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Redirect;
@@ -33,10 +34,11 @@ class SongController extends Controller
         return view('songs.create', compact('song', 'instrumentOptions', 'keyOptions', 'existingSources'));
     }
 
-    public function store(SongRequest $request, SaveSongService $service): RedirectResponse
+    public function store(SongRequest $request, SaveSongService $service, SaveSongAudioService $audioService): RedirectResponse
     {
         try {
-            $service->execute($request->validated());
+            $song = $service->execute(collect($request->validated())->except(['audio', 'remove_audio'])->all());
+            $audioService->execute($song, $request->file('audio'));
         } catch (\Exception $e) {
             return Redirect::route('songs.index')
                 ->with('error', __('Something went wrong'));
@@ -61,10 +63,11 @@ class SongController extends Controller
         return view('songs.edit', compact('song', 'instrumentOptions', 'keyOptions', 'existingSources'));
     }
 
-    public function update(SongRequest $request, Song $song, SaveSongService $service): RedirectResponse
+    public function update(SongRequest $request, Song $song, SaveSongService $service, SaveSongAudioService $audioService): RedirectResponse
     {
         try {
-            $service->execute($request->validated(), $song);
+            $service->execute(collect($request->validated())->except(['audio', 'remove_audio'])->all(), $song);
+            $audioService->execute($song, $request->file('audio'), $request->boolean('remove_audio'));
         } catch (\Exception $e) {
             return Redirect::route('songs.index')
                 ->with('error', __('Something went wrong'));
@@ -74,10 +77,11 @@ class SongController extends Controller
             ->with('success', __('Song updated successfully.'));
     }
 
-    public function destroy(Song $song): RedirectResponse
+    public function destroy(Song $song, SaveSongAudioService $audioService): RedirectResponse
     {
         try {
             $song->delete();
+            $audioService->deleteFile($song);
         } catch (\Exception $e) {
             return Redirect::route('songs.index')
                 ->with('error', __('Something went wrong'));

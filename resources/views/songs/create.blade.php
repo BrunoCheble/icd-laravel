@@ -22,7 +22,7 @@
                     <div class="flow-root">
                         <div class="mt-8 overflow-x-auto">
                             <div class="max-w-3xl py-2 align-middle">
-                                <form method="POST" action="{{ route('songs.store') }}"  role="form">
+                                <form method="POST" action="{{ route('songs.store') }}" role="form" enctype="multipart/form-data">
                                     @csrf
                                     @include('songs.form')
                                 </form>
