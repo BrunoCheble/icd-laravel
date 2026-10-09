@@ -34,6 +34,33 @@ class SaveSongAudioService
         return $song;
     }
 
+    // Largest audio file accepted by the song form (see SongRequest), in MB.
+    public const MAX_MEGABYTES = 30;
+
+    /**
+     * Largest audio file that can be sent, in MB: the form's limit or the server's (PHP upload limits), if lower.
+     */
+    public static function maxUploadMegabytes(): int
+    {
+        $toMegabytes = function (string $value): float {
+            $number = (float) $value;
+
+            return match (strtolower(substr(trim($value), -1))) {
+                'g' => $number * 1024,
+                'k' => $number / 1024,
+                'm' => $number,
+                default => $number / 1048576,
+            };
+        };
+        $limits = array_filter([
+            self::MAX_MEGABYTES,
+            $toMegabytes((string) ini_get('upload_max_filesize')),
+            $toMegabytes((string) ini_get('post_max_size')),
+        ], fn ($limit) => $limit > 0);
+
+        return (int) floor(min($limits));
+    }
+
     public function deleteFile(Song $song): void
     {
         $path = $song->audio_path ? public_path(self::FOLDER . '/' . $song->audio_path) : null;

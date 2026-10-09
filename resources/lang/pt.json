@@ -465,7 +465,7 @@
     "Audio (MP3)": "Áudio (MP3)",
     "Remove audio": "Remover áudio",
     "The audio will be removed when you save.": "O áudio será removido ao salvar.",
-    "Up to 30 MB. When the song has an audio file, the setlist app plays it instead of the YouTube video, also offline.": "Até 30 MB. Quando a música tem áudio, o app do repertório toca o arquivo no lugar do vídeo do YouTube, inclusive offline.",
+    "Up to :size MB. When the song has an audio file, the setlist app plays it instead of the YouTube video, also offline.": "Até :size MB. Quando a música tem áudio, o app do repertório toca o arquivo no lugar do vídeo do YouTube, inclusive offline.",
     "Song sound": "Som da música",
     "This song has no audio or YouTube video.": "Esta música não tem áudio nem vídeo do YouTube.",
     "Available offline": "Disponível offline",
@@ -477,5 +477,9 @@
     "No connection": "Sem conexão",
     "No connection: showing the copy saved on this device": "Sem conexão: mostrando a cópia guardada neste aparelho",
     "No connection: download the setlist for offline to add songs.": "Sem conexão: baixe o repertório para offline para poder adicionar músicas.",
-    "No connection: changed only on this device, not saved.": "Sem conexão: alterado só neste aparelho, não salvo."
+    "No connection: changed only on this device, not saved.": "Sem conexão: alterado só neste aparelho, não salvo.",
+    "The file is already light: it will be sent as it is.": "O arquivo já é leve: será enviado como está.",
+    "Converting to MP3 :kbps kbps… :percent%": "Convertendo para MP3 :kbps kbps… :percent%",
+    "Converted to MP3 :kbps kbps: :before MB → :after MB.": "Convertido para MP3 :kbps kbps: :before MB → :after MB.",
+    "The file could not be converted: it will be sent as it is.": "Não foi possível converter o arquivo: será enviado como está."
 }

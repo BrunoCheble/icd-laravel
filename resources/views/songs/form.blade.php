@@ -50,7 +50,7 @@
     </div>
 
     {{-- Audio file: played instead of the YouTube video in the setlist app, also offline --}}
-    <div x-data="{ remove: false }">
+    <div x-data="songAudioField()">
         <x-input-label for="audio" :value="__('Audio (MP3)')" />
         @if ($song?->audioUrl())
             <div class="mt-1 flex flex-wrap items-center gap-3" x-show="!remove">
@@ -63,8 +63,9 @@
             </p>
             <input type="hidden" name="remove_audio" :value="remove ? 1 : 0">
         @endif
-        <input id="audio" name="audio" type="file" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" class="mt-2 block w-full text-sm">
-        <p class="mt-1 text-sm text-gray-500">{{ __('Up to 30 MB. When the song has an audio file, the setlist app plays it instead of the YouTube video, also offline.') }}</p>
+        <input id="audio" name="audio" type="file" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" class="mt-2 block w-full text-sm" @change="convert($event.target)" :disabled="converting">
+        <p class="mt-1 text-sm font-semibold" style="color: #4338ca;" x-show="status" x-text="status" x-cloak></p>
+        <p class="mt-1 text-sm text-gray-500">{{ __('Up to :size MB. When the song has an audio file, the setlist app plays it instead of the YouTube video, also offline.', ['size' => \App\Services\SaveSongAudioService::maxUploadMegabytes()]) }}</p>
         <x-input-error class="mt-2" :messages="$errors->get('audio')" />
     </div>
 
@@ -327,6 +328,88 @@
         // Wait for Alpine so the chord sheet component is listening.
         document.addEventListener('alpine:initialized', apply);
     })();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+<script>
+    // Audio file of the song: before sending, a file heavier than needed (above about 128 kbps, or not MP3) is turned
+    // into MP3 at 128 kbps with a constant bitrate, in the browser. Smaller uploads, and a constant bitrate keeps
+    // jumping to a block's start exact. If the conversion fails, the original file is sent.
+    function songAudioField() {
+        const TARGET_KBPS = 128;
+        const megabytes = (bytes) => (bytes / 1048576).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        return {
+            remove: false,
+            converting: false,
+            status: '',
+            init() {
+                this.$el.closest('form')?.addEventListener('submit', (event) => {
+                    if (this.converting) event.preventDefault();
+                });
+            },
+            async convert(input) {
+                const file = input.files?.[0];
+                this.status = '';
+                if (!file || !window.lamejs) return;
+                this.converting = true;
+                try {
+                    const context = new (window.AudioContext || window.webkitAudioContext)();
+                    const decoded = await context.decodeAudioData(await file.arrayBuffer());
+                    context.close();
+                    const kbps = file.size * 8 / decoded.duration / 1000;
+                    if (/\.mp3$/i.test(file.name) && kbps <= TARGET_KBPS * 1.1) {
+                        this.status = @js(__('The file is already light: it will be sent as it is.'));
+                        return;
+                    }
+
+                    // 44.1 kHz, up to 2 channels, as the MP3 encoder expects.
+                    const channels = Math.min(2, decoded.numberOfChannels);
+                    const offline = new OfflineAudioContext(channels, Math.ceil(decoded.duration * 44100), 44100);
+                    const source = offline.createBufferSource();
+                    source.buffer = decoded;
+                    source.connect(offline.destination);
+                    source.start();
+                    const audio = await offline.startRendering();
+
+                    const encoder = new lamejs.Mp3Encoder(channels, 44100, TARGET_KBPS);
+                    const toInt16 = (samples) => {
+                        const out = new Int16Array(samples.length);
+                        for (let i = 0; i < samples.length; i++) out[i] = Math.max(-1, Math.min(1, samples[i])) * 0x7fff;
+                        return out;
+                    };
+                    const left = toInt16(audio.getChannelData(0));
+                    const right = channels > 1 ? toInt16(audio.getChannelData(1)) : null;
+                    const parts = [];
+                    const block = 1152 * 100;
+                    for (let start = 0; start < left.length; start += block) {
+                        const end = start + block;
+                        const chunk = right ? encoder.encodeBuffer(left.subarray(start, end), right.subarray(start, end)) : encoder.encodeBuffer(left.subarray(start, end));
+                        if (chunk.length) parts.push(new Int8Array(chunk));
+                        this.status = @js(__('Converting to MP3 :kbps kbps… :percent%')).replace(':kbps', TARGET_KBPS).replace(':percent', Math.min(100, Math.round(end / left.length * 100)));
+                        // Lets the page update between chunks.
+                        await new Promise(resolve => setTimeout(resolve));
+                    }
+                    const last = encoder.flush();
+                    if (last.length) parts.push(new Int8Array(last));
+
+                    const mp3 = new File(parts, file.name.replace(/\.[^.]+$/, '') + '.mp3', { type: 'audio/mpeg' });
+                    if (mp3.size >= file.size) {
+                        this.status = @js(__('The file is already light: it will be sent as it is.'));
+                        return;
+                    }
+                    const files = new DataTransfer();
+                    files.items.add(mp3);
+                    input.files = files.files;
+                    this.status = @js(__('Converted to MP3 :kbps kbps: :before MB → :after MB.'))
+                        .replace(':kbps', TARGET_KBPS).replace(':before', megabytes(file.size)).replace(':after', megabytes(mp3.size));
+                } catch (error) {
+                    this.status = @js(__('The file could not be converted: it will be sent as it is.'));
+                } finally {
+                    this.converting = false;
+                }
+            },
+        };
+    }
 </script>
 
 <script src="{{ asset('js/chord-transposer.js') }}?v={{ filemtime(public_path('js/chord-transposer.js')) }}"></script>
