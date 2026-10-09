@@ -19,3 +19,18 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# Upload limits for the songs' audio files, for hosts running PHP as an Apache / LiteSpeed module (PHP-FPM hosts read
+# public/.user.ini instead). Each block only applies when its module is loaded, so it never breaks other setups.
+<IfModule lsapi_module>
+    php_value upload_max_filesize 32M
+    php_value post_max_size 40M
+</IfModule>
+<IfModule mod_php.c>
+    php_value upload_max_filesize 32M
+    php_value post_max_size 40M
+</IfModule>
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 32M
+    php_value post_max_size 40M
+</IfModule>

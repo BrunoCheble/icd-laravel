@@ -87,6 +87,16 @@ class SongRequest extends FormRequest
         };
     }
 
+    /**
+     * A file above the server's upload limit arrives as a failed upload: the message says what to do.
+     */
+    public function messages(): array
+    {
+        return [
+            'audio.uploaded' => __('The audio is larger than the server accepts (:size MB). Send a smaller file or raise the upload limit of the server.', ['size' => SaveSongAudioService::maxUploadMegabytes()]),
+        ];
+    }
+
     public function attributes(): array
     {
         return [

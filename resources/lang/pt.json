@@ -481,5 +481,6 @@
     "The file is already light: it will be sent as it is.": "O arquivo já é leve: será enviado como está.",
     "Converting to MP3 :kbps kbps… :percent%": "Convertendo para MP3 :kbps kbps… :percent%",
     "Converted to MP3 :kbps kbps: :before MB → :after MB.": "Convertido para MP3 :kbps kbps: :before MB → :after MB.",
-    "The file could not be converted: it will be sent as it is.": "Não foi possível converter o arquivo: será enviado como está."
+    "The file could not be converted: it will be sent as it is.": "Não foi possível converter o arquivo: será enviado como está.",
+    "The audio is larger than the server accepts (:size MB). Send a smaller file or raise the upload limit of the server.": "O áudio é maior do que o servidor aceita (:size MB). Envie um arquivo menor ou aumente o limite de upload do servidor."
 }
