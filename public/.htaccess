@@ -5,6 +5,10 @@
 
     RewriteEngine On
 
+    # Old addresses from when the site was served from the project folder ("/public/songs" -> "/songs").
+    RewriteCond %{THE_REQUEST} \s/public/
+    RewriteRule ^public/(.*)$ /$1 [L,R=301]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
