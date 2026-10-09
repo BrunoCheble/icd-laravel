@@ -836,7 +836,7 @@
                 // Pages, scripts, styles, fonts and icons of this setlist ([cache, url] pairs) and, with `withAudio`, its
                 // songs' audio files.
                 offlineJobs(withAudio) {
-                    const assets = performance.getEntriesByType('resource').map(entry => entry.name)
+                    const assets = [...new Set(performance.getEntriesByType('resource').map(entry => entry.name))]
                         .filter(url => /\/(build|js|icons|img)\//.test(new URL(url).pathname) || /cdnjs\.cloudflare\.com|fonts\.bunny\.net/.test(url));
                     return [
                         ...this.offlinePages().map(url => ['repertoire-pages-v1', url]),
@@ -846,21 +846,26 @@
                         ...(withAudio ? this.offlineAudio().map(url => ['repertoire-audio-v1', url]) : []),
                     ];
                 },
+                // Saves one address. Scripts, styles and audio files never change under the same address, so the ones
+                // already saved are skipped. The server limits how many requests come in a row (429): it waits and
+                // tries again a few times.
                 async saveOffline([name, url]) {
-                    const response = await fetch(url, { cache: 'reload' });
-                    if (!response.ok) throw new Error(response.status);
-                    await (await caches.open(name)).put(url, response);
+                    const cache = await caches.open(name);
+                    if (name !== 'repertoire-pages-v1' && await cache.match(url)) return;
+                    for (let attempt = 0; ; attempt++) {
+                        const response = await fetch(url, { cache: 'reload' });
+                        if (response.ok) return cache.put(url, response);
+                        if (![429, 503].includes(response.status) || attempt === 4) throw new Error(response.status);
+                        const wait = Number(response.headers.get('Retry-After')) || 2 ** (attempt + 1);
+                        await new Promise(resolve => setTimeout(resolve, Math.min(wait, 20) * 1000));
+                    }
                 },
                 // Every visit with a connection saves the page and what it loaded (not the audio, which only the
                 // button downloads), so the setlist opens again offline even before "Download for offline".
                 async saveOfflineShell() {
                     if (!this.offlineSupported || !navigator.onLine) return;
                     for (const job of this.offlineJobs(false)) {
-                        try {
-                            // Scripts and styles change name when they change: the ones already saved are skipped.
-                            if (job[0] === 'repertoire-assets-v1' && await (await caches.open(job[0])).match(job[1])) continue;
-                            await this.saveOffline(job);
-                        } catch (e) {}
+                        try { await this.saveOffline(job); } catch (e) {}
                     }
                     this.checkOffline();
                 },
@@ -878,6 +883,8 @@
                             this.offline.error = true;
                         }
                         this.offline.done++;
+                        // A short pause between requests, for the server's request limit.
+                        await new Promise(resolve => setTimeout(resolve, 250));
                     }
                     this.offline.busy = false;
                     this.forgetOldAudio();

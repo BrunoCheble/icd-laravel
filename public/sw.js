@@ -42,8 +42,9 @@ async function page(request) {
             cache.put(request, response.clone());
             cache.put(LAST_PAGE, response.clone());
         }
-        // The server is reachable but failing (e.g. 502): the saved copy is more useful than the error page.
-        if (response.status >= 500) return (await saved()) || response;
+        // The server is reachable but failing (e.g. 502) or limiting requests (429): the saved copy is more useful
+        // than the error page.
+        if (response.status >= 500 || response.status === 429) return (await saved()) || response;
         return response;
     } catch (error) {
         return (await saved()) || Response.error();
