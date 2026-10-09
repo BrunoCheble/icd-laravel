@@ -866,6 +866,9 @@
                 },
                 async downloadOffline() {
                     if (this.offline.busy) return;
+                    // Asks the browser to keep the copy even when the device is short of space (usually granted
+                    // without asking on Android; ignored on iPhone).
+                    try { await navigator.storage?.persist?.(); } catch (e) {}
                     const jobs = this.offlineJobs(true);
                     this.offline = { busy: true, ready: false, error: false, done: 0, total: jobs.length };
                     for (const job of jobs) {
