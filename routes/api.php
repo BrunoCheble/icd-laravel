@@ -14,4 +14,5 @@ Route::prefix('study')->middleware(EnsureStudyToken::class)->name('study.')->gro
     Route::get('/songs', [StudySongController::class, 'index'])->name('songs.index');
     Route::get('/songs/{song}', [StudySongController::class, 'show'])->name('songs.show');
     Route::put('/songs/{song}/map', [StudySongController::class, 'updateMap'])->name('songs.map');
+    Route::post('/songs/{song}/audio', [StudySongController::class, 'updateAudio'])->name('songs.audio');
 });
