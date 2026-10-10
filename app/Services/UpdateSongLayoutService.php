@@ -50,6 +50,7 @@ class UpdateSongLayoutService
             } else {
                 unset($block['passing']);
             }
+            $block = self::cleanDurations($block, $count);
             // Start time set on the page: stored as "m:ss"; empty means none (other values are kept to be fixed).
             $start = self::toSeconds($block['start'] ?? null);
             if ($start !== null) {
@@ -83,6 +84,36 @@ class UpdateSongLayoutService
             ->all();
     }
 
+    // Shortest chord duration, in beats: a chord can change on a beat or halfway through it.
+    public const DURATION_STEP = 0.5;
+
+    /**
+     * Duration of each chord in beats ("durations", next to "chords", line breaks not counted) and beats per bar,
+     * as the study app saves them. Kept only when there is one valid duration (a multiple of half a beat) per chord;
+     * otherwise the block goes back to having no durations, like the maps made on the layout page.
+     */
+    private static function cleanDurations(array $block, int $count): array
+    {
+        $durations = $block['durations'] ?? null;
+        $valid = is_array($durations) && count($durations) === $count && $count > 0
+            && collect($durations)->every(fn ($beats) => is_numeric($beats) && $beats > 0
+                && fmod((float) $beats, self::DURATION_STEP) == 0.0);
+        if ($valid) {
+            $block['durations'] = array_map(fn ($beats) => floor($beats) == $beats ? (int) $beats : (float) $beats, array_values($durations));
+        } else {
+            unset($block['durations']);
+        }
+
+        $perBar = $block['beats_per_bar'] ?? null;
+        if (is_int($perBar) && $perBar >= 1 && $perBar <= 12) {
+            $block['beats_per_bar'] = $perBar;
+        } else {
+            unset($block['beats_per_bar']);
+        }
+
+        return $block;
+    }
+
     /**
      * "1:05" / "0:01:05" / "65" / 65 -> 65; null when empty or invalid.
      */
@@ -102,13 +133,15 @@ class UpdateSongLayoutService
     }
 
     /**
-     * 65 -> "1:05"
+     * 65 -> "1:05"; 65.34 -> "1:05.3" (tenths kept, for starts taken from the beats of the audio).
      */
     public static function format(float $seconds): string
     {
-        $total = (int) round($seconds);
+        $tenths = (int) round($seconds * 10);
+        $whole = intdiv($tenths, 10);
+        $text = intdiv($whole, 60) . ':' . str_pad((string) ($whole % 60), 2, '0', STR_PAD_LEFT);
 
-        return intdiv($total, 60) . ':' . str_pad((string) ($total % 60), 2, '0', STR_PAD_LEFT);
+        return $tenths % 10 === 0 ? $text : $text . '.' . ($tenths % 10);
     }
 
     /**

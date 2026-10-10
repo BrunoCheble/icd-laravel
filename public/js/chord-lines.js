@@ -219,3 +219,62 @@ function automaticSegments(chords, songCycles, passing) {
 function songCyclesOf(chordLists, passingLists = []) {
     return chordLists.flatMap((chords, section) => chordSegments(chords, [], passingLists[section]).cycles);
 }
+
+// ---- Versions of a song's map for an instrument (same blocks and times, its own chords) ----
+
+// A version's map in the song's key (`toKey`): it is stored in the key it was saved in.
+function versionStructure(version, toKey) {
+    const from = version?.musical_key || toKey;
+    return (Array.isArray(version?.structure) ? version.structure : []).map(block => (block && typeof block === 'object' && Array.isArray(block.chords)
+        ? { ...block, chords: from && toKey && from !== toKey ? ChordTransposer.transposeChords(block.chords.map(String), from, toKey) : block.chords.map(String) }
+        : block));
+}
+
+// The chord sheet with the chords of another map of the same blocks and times (an instrument's version): chord n of
+// the sheet is chord n of the base map (when the sheet has the base map's chords). Each chord of the sheet takes the
+// version's chord sounding when it starts (by the chords' beats); when that is still the chord before it in the
+// version (e.g. G4 G C/G played as one G on the bass), its mark goes away and the lyrics stay. Without beats, a block
+// of the version with as many chords as in the base gives its chords in order; the others keep the sheet's.
+function sheetWithChords(sections, baseStructure, structure) {
+    const listOf = (block) => chordsOnly(Array.isArray(block?.chords) ? block.chords.map(String) : []);
+    const beatsOf = (block, count) => {
+        const durations = Array.isArray(block?.durations) ? block.durations.map(Number) : [];
+        return count && durations.length === count && durations.every(value => value > 0) ? durations : null;
+    };
+    const base = (baseStructure || []).map(listOf);
+    const other = (structure || []).map(listOf);
+    const lineChords = (line) => (/^\s*\{/.test(String(line)) ? [] : [...String(line).matchAll(/\[([^\]]+)\]/g)].map(match => match[1]));
+    const sheetChords = (sections || []).flatMap(section => (section.lines || []).flatMap(lineChords));
+    if (JSON.stringify(sheetChords) !== JSON.stringify(base.flat())) return sections;
+    // The chord for each chord of the sheet; null: the version is still on the chord before (no mark).
+    const names = [];
+    base.forEach((list, b) => {
+        const own = other[b] || [];
+        const baseBeats = beatsOf(baseStructure[b], list.length);
+        const ownBeats = beatsOf(structure[b], own.length);
+        if (baseBeats && ownBeats) {
+            const starts = [];
+            ownBeats.reduce((time, beats) => { starts.push(time); return time + beats; }, 0);
+            let time = 0, last = -1;
+            list.forEach((chord, k) => {
+                let index = 0;
+                while (index + 1 < starts.length && starts[index + 1] <= time + 1e-6) index++;
+                names.push(index === last ? null : own[index]);
+                last = index;
+                time += baseBeats[k];
+            });
+        } else {
+            list.forEach((chord, k) => names.push(own.length === list.length ? own[k] : chord));
+        }
+    });
+    let n = 0;
+    // A line of chords only that lost some marks is tidied (one space between chords).
+    const tidy = (line) => (line.replace(/\[[^\]]+\]/g, '').trim() === '' ? line.trim().replace(/\s+/g, ' ') : line);
+    return (sections || []).map(section => ({
+        ...section,
+        lines: (section.lines || []).map(line => (/^\s*\{/.test(String(line)) ? line : tidy(String(line).replace(/\[([^\]]+)\]/g, () => {
+            const name = names[n++];
+            return name === null ? '' : `[${name}]`;
+        })))),
+    }));
+}

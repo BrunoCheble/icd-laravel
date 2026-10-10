@@ -12,6 +12,7 @@ class SaveSongService
             'title'        => $data['title'],
             'artist'       => $data['artist'],
             'musical_key'  => $data['musical_key'] ?? null,
+            'bpm'          => $data['bpm'] ?? null,
             'youtube_url'  => $data['youtube_url'] ?? null,
             'source_url'   => $data['source_url'] ?? null,
             'video_lesson' => $this->videoLessons($data['video_lesson'] ?? []),

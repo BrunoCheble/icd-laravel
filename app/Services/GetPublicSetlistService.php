@@ -14,7 +14,7 @@ class GetPublicSetlistService
      */
     public function execute(Setlist $setlist): array
     {
-        $setlist->load('songs');
+        $setlist->load('songs.versions');
 
         return [
             'id'            => $setlist->id,
@@ -34,6 +34,8 @@ class GetPublicSetlistService
             'title'        => $song->title,
             'artist'       => $song->artist,
             'original_key' => $song->musical_key,
+            // Tempo for the live mode (bars counted by it).
+            'bpm'          => $song->bpm,
             'setlist_key'  => $song->pivot?->musical_key,
             'minister_name' => $song->pivot?->minister_name,
             'position'     => $song->pivot?->position,
@@ -41,6 +43,12 @@ class GetPublicSetlistService
             'youtube_url'  => $song->youtube_url,
             // Audio file played instead of the YouTube video (also offline).
             'audio_url'    => $song->audioUrl(),
+            // The map for each instrument that has its own (see SongVersion), shown to whoever picks it.
+            'versions'     => $song->versions->map(fn ($version) => [
+                'instrument'  => $version->instrument,
+                'musical_key' => $version->musical_key,
+                'structure'   => $version->structure,
+            ])->values()->all(),
             // Chord sheet split like the chord map's blocks, which give it their section times.
             'chord_sheet'  => isset($song->chord_sheet['sections'])
                 ? app(AlignSectionStartsService::class)->execute(

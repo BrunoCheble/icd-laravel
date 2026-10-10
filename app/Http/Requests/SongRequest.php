@@ -21,6 +21,7 @@ class SongRequest extends FormRequest
             'title'       => ['required', 'string', 'max:255'],
             'artist'      => ['required', 'string', 'max:255'],
             'musical_key' => ['nullable', 'string', 'max:20', Rule::in($this->allowedKeys())],
+            'bpm'         => ['nullable', 'numeric', 'between:30,300'],
             'youtube_url' => ['nullable', 'url', 'max:500'],
             // Audio file played instead of the YouTube video (and kept for offline use): up to 30 MB.
             'audio'        => ['nullable', 'file', 'mimes:mp3,mpga,m4a,mp4,aac,ogg,oga,wav', 'max:' . SaveSongAudioService::MAX_MEGABYTES * 1024],

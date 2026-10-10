@@ -113,6 +113,12 @@
                 @if ($blocks === [] && $sheet === [])
                     <p class="mt-6 text-sm text-gray-500">{{ __('No structure available for this song.') }}</p>
                 @else
+                    {{-- Bars: gives every chord a duration (one bar each) so the map is edited as a grid of bars --}}
+                    <form id="create-bars-form" method="POST" action="{{ route('songs.bars.create', $song) }}" hidden
+                        onsubmit="return confirm(@js(__('Create bars for this map? Each chord gets one bar, to be adjusted on the grid. Unsaved changes here are lost.')))">
+                        @csrf
+                    </form>
+
                     <form method="POST" action="{{ route('songs.layout.update', $song) }}" class="mt-2 sm:mt-6 space-y-4"
                         x-data="songLayout(@js(['structure' => $blocks, 'sheet' => $sheet, 'key' => $song->musical_key, 'keyPairs' => $keyOptions, 'structureUrl' => route('songs.chord-sheet.structure'), 'youtubeUrl' => $song->youtube_url]))"
                         @submit="submitting = true">
@@ -200,6 +206,11 @@
                             <div class="ws-panel-section">
                                 <div class="ws-panel-label"><i class="fa-solid fa-tag"></i> {{ __('Block names') }}</div>
                                 <button type="button" class="ws-btn" @click="suggestAll(); optionsOpen = false" :disabled="!hasSuggestions"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('Suggest names') }}</button>
+                            </div>
+                            <div class="ws-panel-section">
+                                <div class="ws-panel-label"><i class="fa-solid fa-table-cells"></i> {{ __('Bars') }}</div>
+                                <button type="submit" form="create-bars-form" class="ws-btn"><i class="fa-solid fa-table-cells"></i> {{ __('Create bars') }}</button>
+                                <p class="ws-panel-help mt-2">{{ __('Edit this map as a grid of bars (the chord of each beat). Each chord starts with one bar; maps saved by the study app already come with bars.') }}</p>
                             </div>
                             @include('songs.partials.video-options')
                             <div class="ws-panel-section">

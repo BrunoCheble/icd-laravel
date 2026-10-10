@@ -17,6 +17,7 @@ use App\Http\Controllers\SongChordSheetController;
 use App\Http\Controllers\SongController;
 use App\Http\Controllers\SongLayoutController;
 use App\Http\Controllers\SongPracticeController;
+use App\Http\Controllers\SongVersionController;
 use App\Http\Controllers\Site\SetlistController as SiteSetlistController;
 use App\Http\Controllers\Site\SiteController;
 use Illuminate\Support\Facades\Route;
@@ -85,6 +86,12 @@ Route::middleware('auth')->group(function () {
     Route::resource('songs', SongController::class);
     Route::get('/songs/{song}/layout', [SongLayoutController::class, 'edit'])->name('songs.layout.edit');
     Route::put('/songs/{song}/layout', [SongLayoutController::class, 'update'])->name('songs.layout.update');
+    Route::put('/songs/{song}/bars', [SongLayoutController::class, 'updateBars'])->name('songs.bars.update');
+    Route::put('/songs/{song}/sheet-section', [SongLayoutController::class, 'updateSheetSection'])->name('songs.sheet-section.update');
+    Route::post('/songs/{song}/versions', [SongVersionController::class, 'store'])->name('songs.versions.store');
+    Route::put('/songs/{song}/versions/{version}', [SongVersionController::class, 'update'])->name('songs.versions.update');
+    Route::delete('/songs/{song}/versions/{version}', [SongVersionController::class, 'destroy'])->name('songs.versions.destroy');
+    Route::post('/songs/{song}/bars', [SongLayoutController::class, 'createBars'])->name('songs.bars.create');
     Route::get('/songs/{song}/practice', [SongPracticeController::class, 'show'])->name('songs.practice');
 
     Route::get('/setlists/songs/search', [SetlistController::class, 'searchSongs'])->name('setlists.songs.search');

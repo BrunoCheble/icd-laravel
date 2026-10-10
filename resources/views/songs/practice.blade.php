@@ -101,6 +101,9 @@
         .chord.is-right .chord-name { color: #15803d; text-decoration: none; }
         .chord.is-wrong .chord-name { color: #dc2626; text-decoration: line-through dotted #dc2626; }
         .chord.is-asking .chord-mask { background: var(--accent); color: var(--accent-text); border-style: solid; }
+        /* The chord being played (MP3 or video); a hidden one stays hidden, only its "?" is lit. */
+        .chord.is-playing .chord-name { margin: 0 -.2em; padding: 0 .2em; border-radius: .25rem; background: var(--accent); color: var(--accent-text); }
+        .chord.is-playing .chord-mask { background: var(--accent); color: var(--accent-text); border-style: solid; }
         .is-test .chord.is-hidden .chord-mask { cursor: pointer; }
         @media (hover: hover) {
             .practice:not(.is-test) .chord.is-hidden:hover .chord-name { visibility: visible; }
@@ -156,7 +159,7 @@
                         <button type="button" class="ws-btn is-active" x-show="loop !== null" @click="loop = null" :title="@js(__('Stop repeating'))">
                             <i class="fa-solid fa-repeat"></i><span class="ws-label" x-text="loop !== null ? sections[loop]?.label : ''"></span><i class="fa-solid fa-xmark"></i>
                         </button>
-                        @include('songs.partials.play-button', ['toggle' => 'togglePlay()', 'time' => 'formatTime(time)', 'show' => 'videoId'])
+                        @include('songs.partials.play-button', ['toggle' => 'togglePlay()', 'time' => 'formatTime(time)', 'show' => 'hasPlayer'])
                         <button type="button" class="ws-btn" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" title="{{ __('Options') }}" aria-label="{{ __('Options') }}"><i class="fa-solid fa-gear"></i></button>
                     </div>
                     {{-- Phones: the test score under the toolbar --}}
@@ -419,8 +422,31 @@
             }).filter(section => section.lines.length);
         }
 
+        // Start time (seconds) of each chord of the map, in order, from the blocks' times and the chords' beats; null
+        // when the map has no durations (bars) for every block or the song has no BPM.
+        function chordTimes(structure, bpm) {
+            const list = (Array.isArray(structure) ? structure : []).filter(section => section && typeof section === 'object' && section.jump !== 'start');
+            if (!bpm || !list.length) return null;
+            const beat = 60 / bpm;
+            const times = [];
+            let end = 0;
+            for (const section of list) {
+                const chords = chordsOnly(Array.isArray(section.chords) ? section.chords.map(String) : []);
+                const durations = Array.isArray(section.durations) ? section.durations.map(Number) : [];
+                if (durations.length !== chords.length || durations.some(value => !(value > 0))) return null;
+                let time = toSeconds(section.start) ?? end;
+                durations.forEach(value => { times.push(time); time += value * beat; });
+                end = time;
+            }
+            return times;
+        }
+
         function practicePage(data) {
             const song = data.song;
+            // The song's MP3 plays instead of the YouTube video when there is one.
+            const audio = song.audio_url ? new Audio(song.audio_url) : null;
+            if (audio) audio.preload = 'auto';
+            const timeline = chordTimes(song.structure, Number(song.bpm));
             const sheet = practiceSheet(song.chord_sheet);
             const map = practiceMap(song.structure);
             const countSheet = sheet.reduce((total, section) => total + section.lines.reduce((sum, line) => sum + (line.units || []).filter(unit => unit.g !== null).length, 0), 0);
@@ -435,7 +461,8 @@
             // have the same chords (chord n of the sheet is chord n of the map).
             const mapPassing = new Set();
             map.forEach(section => section.lines.flat(2).forEach(item => { if (item.passing) mapPassing.add(item.g); }));
-            const sheetPassing = JSON.stringify(sheetChords) === JSON.stringify(mapChords.filter(chord => chord !== undefined)) ? mapPassing : new Set();
+            const sheetFollowsMap = JSON.stringify(sheetChords) === JSON.stringify(mapChords.filter(chord => chord !== undefined));
+            const sheetPassing = sheetFollowsMap ? mapPassing : new Set();
 
             return withYoutubeMini({
                 settings: loadPracticeSettings(),
@@ -483,12 +510,19 @@
                 },
                 time: 0,
                 lastCurrent: null,
+                lastChord: -1,
 
                 init() {
                     this.view = this.hasSheet && (this.settings.view === 'sheet' || !this.hasMap) ? 'sheet' : 'map';
                     this.shuffle();
-                    this.$nextTick(() => this.initVideo('yt-practice'));
-                    setInterval(() => this.tick(), 250);
+                    if (audio) {
+                        audio.addEventListener('play', () => { this.playing = true; });
+                        audio.addEventListener('pause', () => { this.playing = false; });
+                        audio.addEventListener('ended', () => { if (this.loop !== null) this.restartLoop(); });
+                    } else {
+                        this.$nextTick(() => this.initVideo('yt-practice'));
+                    }
+                    setInterval(() => this.tick(), 100);
                 },
 
                 get sections() { return this.view === 'sheet' ? sheet : map; },
@@ -519,6 +553,7 @@
                         'is-wrong': !!answer && !answer.right,
                         'is-asking': this.question?.g === g,
                         'is-passing': this.isPassing(g),
+                        'is-playing': g === this.currentChord,
                     };
                 },
                 // Practice: a tap (or click) shows a hidden chord until it is tapped again. Test: asks for it.
@@ -624,45 +659,78 @@
                     savePracticeSettings(this.settings);
                 },
 
-                // ---- YouTube (shared small player, see youtube-mini.js) ----
-                togglePlay() { this.toggleVideo(); },
+                // ---- Player: the song's MP3, or its YouTube video (shared small player, see youtube-mini.js) ----
+                get hasPlayer() { return !!audio || !!this.videoId; },
+                // Ready to play and seek.
+                get canPlay() { return !!audio || this.playerReady; },
+                togglePlay() {
+                    if (audio) return audio.paused ? audio.play() : audio.pause();
+                    this.toggleVideo();
+                },
+                seek(time) {
+                    if (!audio) return this.seekVideo(time);
+                    audio.currentTime = time;
+                    audio.play();
+                },
                 tick() {
-                    if (!this.playerReady) return;
-                    this.time = this.videoCurrentTime();
-                    // Repeating a block: back to its start when the next block starts (or the video jumped out of it),
-                    // also while the video is loading (state 3), which often happens right at the end of a block.
-                    const state = this.videoState();
+                    if (!this.canPlay) return;
+                    this.time = audio ? audio.currentTime : this.videoCurrentTime();
+                    // Playing, or (video) loading, which often happens right at the end of a block.
+                    const state = audio ? (audio.paused ? 2 : 1) : this.videoState();
+                    // Repeating a block: back to its start when the next block starts (or the player jumped out of it).
                     const range = this.loop === null ? null : this.loopRange(this.loop);
                     if (range && (state === 1 || state === 3) && performance.now() > this.loopCooldown
                         && (this.time >= range.end - 0.3 || this.time < range.start - 0.5)) {
                         this.restartLoop();
                     }
-                    // The current block is kept in view while the video plays.
+                    // While playing, the chord being played is kept in view (or the current block, without chord times).
+                    const chord = this.currentChord;
                     const current = this.currentIndex;
-                    if (state === 1 && current !== null && current !== this.lastCurrent) {
+                    if (state === 1 && chord >= 0 && chord !== this.lastChord) {
+                        this.scrollToChord(chord);
+                    } else if (state === 1 && chord < 0 && current !== null && current !== this.lastCurrent) {
                         this.$root.querySelector(`[data-section="${current}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
                     }
+                    this.lastChord = chord;
                     this.lastCurrent = current;
                 },
-                // Block being played: the one with the latest start not after the video time.
+                // Number of the chord being played (the n-th of the map; in the chord sheet only when it has the
+                // map's chords), or -1.
+                get currentChord() {
+                    if (!timeline || !this.canPlay || (this.time === 0 && !this.playing)) return -1;
+                    if (this.view === 'sheet' && !sheetFollowsMap) return -1;
+                    let n = -1;
+                    while (n + 1 < timeline.length && timeline[n + 1] <= this.time + 0.05) n++;
+                    return n;
+                },
+                // Scrolls only when the chord is leaving the comfortable middle of the screen.
+                scrollToChord(g) {
+                    const element = this.$root.querySelector(`[data-g="${g}"]`);
+                    if (!element) return;
+                    const box = element.getBoundingClientRect();
+                    if (box.top < window.innerHeight * .25 || box.bottom > window.innerHeight * .7) {
+                        window.scrollBy({ top: box.top - window.innerHeight * .35, behavior: 'smooth' });
+                    }
+                },
+                // Block being played: the one with the latest start not after the player's time.
                 get currentIndex() {
-                    if (!this.playerReady) return null;
+                    if (!this.canPlay) return null;
                     let found = null;
                     this.sections.forEach((section, index) => {
                         if (section.start !== null && section.start <= this.time + 0.2) found = index;
                     });
                     return found;
                 },
-                canSeek(section) { return this.playerReady && section.start !== null; },
+                canSeek(section) { return this.canPlay && section.start !== null; },
                 seekTo(section) {
-                    if (this.canSeek(section)) this.seekVideo(section.start);
+                    if (this.canSeek(section)) this.seek(section.start);
                 },
                 // A block is played from its start to the start of the next timed block (or the end of the video).
                 loopRange(index) {
                     const start = this.sections[index]?.start;
                     if (start === null || start === undefined) return null;
                     const next = this.sections.slice(index + 1).find(section => section.start !== null && section.start > start);
-                    return { start, end: next ? next.start : this.videoDuration() };
+                    return { start, end: next ? next.start : (audio ? (audio.duration || Infinity) : this.videoDuration()) };
                 },
                 toggleLoop(index) {
                     this.loop = this.loop === index ? null : index;
@@ -674,7 +742,7 @@
                     // The player reports the old time for a moment after a jump: no new jump meanwhile.
                     this.loopCooldown = performance.now() + 1000;
                     this.time = range.start;
-                    this.seekVideo(range.start);
+                    this.seek(range.start);
                 },
                 formatTime(seconds) {
                     const total = Math.max(0, Math.round(seconds || 0));
@@ -689,10 +757,10 @@
                         if (option) this.answer(option);
                         return;
                     }
-                    if (event.code === 'Space' && this.videoId) { event.preventDefault(); this.togglePlay(); }
+                    if (event.code === 'Space' && this.hasPlayer) { event.preventDefault(); this.togglePlay(); }
                     if (event.key === 's' || event.key === 'S') this.shuffle();
                 },
-            }, song.youtube_url, {
+            }, audio ? null : song.youtube_url, {
                 // The last block ends with the video: start it again.
                 onEnded() { if (this.loop !== null) this.restartLoop(); },
                 // Above the test panel when it is open.

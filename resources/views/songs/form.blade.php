@@ -43,6 +43,14 @@
         <p id="key-transpose-notice" class="mt-2 text-sm" style="display: none; color: #4338ca;"></p>
     </div>
 
+    {{-- Tempo: the live mode of the setlist app counts the bars with it --}}
+    <div>
+        <x-input-label for="bpm" :value="__('BPM')" />
+        <x-text-input id="bpm" name="bpm" type="number" step="0.1" min="30" max="300" class="mt-1 block w-full" :value="old('bpm', $song?->bpm)" />
+        <p class="mt-1 text-sm text-gray-500">{{ __('Beats per minute. Filled in by the study app (icd-chords) when it saves the map; the live mode of the setlist follows it.') }}</p>
+        <x-input-error class="mt-2" :messages="$errors->get('bpm')" />
+    </div>
+
     <div>
         <x-input-label for="youtube_url" :value="__('YouTube')" />
         <x-text-input id="youtube_url" name="youtube_url" type="url" class="mt-1 block w-full" :value="old('youtube_url', $song?->youtube_url)" />

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\SaveSongAudioService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Song extends Model
 {
@@ -14,6 +15,7 @@ class Song extends Model
         'title',
         'artist',
         'musical_key',
+        'bpm',
         'youtube_url',
         'source_url',
         'video_lesson',
@@ -28,6 +30,7 @@ class Song extends Model
             'structure' => 'object',
             'chord_sheet' => 'array',
             'reviewed_at' => 'datetime',
+            'bpm'         => 'float',
         ];
     }
 
@@ -38,6 +41,14 @@ class Song extends Model
     {
         return $this->belongsToMany(Setlist::class, 'setlist_songs')
             ->withPivot('musical_key', 'position', 'minister_name');
+    }
+
+    /**
+     * Chord maps of this song for instruments (see SongVersion), by instrument name.
+     */
+    public function versions(): HasMany
+    {
+        return $this->hasMany(SongVersion::class)->orderBy('instrument');
     }
 
     /**
@@ -76,6 +87,22 @@ class Song extends Model
             $sections->filter(fn ($section) => ($section->start ?? '') !== '' && $section->start !== null)->count(),
             $sections->count(),
         ];
+    }
+
+    /**
+     * Whether the chord map can be shown as a grid of bars: every block with chords has one duration per chord
+     * (saved by the study app, or created on the layout page).
+     */
+    public function hasBars(): bool
+    {
+        $blocks = array_filter(
+            json_decode(json_encode($this->structure ?? []), true) ?? [],
+            fn ($block) => is_array($block) && ($block['jump'] ?? null) !== 'start',
+        );
+        $withChords = array_filter($blocks, fn ($block) => \App\Services\UpdateSongLayoutService::chordSequence([$block]) !== []);
+
+        return $withChords !== [] && collect($withChords)->every(fn ($block) => is_array($block['durations'] ?? null)
+            && count($block['durations']) === count(\App\Services\UpdateSongLayoutService::chordSequence([$block])));
     }
 
     /**

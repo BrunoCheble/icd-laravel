@@ -13,6 +13,7 @@ class GetSongCatalogService
     public function execute(): array
     {
         return Song::query()
+            ->with('versions')
             ->orderBy('title')
             ->get()
             ->map(fn (Song $song) => GetPublicSetlistService::songPayload($song))

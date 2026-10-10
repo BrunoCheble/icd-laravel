@@ -108,6 +108,7 @@
         .key-option.is-selected { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
         .key-option:disabled { opacity: .5; cursor: default; }
         .song-meta { margin: .15rem 0 0; font-size: .85rem; color: var(--muted); }
+        .instrument-badge { padding: .1rem .55rem; border-radius: 999px; background: var(--accent); color: var(--accent-text); font-size: .75rem; font-weight: 700; white-space: nowrap; }
         .song-meta strong { color: var(--text); font-weight: 600; }
         .hint { font-size: .85rem; color: var(--muted); }
 
@@ -156,6 +157,21 @@
         .sheet-line.no-chords .seg-chord { display: none; }
         .sheet-line.only-chords .seg-text { display: none; }
         .sheet-comment { font-size: calc(.85rem * var(--label-scale, 1)); font-style: italic; color: var(--muted); }
+        /* Live mode: bars counted by the BPM, the current beat lit */
+        .live-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .35rem; }
+        @media (max-width: 700px) { .live-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        .live-bar { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: .5rem; padding: .3rem .4rem .45rem; cursor: pointer; }
+        .live-bar.is-current { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+        .live-bar.has-block { border-top: 3px solid var(--type-color, var(--accent)); }
+        .live-bar .number { position: absolute; top: .15rem; right: .35rem; font-size: .62rem; color: var(--muted); }
+        .live-block { font-size: calc(.7rem * var(--label-scale, 1)); font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, var(--accent)); min-height: .95rem; margin-right: 1.3rem; }
+        .live-beats { display: grid; gap: .15rem; margin-top: .2rem; }
+        .live-beat { min-width: 0; padding: .1rem .2rem; border-radius: .3rem; font-weight: 800; font-size: calc(1.1rem * var(--chord-scale, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .live-beat.is-repeat { color: var(--muted); font-weight: 400; }
+        .live-beat.is-on { background: var(--accent); color: var(--accent-text); }
+        .live-beat .and { font-size: .8em; border-left: 1px dashed var(--muted); padding-left: .2rem; margin-left: .2rem; }
+        .live-tempo { display: inline-flex; align-items: center; gap: .25rem; }
+        .live-tempo .bpm { min-width: 4.2rem; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; font-size: .9rem; }
         .mode-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
         .mode-toggle button { padding: .15rem .7rem; font-size: .85rem; font-weight: 600; background: none; color: var(--muted); border: 0; cursor: pointer; min-height: 32px; }
         .mode-toggle button.is-active { background: var(--accent); color: var(--accent-text); }
@@ -166,6 +182,8 @@
         .chord-step { white-space: pre; }
         /* Passing chords: dotted underline */
         .chord-step .is-passing, .seg-chord.is-passing { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .22em; }
+        /* The chord being played (clock, audio or video) */
+        .seg-chord.is-playing > span, .chord-step .is-playing { margin: 0 -.2em; padding: 0 .2em; border-radius: .25rem; background: var(--accent); color: var(--accent-text); }
         /* Repeated cycles in columns: each column is as wide as its widest chord across the lines. */
         .section-chords.is-aligned { display: grid; grid-template-columns: repeat(var(--chord-columns, 1), max-content); column-gap: 1em; justify-content: start; }
         .section-chords.is-aligned .chord-line { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
@@ -324,7 +342,7 @@
 
         @if ($data)
             {{-- Section timer: follows the "start" times of the structure; tapping a block re-syncs it --}}
-            <div class="player" x-show="current">
+            <div class="player" x-show="current && !liveMode">
                 <button type="button" class="btn btn-icon" @click="togglePlay()" :aria-label="playing ? @js(__('Pause')) : @js(__('Play'))" ><i class="fa-solid" :class="playing ? 'fa-pause' : 'fa-play'"></i></button>
                 <span class="player-time" x-text="formatTime(elapsed)"></span>
                 <div class="player-section">
@@ -337,6 +355,27 @@
                     <div class="player-progress" x-show="currentProgress !== null"><div :style="`width: ${(currentProgress ?? 0) * 100}%`"></div></div>
                 </div>
                 <button type="button" class="btn btn-icon" @click="restart()" aria-label="{{ __('Restart') }}" title="{{ __('Restart') }}"><i class="fa-solid fa-rotate-left"></i></button>
+            </div>
+
+            {{-- Live mode: counts the bars by the BPM (each musician on his device); tapping a bar goes on from it --}}
+            <div class="player" x-show="current && liveMode" x-cloak>
+                <button type="button" class="btn btn-icon" @click="toggleLive()" :aria-label="live.running ? @js(__('Stop')) : @js(__('Start'))"><i class="fa-solid" :class="live.running ? 'fa-stop' : 'fa-play'"></i></button>
+                <span class="player-time" x-text="`${liveBar + 1}/${liveGrid?.bars.length ?? 0}`"></span>
+                <div class="player-section">
+                    <div class="names">
+                        <strong x-text="liveChordNow ? chordFor(liveChordNow) : '—'"></strong>
+                        <template x-if="liveChordNext">
+                            <span> <i class="fa-solid fa-arrow-right" style="font-size: .8em;"></i> <span x-text="chordFor(liveChordNext)"></span></span>
+                        </template>
+                    </div>
+                </div>
+                <span class="live-tempo">
+                    <button type="button" class="btn btn-icon" @click="setLiveBpm(liveBpm - 1)" aria-label="{{ __('Slower') }}">−</button>
+                    <button type="button" class="btn bpm" @click="tapTempo()" :title="@js(__('Tap the beat to set the tempo'))"><span x-text="`${Math.round(liveBpm)} BPM`"></span></button>
+                    <button type="button" class="btn btn-icon" @click="setLiveBpm(liveBpm + 1)" aria-label="{{ __('Faster') }}">+</button>
+                </span>
+                <button type="button" class="btn btn-icon" :class="{ 'is-active': live.click }" @click="live.click = !live.click" :title="@js(__('Metronome'))" aria-label="{{ __('Metronome') }}"><i class="fa-solid fa-drum"></i></button>
+                <button type="button" class="btn btn-icon" @click="restartLive()" aria-label="{{ __('Restart') }}" title="{{ __('Restart') }}"><i class="fa-solid fa-rotate-left"></i></button>
             </div>
         @endif
 
@@ -380,6 +419,17 @@
                     <label class="switch"><input type="checkbox" x-model="settings.showLyrics"> {{ __('Lyrics') }}</label>
                     <label class="switch"><input type="checkbox" x-model="settings.twoColumns"> {{ __('Two columns') }}</label>
                     <label class="switch" :title="audioUrl || videoId ? '' : @js(__('This song has no audio or YouTube video.'))"><input type="checkbox" x-model="settings.youtubeSound"> {{ __('Song sound') }}</label>
+                </div>
+
+                <div class="option-row" x-show="instrumentOptions.length">
+                    <span class="option-label">{{ __('My instrument') }}</span>
+                    <select class="control" x-model="settings.instrument" style="width: auto;">
+                        <option value="">{{ __('Base (everyone)') }}</option>
+                        <template x-for="name in instrumentOptions" :key="name">
+                            <option :value="name" x-text="name" :selected="name === settings.instrument"></option>
+                        </template>
+                    </select>
+                    <span class="hint">{{ __('Songs with a version for your instrument show its chords; the others show the base.') }}</span>
                 </div>
 
                 <div class="option-row" x-show="current">
@@ -434,6 +484,7 @@
                     <article>
                         <div class="song-head">
                             <h1 class="song-title" x-text="current.title"></h1>
+                            <span class="instrument-badge" x-show="current.instrumentVersion" x-text="current.instrumentVersion" :title="@js(__('Version of this song for your instrument'))"></span>
                             <span class="key-picker-anchor" @click.outside="keyPickerOpen = false" @keydown.escape.window="keyPickerOpen = false">
                                 <button type="button" class="key-badge" @click.stop="keyPickerOpen = !keyPickerOpen" :aria-expanded="keyPickerOpen" :title="@js(__('Change key'))">
                                     <span x-text="selectedKey || '—'"></span>
@@ -449,9 +500,10 @@
                                     </template>
                                 </div>
                             </span>
-                            <span class="mode-toggle" x-show="hasSheet" role="group" :aria-label="@js(__('View'))">
-                                <button type="button" :class="{ 'is-active': !sheetMode }" @click.stop="setViewMode('map')">{{ __('Map') }}</button>
-                                <button type="button" :class="{ 'is-active': sheetMode }" @click.stop="setViewMode('sheet')">{{ __('Chord sheet') }}</button>
+                            <span class="mode-toggle" x-show="hasSheet || hasLive" role="group" :aria-label="@js(__('View'))">
+                                <button type="button" :class="{ 'is-active': !sheetMode && !liveMode }" @click.stop="setViewMode('map')">{{ __('Map') }}</button>
+                                <button type="button" x-show="hasSheet" :class="{ 'is-active': sheetMode }" @click.stop="setViewMode('sheet')">{{ __('Chord sheet') }}</button>
+                                <button type="button" x-show="hasLive" :class="{ 'is-active': liveMode }" @click.stop="setViewMode('live')"><i class="fa-solid fa-circle" style="font-size: .55em; color: #ef4444;"></i> {{ __('Live') }}</button>
                             </span>
                         </div>
                         <p class="song-meta" x-show="settings.showDetails">
@@ -460,6 +512,26 @@
                                 <span> · {{ __('Minister') }}: <strong x-text="current.minister_name"></strong></span>
                             </template>
                         </p>
+
+                        {{-- Live mode: the bars of the map (from the chord durations), counted by the BPM --}}
+                        <template x-if="liveMode">
+                        <div class="live-grid" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}`">
+                            <template x-for="(bar, b) in liveGrid.bars" :key="`${current.id}-live-${b}`">
+                                <div class="live-bar" :class="{ 'is-current': b === liveBar, 'has-block': bar.blocks.some(block => !block.marker) }"
+                                    :style="bar.blocks.length ? typeStyle(bar.blocks[0].name) : ''" @click="goToLiveBar(b)" :data-live-bar="b">
+                                    <span class="number" x-text="b + 1"></span>
+                                    <div class="live-block"><template x-for="block in bar.blocks" :key="block.tick"><span x-text="(block.marker ? '↺ ' + @js(__('Back to the start')) : block.name) + ' '"></span></template></div>
+                                    <div class="live-beats" :style="`grid-template-columns: repeat(${bar.beats.length}, minmax(0, 1fr))`">
+                                        <template x-for="(beat, i) in bar.beats" :key="i">
+                                            <span class="live-beat" :class="{ 'is-repeat': beat.repeat, 'is-on': b === liveBar && i === liveBeat }">
+                                                <span x-text="beat.repeat ? '/' : (beat.chord ? chordFor(beat.chord) : '–')"></span><template x-if="beat.and !== null"><span class="and" x-text="beat.and ? chordFor(beat.and) : '–'"></span></template>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        </template>
 
                         <template x-if="sheetMode">
                         <div class="sections" :class="{ 'two-columns': settings.twoColumns }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
@@ -477,7 +549,7 @@
                                                 :class="parsed.type === 'comment' ? 'sheet-comment' : { 'sheet-line': true, 'no-chords': !parsed.hasChords, 'only-chords': !parsed.hasText }">
                                                 <span x-show="parsed.type === 'comment'" x-text="parsed.text"></span>
                                                 <template x-for="(unit, unitIndex) in (parsed.units || [])" :key="unitIndex">
-                                                    <span class="seg" :class="{ 'is-wide': unit.wide }"><span class="seg-chord" :class="{ 'is-passing': unit.chord && sheetChordPassing(index, lineIndex, unit.ordinal) }" x-text="unit.chord ? chordFor(unit.chord) : ''"></span><span class="seg-text" x-text="unit.text"></span></span>
+                                                    <span class="seg" :class="{ 'is-wide': unit.wide }"><span class="seg-chord" :class="{ 'is-passing': unit.chord && sheetChordPassing(index, lineIndex, unit.ordinal), 'is-playing': unit.chord && playingChord >= 0 && sheetChordNumber(index, lineIndex, unit.ordinal) === playingChord }" :data-chord="unit.chord ? sheetChordNumber(index, lineIndex, unit.ordinal) : null"><span x-text="unit.chord ? chordFor(unit.chord) : ''"></span></span><span class="seg-text" x-text="unit.text"></span></span>
                                                 </template>
                                             </div>
                                         </template>
@@ -490,7 +562,7 @@
                         </div>
                         </template>
 
-                        <template x-if="!sheetMode">
+                        <template x-if="!sheetMode && !liveMode">
                         <div class="sections" :class="{ 'two-columns': settings.twoColumns }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
                             <template x-for="(section, index) in sections" :key="`${current.id}-${index}`">
                                 <section :class="sectionState(index)" :style="typeStyle(sectionName(section))" @click="selectSection(index)">
@@ -511,7 +583,7 @@
                                                 this.$nextTick(() => this.aligned = this.$el.scrollWidth <= this.$el.clientWidth + 1);
                                             },
                                         }"
-                                        x-effect="lines = editingIndex === index ? [] : chordLines(section); layout.fontScale; settings.twoColumns; editingIndex === index ? (aligned = false) : fit()"
+                                        x-effect="lines = editingIndex === index ? [] : chordLines(section, index); layout.fontScale; settings.twoColumns; editingIndex === index ? (aligned = false) : fit()"
                                         @resize.window.debounce.200ms="fit()"
                                         :class="{ 'is-aligned': aligned }"
                                         :style="`--chord-columns: ${Math.max(1, ...lines.map(line => line.length))}`">
@@ -527,7 +599,7 @@
                                         <template x-for="(line, lineIndex) in lines" :key="lineIndex">
                                             <div class="chord-line">
                                                 <template x-for="(step, stepIndex) in line" :key="stepIndex">
-                                                    <span class="chord-step"><template x-for="(chord, c) in step" :key="c"><span :class="{ 'is-passing': chord.passing }" x-text="(c ? ' ' : '') + chord.name"></span></template></span>
+                                                    <span class="chord-step"><template x-for="(chord, c) in step" :key="c"><span :class="{ 'is-passing': chord.passing, 'is-playing': playingChord >= 0 && chord.numbers.includes(playingChord) }" :data-chord="chord.numbers[0]" x-text="(c ? ' ' : '') + chord.name"></span></template></span>
                                                 </template>
                                             </div>
                                         </template>
@@ -659,7 +731,7 @@
         // Per-viewer display preferences; the page works the same when storage is unavailable.
         // Toggles are shared by every song; size settings are stored per song_id.
         const SETTINGS_KEY = 'setlist-view-settings';
-        const DEFAULT_SETTINGS = { showDetails: true, showAnchors: true, showLyrics: false, twoColumns: true, viewMode: 'map', youtubeSound: false };
+        const DEFAULT_SETTINGS = { showDetails: true, showAnchors: true, showLyrics: false, twoColumns: true, viewMode: 'map', youtubeSound: false, instrument: '' };
 
         // YouTube player for the song sound, outside Alpine's reactive state.
         let soundPlayer = null;
@@ -1055,33 +1127,85 @@
                 sectionName(section) { return String(section?.section ?? '').replaceAll('_', ' '); },
                 // Display only: the section's lines (marked with "|" or automatic, see chord-lines.js), each a list
                 // of steps, each step a list of chords; an identical chord repeated in a line is shown once (G G -> G).
-                chordLines(section) {
+                // `index`: the section's position in the map.
+                chordLines(section, index) {
                     const chords = Array.isArray(section?.chords) ? section.chords.map(String) : [];
                     const passing = this.sectionPassing(section);
+                    // Numbers of each chord in the whole map (to light the chord being played); none when edited here.
+                    const offset = section?.edited ? null : this.mapChordOffsets[index];
                     const lines = chordSegments(chords, this.mapSongCycles, passing)
-                        .map(line => line.map(step => step.chords.map((name, i) => ({ name, passing: passing.includes(step.positions[i]) }))));
+                        .map(line => line.map(step => step.chords.map((name, i) => ({
+                            name,
+                            passing: passing.includes(step.positions[i]),
+                            numbers: offset === undefined || offset === null ? [] : [offset + step.positions[i]],
+                        }))));
 
-                    // Shows a chord repeated in a row once per line (G G -> G), dropping cells left empty.
+                    // Shows a chord repeated in a row once per line (G G -> G), dropping cells left empty; the chord
+                    // shown also stands for the ones dropped after it.
                     return lines.map(line => {
                         const cells = [];
+                        let last = null;
                         line.forEach(step => {
-                            const previous = cells[cells.length - 1];
-                            const chords = step.filter((chord, i) => chord.name !== (i === 0 ? previous?.[previous.length - 1]?.name : step[i - 1].name));
-                            if (chords.length) cells.push(chords);
+                            const kept = [];
+                            step.forEach(chord => {
+                                if (last && chord.name === last.name) last.numbers.push(...chord.numbers);
+                                else { kept.push(chord); last = chord; }
+                            });
+                            if (kept.length) cells.push(kept);
                         });
                         return cells;
                     }).filter(line => line.length);
+                },
+                // Number of the first chord of each map section in the whole map.
+                get mapChordOffsets() {
+                    let offset = 0;
+                    return (Array.isArray(this.current?.structure) ? this.current.structure : []).map(section => {
+                        const start = offset;
+                        offset += chordsOnly(Array.isArray(section?.chords) ? section.chords.map(String) : []).length;
+                        return start;
+                    });
                 },
                 // Passing chords of a map section (positions); none when this device changed its chords.
                 sectionPassing(section) {
                     return !section?.edited && Array.isArray(section?.passing) ? section.passing : [];
                 },
 
+                // ---- Versions for an instrument: whoever picks an instrument sees its version of each song that has
+                // one (its map and the chord sheet with its chords); the base map stays kept in `_base` ----
+                get instrumentOptions() {
+                    const names = new Set(this.songs.flatMap(song => (song.versions || []).map(version => version.instrument)));
+                    if (this.settings.instrument) names.add(this.settings.instrument);
+                    return [...names].sort((a, b) => a.localeCompare(b));
+                },
+                applyInstrument(song) {
+                    if (!song) return;
+                    if (!song._base) song._base = { structure: song.structure, chord_sheet: song.chord_sheet };
+                    const version = (song.versions || []).find(item => item.instrument === this.settings.instrument);
+                    if (version) {
+                        const structure = versionStructure(version, song.original_key);
+                        song.structure = structure;
+                        song.chord_sheet = Array.isArray(song._base.chord_sheet) ? sheetWithChords(song._base.chord_sheet, song._base.structure, structure) : song._base.chord_sheet;
+                        song.instrumentVersion = version.instrument;
+                    } else {
+                        song.structure = song._base.structure;
+                        song.chord_sheet = song._base.chord_sheet;
+                        song.instrumentVersion = null;
+                    }
+                },
+                applyInstruments() { this.songs.forEach(song => this.applyInstrument(song)); },
+
                 init() {
                     window.addEventListener('install-available', () => this.installPrompt = window.installPrompt);
                     this.setupAudio();
+                    this.liveBpm = this.loadLiveBpm();
                     this.checkOffline();
                     this.loadPending();
+                    this.applyInstruments();
+                    this.$watch('settings.instrument', () => {
+                        this.stopLive();
+                        this.resetPlayback();
+                        this.applyInstruments();
+                    });
                     // Back online: the changes stay on screen until the app is opened again, but are no longer kept.
                     window.addEventListener('online', () => { this.online = true; this.forgetPending(); this.saveOfflineShell(); });
                     window.addEventListener('offline', () => this.online = false);
@@ -1097,6 +1221,8 @@
                         if (this.playing && document.visibilityState === 'visible') this.requestWakeLock();
                     });
                     this.$watch('currentId', id => {
+                        this.stopLive();
+                        this.liveBpm = this.loadLiveBpm();
                         this.layout = id ? loadLayout(id) : { ...DEFAULT_LAYOUT };
                         this.chordEdits = id ? loadChordEdits(id) : {};
                         this.editingIndex = null;
@@ -1126,12 +1252,168 @@
                     this.layout = { ...DEFAULT_LAYOUT };
                     if (this.currentId) saveLayout(this.currentId, null);
                 },
+                // ---- Live mode: the map's bars, built from the duration of each chord (in beats, saved by the study
+                // app), counted by the BPM on this device. A chord can change on a beat or halfway through it ("and"),
+                // so the count goes by half beats ("ticks"). "Back to the start" goes back to the first block once. ----
+                live: { running: false, tick: 0, startTick: 0, startedAt: 0, click: false, usedMarkers: [], frame: null, lastBeat: -1 },
+                liveBpm: 80,
+                taps: [],
+                liveCache: { key: null, value: null },
+                get liveGrid() {
+                    const structure = Array.isArray(this.current?.structure) ? this.current.structure : [];
+                    const key = `${this.currentId}:${JSON.stringify(structure)}`;
+                    if (this.liveCache.key === key) return this.liveCache.value;
+                    let value = null;
+                    const ticks = [];
+                    const blocks = [];
+                    let perBar = 4;
+                    let complete = structure.length > 0;
+                    structure.forEach((section, index) => {
+                        if (!section || typeof section !== 'object') return;
+                        if (section.jump === 'start') return blocks.push({ tick: ticks.length, marker: true, name: '', index });
+                        const chords = chordsOnly(Array.isArray(section.chords) ? section.chords.map(String) : []);
+                        const durations = Array.isArray(section.durations) ? section.durations : null;
+                        if (!durations || durations.length !== chords.length) { complete = complete && chords.length === 0; return; }
+                        if (section.beats_per_bar) perBar = section.beats_per_bar;
+                        blocks.push({ tick: ticks.length, marker: false, name: this.sectionName(section), index });
+                        chords.forEach((chord, i) => { for (let k = 0; k < Math.round(durations[i] * 2); k++) ticks.push(chord); });
+                    });
+                    if (complete && ticks.length) {
+                        const size = perBar * 2;
+                        const bars = [];
+                        for (let start = 0; start < ticks.length; start += size) {
+                            const part = ticks.slice(start, start + size);
+                            const beats = [];
+                            for (let i = 0; i < part.length; i += 2) {
+                                const onBeat = part[i];
+                                const previous = start + i > 0 ? ticks[start + i - 1] : null;
+                                beats.push({ chord: onBeat, repeat: i > 0 && onBeat === previous, and: part[i + 1] !== undefined && part[i + 1] !== onBeat ? part[i + 1] : null });
+                            }
+                            bars.push({ start, beats, blocks: blocks.filter(block => block.tick >= start && block.tick < start + size) });
+                        }
+                        value = { perBar, ticks, bars, blocks: blocks.filter(block => !block.marker), markers: blocks.filter(block => block.marker).map(block => block.tick) };
+                    }
+                    this.liveCache = { key, value };
+                    return value;
+                },
+                get hasLive() { return !!this.liveGrid; },
+                get liveBar() { return this.liveGrid ? Math.floor(this.live.tick / (this.liveGrid.perBar * 2)) : 0; },
+                get liveBeat() { return this.liveGrid ? Math.floor((this.live.tick % (this.liveGrid.perBar * 2)) / 2) : 0; },
+                get liveChordNow() { return this.liveGrid?.ticks[this.live.tick] ?? ''; },
+                get liveChordNext() {
+                    const ticks = this.liveGrid?.ticks || [];
+                    const now = ticks[this.live.tick];
+                    for (let t = this.live.tick + 1; t < ticks.length; t++) if (ticks[t] && ticks[t] !== now) return ticks[t];
+                    return '';
+                },
+                liveBpmKey() { return `live-bpm-${this.currentId}`; },
+                loadLiveBpm() {
+                    let saved = 0;
+                    try { saved = Number(localStorage.getItem(this.liveBpmKey())); } catch (e) {}
+                    return saved > 0 ? saved : (Number(this.current?.bpm) || 80);
+                },
+                setLiveBpm(value) {
+                    const bpm = Math.min(240, Math.max(30, Math.round(value)));
+                    if (this.live.running) {
+                        // Keeps the position: the count goes on from the current tick at the new tempo.
+                        this.live.startTick = this.live.tick;
+                        this.live.startedAt = performance.now();
+                    }
+                    this.liveBpm = bpm;
+                    writeStorage(this.liveBpmKey(), bpm);
+                },
+                // Tapping the tempo: the average of the last taps (a pause of 2 s starts over).
+                tapTempo() {
+                    const now = performance.now();
+                    this.taps = [...this.taps.filter(tap => now - tap < 2000), now].slice(-6);
+                    if (this.taps.length < 3) return;
+                    const gaps = this.taps.slice(1).map((tap, i) => tap - this.taps[i]);
+                    this.setLiveBpm(60000 / (gaps.reduce((a, b) => a + b, 0) / gaps.length));
+                },
+                toggleLive() { this.live.running ? this.stopLive() : this.startLive(); },
+                // Starts right away from the current bar (no count-in) and goes on by itself.
+                startLive() {
+                    if (!this.liveGrid) return;
+                    if (this.live.tick >= this.liveGrid.ticks.length - 1) this.live.tick = 0;
+                    this.live.running = true;
+                    this.live.startTick = this.live.tick;
+                    this.live.startedAt = performance.now();
+                    this.live.lastBeat = -1;
+                    this.requestWakeLock();
+                    if (this.live.tick % 2 === 0) this.clickBeat(this.live.tick % (this.liveGrid.perBar * 2) === 0);
+                    const loop = () => {
+                        if (!this.live.running) return;
+                        const beatMs = 60000 / this.liveBpm;
+                        let tick = this.live.startTick + Math.floor((performance.now() - this.live.startedAt) / (beatMs / 2));
+                        const marker = this.liveGrid.markers.find(at => at <= tick && at > this.live.tick && !this.live.usedMarkers.includes(at));
+                        if (marker !== undefined) {
+                            this.live.usedMarkers.push(marker);
+                            this.live.startTick = 0;
+                            this.live.startedAt = performance.now();
+                            tick = 0;
+                        }
+                        if (tick >= this.liveGrid.ticks.length) return this.stopLive();
+                        if (tick !== this.live.tick) {
+                            const before = this.liveBar;
+                            this.live.tick = tick;
+                            if (tick % 2 === 0) this.clickBeat(tick % (this.liveGrid.perBar * 2) === 0);
+                            if (this.liveBar !== before) this.scrollToLiveBar();
+                        }
+                        this.live.frame = requestAnimationFrame(loop);
+                    };
+                    this.live.frame = requestAnimationFrame(loop);
+                },
+                stopLive() {
+                    if (this.live.frame) cancelAnimationFrame(this.live.frame);
+                    this.live.running = false;
+                    this.releaseWakeLock();
+                },
+                restartLive() {
+                    const running = this.live.running;
+                    this.stopLive();
+                    this.live.tick = 0;
+                    this.live.usedMarkers = [];
+                    this.scrollToLiveBar();
+                    if (running) this.startLive();
+                },
+                // Tapping a bar: the count goes on from it (right away when running).
+                goToLiveBar(bar) {
+                    this.live.tick = bar * this.liveGrid.perBar * 2;
+                    this.live.startTick = this.live.tick;
+                    this.live.startedAt = performance.now();
+                },
+                scrollToLiveBar() {
+                    this.$nextTick(() => {
+                        const element = document.querySelector(`[data-live-bar="${this.liveBar}"]`);
+                        if (!element) return;
+                        element.style.scrollMarginTop = `${(document.querySelector('.chrome')?.offsetHeight ?? 0) + 8}px`;
+                        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    });
+                },
+                // Metronome click (when on); the first beat of a bar is higher.
+                clickBeat(accent) {
+                    if (!this.live.click) return;
+                    try {
+                        this.clickContext = this.clickContext || new AudioContext();
+                        const context = this.clickContext;
+                        const oscillator = context.createOscillator();
+                        const gain = context.createGain();
+                        oscillator.frequency.value = accent ? 1600 : 1000;
+                        gain.gain.setValueAtTime(0.4, context.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.05);
+                        oscillator.connect(gain).connect(context.destination);
+                        oscillator.start();
+                        oscillator.stop(context.currentTime + 0.06);
+                    } catch (e) {}
+                },
+
                 // ---- Section timer ----
                 // Start times come from the structure ("start" of each section); a section ends where the
                 // next timed section starts, and the last one has no end.
                 // ---- View mode: chord map (structure) or chord sheet; each has its own blocks and times ----
                 get hasSheet() { return Array.isArray(this.current?.chord_sheet) && this.current.chord_sheet.length > 0; },
                 get sheetMode() { return this.hasSheet && this.settings.viewMode === 'sheet'; },
+                get liveMode() { return this.hasLive && this.settings.viewMode === 'live'; },
                 get timedList() {
                     if (this.sheetMode) return this.current.chord_sheet;
                     return Array.isArray(this.current?.structure) ? this.current.structure : [];
@@ -1141,6 +1423,8 @@
                     return this.sheetMode ? (block?.label || this.sectionName(block)) : this.sectionName(this.sections[index]);
                 },
                 setViewMode(mode) {
+                    if (mode !== 'live') this.stopLive();
+                    if (mode === 'live' && this.playing) this.pause();
                     this.settings.viewMode = mode;
                     // Keep the clock and move the highlight to the matching block of the other view.
                     this.clockSection = this.hasTimeline ? this.sectionAt(this.elapsed) : null;
@@ -1177,6 +1461,75 @@
                         return positions;
                     });
                 },
+                // ---- Chord being played: start time of each chord of the map, from the blocks' times, the chords'
+                // beats and the BPM (null when the map has no durations for every block or the song has no BPM) ----
+                chordTimesCache: { key: null, value: null },
+                get chordTimes() {
+                    const song = this.current;
+                    const key = song ? `${song.id}:${song.bpm}:${song.instrumentVersion}` : null;
+                    if (this.chordTimesCache.key === key) return this.chordTimesCache.value;
+                    let times = [];
+                    const beat = 60 / Number(song?.bpm);
+                    let end = 0;
+                    for (const section of (Array.isArray(song?.structure) ? song.structure : [])) {
+                        if (!section || typeof section !== 'object' || section.jump === 'start') continue;
+                        const chords = chordsOnly(Array.isArray(section.chords) ? section.chords.map(String) : []);
+                        const durations = Array.isArray(section.durations) ? section.durations.map(Number) : [];
+                        if (!(beat > 0) || durations.length !== chords.length || durations.some(value => !(value > 0))) { times = null; break; }
+                        let time = parseStart(section.start) ?? end;
+                        durations.forEach(value => { times.push(time); time += value * beat; });
+                        end = time;
+                    }
+                    this.chordTimesCache = { key, value: times?.length ? times : null };
+                    return this.chordTimesCache.value;
+                },
+                playingChord: -1,
+                // Number of the chord being played at `time` (-1 before the song starts or without chord times).
+                chordAt(time) {
+                    const times = this.chordTimes;
+                    if (!times || (!this.playing && time === 0)) return -1;
+                    let n = -1;
+                    while (n + 1 < times.length && times[n + 1] <= time + 0.05) n++;
+                    return n;
+                },
+                followChord() {
+                    const n = this.chordAt(this.elapsed);
+                    if (n === this.playingChord) return;
+                    this.playingChord = n;
+                    // Keeps the chord in view when it goes below the screen (the section scroll handles new blocks).
+                    if (n < 0 || !this.playing) return;
+                    this.$nextTick(() => {
+                        const element = document.querySelector(`.sections [data-chord="${n}"]`);
+                        if (!element) return;
+                        const box = element.getBoundingClientRect();
+                        const top = (document.querySelector('.chrome')?.offsetHeight ?? 0) + 8;
+                        if (box.bottom > window.innerHeight * .85 || box.top < top) {
+                            window.scrollBy({ top: box.top - Math.max(top, window.innerHeight * .3), behavior: 'smooth' });
+                        }
+                    });
+                },
+                // Number of a chord of the chord sheet in the whole map (chord n of the sheet is chord n of the map), or
+                // null when the sheet does not have the map's chords.
+                sheetNumbersCache: { key: null, value: null },
+                get sheetNumbers() {
+                    const song = this.current;
+                    const key = song ? `${song.id}:${song.instrumentVersion}` : null;
+                    if (this.sheetNumbersCache.key === key) return this.sheetNumbersCache.value;
+                    const structure = Array.isArray(song?.structure) ? song.structure : [];
+                    const sheet = Array.isArray(song?.chord_sheet) ? song.chord_sheet : [];
+                    const mapChords = structure.flatMap(section => chordsOnly(Array.isArray(section?.chords) ? section.chords.map(String) : []));
+                    let value = null;
+                    if (JSON.stringify(mapChords) === JSON.stringify(sheet.flatMap(section => (section.lines || []).flatMap(line => sheetChords(line))))) {
+                        let n = 0;
+                        value = sheet.map(section => (section.lines || []).map(line => { const start = n; n += sheetChords(line).length; return start; }));
+                    }
+                    this.sheetNumbersCache = { key, value };
+                    return value;
+                },
+                sheetChordNumber(sectionIndex, lineIndex, ordinal) {
+                    const start = this.sheetNumbers?.[sectionIndex]?.[lineIndex];
+                    return start === undefined ? null : start + ordinal;
+                },
                 sheetChordPassing(sectionIndex, lineIndex, ordinal) {
                     const lines = this.current?.chord_sheet?.[sectionIndex]?.lines || [];
                     const offset = lines.slice(0, lineIndex).reduce((total, line) => total + sheetChords(line).length, 0);
@@ -1204,8 +1557,21 @@
                     });
                     return targets;
                 },
-                jumpTo(target) { this.selectSection(target.index); },
+                jumpTo(target) {
+                    // Live mode: the count goes on from the first bar of that block.
+                    if (this.liveMode) {
+                        const block = this.liveGrid.blocks.find(item => item.index === target.index);
+                        if (!block) return;
+                        this.goToLiveBar(Math.floor(block.tick / (this.liveGrid.perBar * 2)));
+                        return this.scrollToLiveBar();
+                    }
+                    this.selectSection(target.index);
+                },
                 isCurrentTarget(target) {
+                    if (this.liveMode) {
+                        const block = this.liveGrid.blocks.filter(item => item.tick <= this.live.tick).at(-1);
+                        return !!block && String(block.name).trim().toUpperCase() === target.key;
+                    }
                     const names = this.sheetMode ? null : this.sections;
                     if (this.currentSection === null) return false;
                     const name = this.sheetMode ? this.timedName(this.currentSection) : this.sectionName(names[this.currentSection]);
@@ -1318,7 +1684,7 @@
                     this.playing = true;
                     this.clockSection = this.hasTimeline ? this.sectionAt(this.elapsed) : null;
                     if (this.currentSection === null) this.showSection(this.clockSection ?? 0);
-                    this.ticker = setInterval(() => this.tick(), 250);
+                    this.ticker = setInterval(() => this.tick(), 100);
                     this.requestWakeLock();
                 },
                 pause(fromVideo = false) {
@@ -1337,13 +1703,17 @@
                     } else {
                         this.elapsed = (performance.now() - this.startedAt) / 1000;
                     }
+                    let newSection = false;
                     if (this.hasTimeline) {
                         const index = this.sectionAt(this.elapsed);
                         if (index !== this.clockSection) {
                             this.clockSection = index;
                             this.showSection(index);
+                            newSection = true;
                         }
                     }
+                    if (newSection) this.playingChord = this.chordAt(this.elapsed);
+                    else this.followChord();
                 },
                 // Moves the timer to `time` without changing play/pause.
                 seek(time) {
@@ -1351,12 +1721,14 @@
                     if (this.soundActive) this.sound.seek(time);
                     if (this.playing) this.startedAt = performance.now() - time * 1000;
                     this.clockSection = this.hasTimeline ? this.sectionAt(time) : null;
+                    this.playingChord = this.chordAt(time);
                 },
                 resetPlayback() {
                     this.pause();
                     this.elapsed = 0;
                     this.currentSection = null;
                     this.clockSection = null;
+                    this.playingChord = -1;
                 },
                 restart() {
                     const wasPlaying = this.playing;
@@ -1475,7 +1847,7 @@
                 onKeydown(event) {
                     if (event.key === 'Escape') this.optionsOpen = false;
                     if (this.panelOpen || this.removing || ['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName)) return;
-                    if (event.key === ' ' && this.current) { event.preventDefault(); this.togglePlay(); }
+                    if (event.key === ' ' && this.current) { event.preventDefault(); this.liveMode ? this.toggleLive() : this.togglePlay(); }
                     if (['ArrowRight', 'PageDown'].includes(event.key)) { event.preventDefault(); this.go(this.currentIndex + 1); }
                     if (['ArrowLeft', 'PageUp'].includes(event.key)) { event.preventDefault(); this.go(this.currentIndex - 1); }
                 },
@@ -1579,6 +1951,7 @@
                     this.adding = true;
                     try {
                         const added = await this.request('POST', `${config.urls.setlist}/${setlist.id}/songs`, { song_id: song.id });
+                        this.applyInstrument(added);
                         this.songs.push(added);
                         if (!this.currentId) this.currentId = added.id;
                         this.notify(this.messages.added);
@@ -1586,6 +1959,7 @@
                         const saved = error.offline ? (await this.offlineCatalog()).find(item => item.id === song.id) : null;
                         if (saved) {
                             const added = { ...saved, position: this.songs.length + 1 };
+                            this.applyInstrument(added);
                             this.songs.push(added);
                             if (!this.currentId) this.currentId = saved.id;
                             this.rememberOffline({ add: added });
