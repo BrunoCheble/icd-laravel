@@ -216,6 +216,7 @@
                     window.addEventListener('icd-import', event => {
                         this.source = event.detail.sheet || '';
                         this.expectedChords = event.detail.chordCount || 0;
+                        this.transpose = event.detail.transpose || null;
                         if (this.source) this.parse();
                     });
                 },
@@ -238,6 +239,16 @@
                         const json = await response.json();
                         if (!response.ok) throw new Error(json.errors ? Object.values(json.errors).flat()[0] : json.message);
 
+                        // A chord sheet imported in another key than the song's (replacing it): in the song's key.
+                        let moved = 0;
+                        if (this.transpose && window.ChordTransposer && ChordTransposer.parseKey(this.transpose.from) && ChordTransposer.parseKey(this.transpose.to)) {
+                            (json.chord_sheet?.sections || []).forEach(section => {
+                                section.lines = (section.lines || []).map(line => (/^\s*\{/.test(String(line)) ? line : String(line).replace(/\[([^\]]+)\]/g, (all, name) => {
+                                    moved++;
+                                    return `[${ChordTransposer.transposeChord(name, this.transpose.from, this.transpose.to)}]`;
+                                })));
+                            });
+                        }
                         this.$refs.sheet.value = JSON.stringify(json.chord_sheet, null, 4);
 
                         // A song without a chord map gets an initial one generated from the chord sheet.
@@ -249,7 +260,8 @@
                         const stats = json.stats;
                         this.message = @js(__(':sections blocks, :lines lines, :chords chords. Review and save.'))
                             .replace(':sections', stats.sections).replace(':lines', stats.lines).replace(':chords', stats.chords)
-                            + (this.structureGenerated ? ' ' + @js(__('The structure was generated from the chord sheet.')) : '');
+                            + (this.structureGenerated ? ' ' + @js(__('The structure was generated from the chord sheet.')) : '')
+                            + (moved ? ' ' + @js(__('Chords transposed from :from to :to, the key of this song.')).replace(':from', this.transpose.from).replace(':to', this.transpose.to) : '');
 
                         // The bookmarklet counted the chords on the page: warn when some were not interpreted.
                         if (this.expectedChords && stats.chords < this.expectedChords) {
@@ -316,8 +328,12 @@
                 missing.push(@js(__('Key')) + (data.key ? ` (${data.key})` : ''));
             }
 
+            // Replacing the chord sheet of a song already here: in that song's key.
+            const songKey = keySelect?.value || '';
+            const importedKey = enharmonic[data.key] || data.key;
+            const transpose = data.replace && songKey && importedKey && songKey !== importedKey ? { from: importedKey, to: songKey } : null;
             if (data.sheet) {
-                window.dispatchEvent(new CustomEvent('icd-import', { detail: { sheet: data.sheet, chordCount: data.chordCount } }));
+                window.dispatchEvent(new CustomEvent('icd-import', { detail: { sheet: data.sheet, chordCount: data.chordCount, transpose } }));
             } else {
                 missing.push(@js(__('Chord sheet')));
             }
@@ -330,7 +346,46 @@
                     + @js(__('Imported from :source. Review the fields and save.')).replace(':source', data.source || '')
                     + (missing.length ? ' ' + @js(__('Not found on the page:')) + ' ' + missing.join(', ') + '.' : '');
                 if (outdated) notice.style.borderColor = '#dc2626';
+                if (data.replace) {
+                    notice.textContent = @js(__('Replacing the chord sheet of this song with the one imported from :source: the chord map (structure) does not change. Review and save (the current version stays in the history).')).replace(':source', data.source || '');
+                    notice.style.borderColor = '#4f46e5';
+                } else {
+                    offerReplace(notice);
+                }
             }
+        };
+
+        // New song with the chord sheet of a song already here (same address or same title): it can go to that song
+        // instead (replacing its chord sheet), or be created anyway.
+        const offerReplace = (notice) => {
+            if (@js(isset($song) && $song->exists)) return;
+            const sources = @js($existingSources ?? []);
+            const titles = @js($existingTitles ?? []);
+            const plainUrl = (url) => {
+                try {
+                    const parsed = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(url) ? url : 'http://' + url);
+                    return parsed.hostname.toLowerCase().replace(/^www\./, '') + parsed.pathname.toLowerCase().replace(/\/+$/, '');
+                } catch (e) {
+                    return String(url || '').toLowerCase();
+                }
+            };
+            const plainTitle = (title) => String(title || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const existing = (data.source && sources[plainUrl(data.source)]) || titles[plainTitle(data.title)];
+            if (!existing) return;
+            const box = document.createElement('div');
+            box.style.cssText = 'margin-top: .6rem; padding: .6rem .7rem; border-radius: .4rem; background: #eef2ff; color: #3730a3;';
+            box.append(@js(__('This song is already here:')) + ' "' + existing.title + '". ');
+            const replace = document.createElement('a');
+            replace.href = existing.edit + '#icd-import=' + encodeURIComponent(JSON.stringify({ ...data, replace: true }));
+            replace.textContent = @js(__('Replace its chord sheet'));
+            replace.style.cssText = 'font-weight: 700; text-decoration: underline; margin-right: 1rem;';
+            const create = document.createElement('a');
+            create.href = '#';
+            create.textContent = @js(__('Create a new song anyway'));
+            create.style.textDecoration = 'underline';
+            create.addEventListener('click', event => { event.preventDefault(); box.remove(); });
+            box.append(replace, create);
+            notice.append(box);
         };
 
         // Wait for Alpine so the chord sheet component is listening.

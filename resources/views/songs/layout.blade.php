@@ -79,6 +79,14 @@
         .sheet-line.only-chords .sheet-text { display: none; }
         .sheet-line.only-chords .sheet-seg { padding-right: .35em; }
         .sheet-comment { margin-top: .5rem; font-size: .8rem; font-style: italic; color: #6b7280; }
+        /* Editing the lyrics of a section of the chord sheet (the chords stay the same) */
+        .sheet-head { display: flex; align-items: center; gap: .35rem; }
+        .sheet-edit-btn { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
+        .sheet-edit-btn:hover { color: #4f46e5; background: #eef2ff; }
+        .sheet-editor textarea { width: 100%; margin-top: .3rem; padding: .4rem .5rem; border: 1px solid #c7d2fe; border-radius: .4rem; font: .85rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
+        .sheet-editor .row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .3rem; }
+        .sheet-editor .help { font-size: .75rem; color: #6b7280; margin-top: .3rem; }
+        .sheet-editor .error { font-size: .78rem; color: #dc2626; margin-top: .3rem; }
         .sheet-seg { position: relative; display: inline-flex; flex-direction: column; }
         /* Lyrics before the first chord keep an empty chord row, so all the text stays on one row. */
         .sheet-chord-space { height: 1.3em; }
@@ -240,9 +248,26 @@
                                     <template x-for="(section, s) in sheetSections" :key="s">
                                         <div class="sheet-section">
                                             <div class="sheet-return" x-show="section.jump"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</div>
-                                            <div class="sheet-label" x-show="!section.jump" x-text="section.label" @click="selectFromSheet(section.lines[0], $event)"
-                                                :class="{ 'is-selected': selected !== null && lineBlockId(section.lines[0]) === selected, 'is-playing': playingBlockId !== null && lineBlockId(section.lines[0]) === playingBlockId }"></div>
-                                            <template x-for="(line, l) in section.lines" :key="l">
+                                            <div class="sheet-head" x-show="!section.jump">
+                                                <div class="sheet-label" x-text="section.label" @click="selectFromSheet(section.lines[0], $event)"
+                                                    :class="{ 'is-selected': selected !== null && lineBlockId(section.lines[0]) === selected, 'is-playing': playingBlockId !== null && lineBlockId(section.lines[0]) === playingBlockId }"></div>
+                                                <button type="button" class="sheet-edit-btn" x-show="section.src !== undefined && sheetEdit?.src !== section.src" @click.stop="editSheetSection(section.src)"
+                                                    title="{{ __('Edit the lyrics') }}" aria-label="{{ __('Edit the lyrics') }}"><i class="fa-solid fa-pen"></i></button>
+                                            </div>
+                                            <template x-if="section.src !== undefined && sheetEdit?.src === section.src">
+                                                <div class="sheet-editor">
+                                                    <textarea x-model="sheetEdit.text" :rows="Math.max(3, sheetEdit.text.split('\n').length + 1)" spellcheck="false"
+                                                        x-init="$nextTick(() => $el.focus())" @keydown.escape.stop.prevent="sheetEdit = null"
+                                                        @keydown.enter.meta.prevent="applySheetSection()" @keydown.enter.ctrl.prevent="applySheetSection()"></textarea>
+                                                    <div class="row">
+                                                        <button type="button" class="layout-btn" @click="applySheetSection()"><i class="fa-solid fa-check"></i> {{ __('Apply') }}</button>
+                                                        <button type="button" class="layout-btn" @click="sheetEdit = null">{{ __('Cancel') }}</button>
+                                                    </div>
+                                                    <p class="help">{{ __('Chords stay in brackets, e.g. Esp[G]írito Santo: change or remove lyrics, or move a chord, but keep the same chords. Saved with the page (Save).') }}</p>
+                                                    <p class="error" x-show="sheetEdit.error" x-text="sheetEdit.error"></p>
+                                                </div>
+                                            </template>
+                                            <template x-for="(line, l) in (section.src !== undefined && sheetEdit?.src === section.src ? [] : section.lines)" :key="l">
                                                 <div :class="(line.comment !== undefined ? 'sheet-comment' : 'sheet-line') + (line.onlyChords ? ' only-chords' : '') + (selected !== null && lineBlockId(line) === selected ? ' is-selected' : '') + (playingBlockId !== null && lineBlockId(line) === playingBlockId ? ' is-playing' : '')"
                                                     @click="selectFromSheet(line, $event)">
                                                     <span x-show="line.comment !== undefined" x-text="line.comment"></span>
@@ -765,7 +790,8 @@
                 get syncedSheet() { return this.sheetMatches ? sheetByBlocks(this.sheet, this.blocks) : this.sheet; },
                 // Sections shown, with the "back to the start" markers after the blocks before them.
                 get sheetSections() {
-                    const sections = parsedSheet(this.syncedSheet).sections;
+                    // `src`: the section's place in the sheet shown (to edit its lines).
+                    const sections = parsedSheet(this.syncedSheet).sections.map((section, src) => ({ ...section, src }));
                     if (!this.sheetMatches) return sections;
                     const markers = this.blocks.map((block, b) => (this.isReturn(block) ? b : null)).filter(b => b !== null);
                     const result = [];
@@ -781,6 +807,32 @@
                     return this.hasSheet && JSON.stringify(this.blocks.flatMap(block => block.chords)) === JSON.stringify(parsedSheet(this.sheet).sequence);
                 },
                 get sheetChanged() { return JSON.stringify(this.syncedSheet) !== originalSheet; },
+
+                // ---- Editing the lines of a section of the chord sheet (lyrics and where the chords fall; the chords
+                // themselves stay, so the map still matches). Saved with the page. ----
+                sheetEdit: null,
+                editSheetSection(src) {
+                    this.sheetEdit = { src, text: (this.syncedSheet[src]?.lines || []).join('\n'), error: '' };
+                },
+                applySheetSection() {
+                    const edit = this.sheetEdit;
+                    if (!edit) return;
+                    const chordsOf = (lines) => lines.filter(line => !/^\s*\{/.test(line)).flatMap(line => [...line.matchAll(/\[([^\]]+)\]/g)].map(match => match[1]));
+                    const sections = JSON.parse(JSON.stringify(this.syncedSheet));
+                    const old = (sections[edit.src]?.lines || []).map(String);
+                    const lines = edit.text.split('\n').map(line => line.replace(/\s+$/, ''));
+                    while (lines.length && !lines.at(-1).trim()) lines.pop();
+                    if (JSON.stringify(chordsOf(lines)) !== JSON.stringify(chordsOf(old))) {
+                        edit.error = @js(__('Only the lyrics and the place of the chords can change here: keep the same chords, in the same order.'));
+                        return;
+                    }
+                    this.remember();
+                    sections[edit.src].lines = lines;
+                    this.sheet = sections;
+                    this.sheetEdit = null;
+                    this.revision++;
+                    this.message = @js(__('Chord sheet changed: save the page to keep it.'));
+                },
 
                 raw(block) {
                     if (!block.breaks) return [...block.chords];

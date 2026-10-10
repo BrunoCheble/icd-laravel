@@ -592,5 +592,12 @@
     "chords": "acordes",
     "sections in the chord sheet": "seções na cifra",
     "See this version": "Ver esta versão",
-    "No earlier versions yet: they are kept from now on, each time the song changes.": "Ainda não há versões anteriores: elas passam a ser guardadas a cada mudança na música."
+    "No earlier versions yet: they are kept from now on, each time the song changes.": "Ainda não há versões anteriores: elas passam a ser guardadas a cada mudança na música.",
+    "Chords transposed from :from to :to, the key of this song.": "Acordes transpostos de :from para :to, o tom desta música.",
+    "Replacing the chord sheet of this song with the one imported from :source: the chord map (structure) does not change. Review and save (the current version stays in the history).": "Substituindo a cifra desta música pela importada de :source: o mapa (estrutura) não muda. Revise e salve (a versão atual fica no histórico).",
+    "This song is already here:": "Esta música já existe aqui:",
+    "Replace its chord sheet": "Substituir a cifra dela",
+    "Create a new song anyway": "Criar uma música nova mesmo assim",
+    "Chords stay in brackets, e.g. Esp[G]írito Santo: change or remove lyrics, or move a chord, but keep the same chords. Saved with the page (Save).": "Os acordes ficam entre colchetes, ex.: Esp[G]írito Santo. Mude ou apague letra, ou mova um acorde, mas mantenha os mesmos acordes. Fica gravado com a página (Salvar).",
+    "Chord sheet changed: save the page to keep it.": "Cifra alterada: salve a página para gravar."
 }

@@ -31,7 +31,8 @@ class SongController extends Controller
         $instrumentOptions = SongInstrument::options();
         $keyOptions = MusicalKey::pairs();
         $existingSources = $sources->all();
-        return view('songs.create', compact('song', 'instrumentOptions', 'keyOptions', 'existingSources'));
+        $existingTitles = $sources->titles();
+        return view('songs.create', compact('song', 'instrumentOptions', 'keyOptions', 'existingSources', 'existingTitles'));
     }
 
     public function store(SongRequest $request, SaveSongService $service, SaveSongAudioService $audioService): RedirectResponse

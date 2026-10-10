@@ -41,9 +41,38 @@ class FindSongBySourceService
                 'id'    => $song->id,
                 'title' => $song->title,
                 'url'   => route('songs.show', $song),
+                'edit'  => route('songs.edit', $song),
             ]])
             ->except([''])
             ->all();
+    }
+
+    /**
+     * Songs (other than $exceptId) by their title written plainly (no accents, case or punctuation), as
+     * plain title => [id, title, artist, url, edit], so an imported chord sheet of a song already here is noticed.
+     */
+    public function titles(?int $exceptId = null): array
+    {
+        return Song::query()
+            ->when($exceptId, fn ($query) => $query->whereKeyNot($exceptId))
+            ->get(['id', 'title', 'artist'])
+            ->mapWithKeys(fn (Song $song) => [self::plainTitle($song->title) => [
+                'id'     => $song->id,
+                'title'  => $song->title,
+                'artist' => $song->artist,
+                'url'    => route('songs.show', $song),
+                'edit'   => route('songs.edit', $song),
+            ]])
+            ->except([''])
+            ->all();
+    }
+
+    /**
+     * "Bendito É o Rei!" -> "benditoeorei" (same rule as the song form's import).
+     */
+    public static function plainTitle(?string $title): string
+    {
+        return preg_replace('/[^a-z0-9]/', '', mb_strtolower(\Illuminate\Support\Str::ascii((string) $title)));
     }
 
     /**
