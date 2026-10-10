@@ -18,6 +18,7 @@ use App\Http\Controllers\SongController;
 use App\Http\Controllers\SongLayoutController;
 use App\Http\Controllers\SongPracticeController;
 use App\Http\Controllers\SongVersionController;
+use App\Http\Controllers\SongHistoryController;
 use App\Http\Controllers\Site\SetlistController as SiteSetlistController;
 use App\Http\Controllers\Site\SiteController;
 use Illuminate\Support\Facades\Route;
@@ -93,6 +94,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/songs/{song}/versions/{version}', [SongVersionController::class, 'destroy'])->name('songs.versions.destroy');
     Route::post('/songs/{song}/bars', [SongLayoutController::class, 'createBars'])->name('songs.bars.create');
     Route::get('/songs/{song}/practice', [SongPracticeController::class, 'show'])->name('songs.practice');
+    Route::get('/songs/{song}/history', [SongHistoryController::class, 'index'])->name('songs.history');
+    Route::post('/songs/{song}/history/{revision}/restore', [SongHistoryController::class, 'restore'])->name('songs.history.restore');
 
     Route::get('/setlists/songs/search', [SetlistController::class, 'searchSongs'])->name('setlists.songs.search');
     Route::resource('setlists', SetlistController::class);

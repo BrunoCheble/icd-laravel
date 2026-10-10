@@ -576,5 +576,21 @@
     "Bar 1, beat 1 needs a chord.": "O compasso 1, tempo 1 precisa de um acorde.",
     "Bar :bar, beat :beat: \":chord\" is not a chord name.": "Compasso :bar, tempo :beat: \":chord\" não é um nome de acorde.",
     "Imported: :changed half beats changed:blocks. Review and save (or undo).": "Importado: :changed meios-tempos mudaram:blocks. Revise e salve (ou desfaça).",
-    ", blocks updated": ", blocos atualizados"
+    ", blocks updated": ", blocos atualizados",
+    "History": "Histórico",
+    "Song form": "Edição da música",
+    "Layout (bars)": "Layout (compassos)",
+    "Bars created": "Compassos criados",
+    "Lyrics of the chord sheet": "Letra da cifra",
+    "Study app (icd-chords)": "App de estudo (icd-chords)",
+    "Restored from the history": "Restaurado do histórico",
+    "Version of :date restored. What the song had before is in the history too.": "Versão de :date restaurada. O que a música tinha antes também ficou no histórico.",
+    "Each time the chord map, the chord sheet, the key or the tempo change, the version before is kept here (the last :count). Restoring a version keeps the current one in the history too.": "Cada vez que o mapa, a cifra ou o BPM mudam, a versão anterior fica guardada aqui (as últimas :count). Só mudar o tom não guarda versão. Restaurar uma versão também guarda a atual no histórico.",
+    "Changed by the edit saved after this version": "Mudou na edição salva depois desta versão",
+    "Restore the version of :date? The chord map, chord sheet, key and tempo go back to it (what the song has now stays in the history).": "Restaurar a versão de :date? O mapa, a cifra, o tom e o BPM voltam a ela (o que a música tem agora fica no histórico).",
+    "blocks": "blocos",
+    "chords": "acordes",
+    "sections in the chord sheet": "seções na cifra",
+    "See this version": "Ver esta versão",
+    "No earlier versions yet: they are kept from now on, each time the song changes.": "Ainda não há versões anteriores: elas passam a ser guardadas a cada mudança na música."
 }

@@ -5,6 +5,7 @@
         'edit'     => [route('songs.edit', $song), 'fa-pen', __('Edit')],
         'layout'   => [route('songs.layout.edit', $song), 'fa-layer-group', __('Layout')],
         'practice' => [route('songs.practice', $song), 'fa-graduation-cap', __('Practice')],
+        'history'  => [route('songs.history', $song), 'fa-clock-rotate-left', __('History')],
     ];
 @endphp
 <nav class="song-tabs" aria-label="{{ __('Song pages') }}">

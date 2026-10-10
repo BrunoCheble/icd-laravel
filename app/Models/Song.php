@@ -44,6 +44,14 @@ class Song extends Model
     }
 
     /**
+     * Earlier versions of the chord map, chord sheet, key and tempo (newest first).
+     */
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(SongRevision::class)->latest('id');
+    }
+
+    /**
      * Chord maps of this song for instruments (see SongVersion), by instrument name.
      */
     public function versions(): HasMany
