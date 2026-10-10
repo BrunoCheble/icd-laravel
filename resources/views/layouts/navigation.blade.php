@@ -34,6 +34,12 @@
                     <x-nav-link :href="route('setlists.index')" :active="request()->routeIs('setlists.*')">
                         {{ __('Setlists') }}
                     </x-nav-link>
+                    @php $pendingSuggestions = \App\Models\SongSuggestion::where('status', 'pending')->count(); @endphp
+                    @if ($pendingSuggestions)
+                        <x-nav-link :href="route('song-suggestions.index')" :active="request()->routeIs('song-suggestions.*')">
+                            {{ __('Suggestions') }} <span class="ms-1 rounded-full bg-indigo-600 px-1.5 text-xs font-bold text-white">{{ $pendingSuggestions }}</span>
+                        </x-nav-link>
+                    @endif
                     <x-nav-link style="display: none" :href="route('report.anniversaries.index')" :active="request()->routeIs('report.anniversaries.index')">
                         {{ __('Anniversaries') }}
                     </x-nav-link>
@@ -98,7 +104,12 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+@if (($pendingSuggestions ?? 0) > 0)
+                <x-responsive-nav-link :href="route('song-suggestions.index')" :active="request()->routeIs('song-suggestions.*')">
+                    {{ __('Suggestions') }} ({{ $pendingSuggestions }})
+                </x-responsive-nav-link>
+            @endif
+                        <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('members.index')" :active="request()->routeIs('members')">

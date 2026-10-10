@@ -19,6 +19,7 @@ use App\Http\Controllers\SongLayoutController;
 use App\Http\Controllers\SongPracticeController;
 use App\Http\Controllers\SongVersionController;
 use App\Http\Controllers\SongHistoryController;
+use App\Http\Controllers\SongSuggestionController;
 use App\Http\Controllers\Site\SetlistController as SiteSetlistController;
 use App\Http\Controllers\Site\SiteController;
 use Illuminate\Support\Facades\Route;
@@ -46,6 +47,7 @@ Route::prefix('repertoire')->name('site.setlist')->controller(SiteSetlistControl
     Route::delete('/{setlist}/songs/{song}', 'removeSong')->whereNumber(['setlist', 'song'])->name('.songs.remove');
     Route::patch('/{setlist}/songs/{song}/key', 'updateKey')->whereNumber(['setlist', 'song'])->name('.songs.key');
     Route::put('/{setlist}/order', 'reorder')->whereNumber('setlist')->name('.order');
+    Route::post('/{setlist}/songs/{song}/suggestions', 'suggest')->whereNumber(['setlist', 'song'])->middleware('throttle:20,1')->name('.songs.suggest');
 });
 
 Route::get('/dashboard', function () {
@@ -95,6 +97,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/songs/{song}/bars', [SongLayoutController::class, 'createBars'])->name('songs.bars.create');
     Route::get('/songs/{song}/practice', [SongPracticeController::class, 'show'])->name('songs.practice');
     Route::get('/songs/{song}/history', [SongHistoryController::class, 'index'])->name('songs.history');
+    Route::get('/song-suggestions', [SongSuggestionController::class, 'index'])->name('song-suggestions.index');
+    Route::post('/song-suggestions/{suggestion}/approve', [SongSuggestionController::class, 'approve'])->name('song-suggestions.approve');
+    Route::post('/song-suggestions/{suggestion}/reject', [SongSuggestionController::class, 'reject'])->name('song-suggestions.reject');
     Route::post('/songs/{song}/history/{revision}/restore', [SongHistoryController::class, 'restore'])->name('songs.history.restore');
 
     Route::get('/setlists/songs/search', [SetlistController::class, 'searchSongs'])->name('setlists.songs.search');

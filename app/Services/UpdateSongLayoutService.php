@@ -147,7 +147,7 @@ class UpdateSongLayoutService
     /**
      * Line breaks only between chords: none at the start, at the end or repeated.
      */
-    private static function cleanBreaks(array $chords): array
+    public static function cleanBreaks(array $chords): array
     {
         $clean = [];
 

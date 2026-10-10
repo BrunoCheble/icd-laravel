@@ -108,6 +108,15 @@
         .key-option.is-selected { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
         .key-option:disabled { opacity: .5; cursor: default; }
         .song-meta { margin: .15rem 0 0; font-size: .85rem; color: var(--muted); }
+        /* Suggesting chord corrections: chords can be clicked; a changed one in orange, a removed one struck out */
+        .is-suggesting .seg-chord, .is-suggesting .chord-step > span { cursor: pointer; }
+        .is-suggesting .seg-chord:hover > span, .is-suggesting .chord-step > span:hover { outline: 1px dashed var(--accent); border-radius: .2rem; }
+        .seg-chord.is-suggested > span, .chord-step .is-suggested { color: #ea580c; text-decoration: underline wavy #ea580c; text-underline-offset: .2em; }
+        .seg-chord.is-removed > span, .chord-step .is-removed { color: #9ca3af; text-decoration: line-through; }
+        .suggest-pop { position: fixed; z-index: 70; width: min(17rem, calc(100vw - 1.5rem)); padding: .6rem; border: 1px solid var(--accent); border-radius: .6rem; background: var(--surface); color: var(--text); box-shadow: 0 12px 30px rgba(0, 0, 0, .3); }
+        .suggest-pop input { width: 100%; padding: .35rem .5rem; border: 1px solid var(--border); border-radius: .4rem; background: var(--surface-2); color: var(--text); font-weight: 700; font-size: 1.05rem; }
+        .suggest-pop .row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
+        .suggest-pop .row .btn { flex: 1; }
         .instrument-badge { padding: .1rem .55rem; border-radius: 999px; background: var(--accent); color: var(--accent-text); font-size: .75rem; font-weight: 700; white-space: nowrap; }
         .song-meta strong { color: var(--text); font-weight: 600; }
         .hint { font-size: .85rem; color: var(--muted); }
@@ -314,6 +323,10 @@
         'messages' => [
             'confirmRemove' => __('Remove ":title" from this setlist?'),
             'saved' => __('Saved'),
+            'invalidChord' => __('Use a chord name, e.g. G, Am7, C/E, D4.'),
+            'discardSuggestion' => __('Discard the chord changes of this song?'),
+            'suggestionSent' => __('Suggestion sent: an admin will review it. Thank you!'),
+            'suggestionOffline' => __('No connection: the changes stay on this device; send them when you are online.'),
             'saveError' => __('Could not save the change.'),
             'added' => __('Song added to the setlist.'),
             'removed' => __('Song removed from the setlist.'),
@@ -321,7 +334,7 @@
             'offlineOnly' => __('No connection: changed only on this device, not saved.'),
             'offlineNoCatalog' => __('No connection: download the setlist for offline to add songs.'),
         ],
-    ]))" @keydown.window="onKeydown($event)" :class="{ 'has-jump-bar': current && jumpTargets.length > 1 }">
+    ]))" @keydown.window="onKeydown($event)" :class="{ 'has-jump-bar': current && jumpTargets.length > 1, 'is-suggesting': settings.suggest && !current?.instrumentVersion }">
 
         <div class="chrome">
         <header class="topbar">
@@ -430,6 +443,25 @@
                         </template>
                     </select>
                     <span class="hint">{{ __('Songs with a version for your instrument show its chords; the others show the base.') }}</span>
+                </div>
+
+                <div class="option-row">
+                    <span class="option-label">{{ __('Suggest chords') }}</span>
+                    <label class="switch"><input type="checkbox" x-model="settings.suggest"> {{ __('Correct chords of the songs (sent for review)') }}</label>
+                    <template x-if="settings.suggest">
+                        <div style="display: grid; gap: .45rem; width: 100%;">
+                            <span class="hint" x-show="current?.instrumentVersion">{{ __('Choose "Base" in My instrument to suggest corrections.') }}</span>
+                            <span class="hint" x-show="!current?.instrumentVersion">{{ __('Tap a chord to change or remove it. Nothing changes for the others until an admin approves.') }}</span>
+                            <input type="text" class="control" x-model="suggestAuthor" @change="saveSuggestAuthor()" placeholder="{{ __('Your name (optional)') }}" maxlength="60">
+                            <textarea class="control" rows="2" x-model="suggestNote" placeholder="{{ __('Comment (optional)') }}" maxlength="500"></textarea>
+                            <div style="display: flex; flex-wrap: wrap; gap: .4rem; align-items: center;">
+                                <button type="button" class="btn btn-accent" @click="sendSuggestion()" :disabled="!suggestCount || sendingSuggestion"
+                                    x-text="@js(__('Send suggestion (:count)')).replace(':count', suggestCount)"></button>
+                                <button type="button" class="btn" x-show="suggestCount" @click="discardSuggestion()">{{ __('Discard') }}</button>
+                                <span class="hint" x-show="otherSuggestions" x-text="@js(__('Other songs with changes not sent: :count')).replace(':count', otherSuggestions)"></span>
+                            </div>
+                        </div>
+                    </template>
                 </div>
 
                 <div class="option-row" x-show="current">
@@ -549,7 +581,8 @@
                                                 :class="parsed.type === 'comment' ? 'sheet-comment' : { 'sheet-line': true, 'no-chords': !parsed.hasChords, 'only-chords': !parsed.hasText }">
                                                 <span x-show="parsed.type === 'comment'" x-text="parsed.text"></span>
                                                 <template x-for="(unit, unitIndex) in (parsed.units || [])" :key="unitIndex">
-                                                    <span class="seg" :class="{ 'is-wide': unit.wide }"><span class="seg-chord" :class="{ 'is-passing': unit.chord && sheetChordPassing(index, lineIndex, unit.ordinal), 'is-playing': unit.chord && playingChord >= 0 && sheetChordNumber(index, lineIndex, unit.ordinal) === playingChord }" :data-chord="unit.chord ? sheetChordNumber(index, lineIndex, unit.ordinal) : null"><span x-text="unit.chord ? chordFor(unit.chord) : ''"></span></span><span class="seg-text" x-text="unit.text"></span></span>
+                                                    <span class="seg" :class="{ 'is-wide': unit.wide }"><span class="seg-chord" :class="{ 'is-passing': unit.chord && sheetChordPassing(index, lineIndex, unit.ordinal), 'is-playing': unit.chord && playingChord >= 0 && sheetChordNumber(index, lineIndex, unit.ordinal) === playingChord, ...suggestClasses(unit.chord ? [sheetChordNumber(index, lineIndex, unit.ordinal)] : []) }" :data-chord="unit.chord ? sheetChordNumber(index, lineIndex, unit.ordinal) : null"
+                                                        @click="unit.chord && suggestClick([sheetChordNumber(index, lineIndex, unit.ordinal)], $event)"><span x-text="unit.chord ? suggestedName([sheetChordNumber(index, lineIndex, unit.ordinal)], chordFor(unit.chord)) : ''"></span></span><span class="seg-text" x-text="unit.text"></span></span>
                                                 </template>
                                             </div>
                                         </template>
@@ -599,7 +632,8 @@
                                         <template x-for="(line, lineIndex) in lines" :key="lineIndex">
                                             <div class="chord-line">
                                                 <template x-for="(step, stepIndex) in line" :key="stepIndex">
-                                                    <span class="chord-step"><template x-for="(chord, c) in step" :key="c"><span :class="{ 'is-passing': chord.passing, 'is-playing': playingChord >= 0 && chord.numbers.includes(playingChord) }" :data-chord="chord.numbers[0]" x-text="(c ? ' ' : '') + chord.name"></span></template></span>
+                                                    <span class="chord-step"><template x-for="(chord, c) in step" :key="c"><span :class="{ 'is-passing': chord.passing, 'is-playing': playingChord >= 0 && chord.numbers.includes(playingChord), ...suggestClasses(chord.numbers) }" :data-chord="chord.numbers[0]"
+                                                        @click="suggestClick(chord.numbers, $event)" x-text="(c ? ' ' : '') + suggestedName(chord.numbers, chord.name)"></span></template></span>
                                                 </template>
                                             </div>
                                         </template>
@@ -716,6 +750,26 @@
         @endif
 
         {{-- Song sound: YouTube player kept small and visible, synced with the section timer --}}
+        {{-- Suggesting a correction of the chord tapped: another chord, or removing it --}}
+        <div class="suggest-pop" x-show="suggestEdit" x-cloak :style="suggestEdit ? `left: ${suggestEdit.left}px; top: ${suggestEdit.top}px` : ''"
+            @click.outside="suggestEdit = null" @keydown.escape.window="suggestEdit = null">
+            <template x-if="suggestEdit">
+                <div>
+                    <div class="hint" style="margin-bottom: .35rem;" x-text="@js(__('Chord on the chord sheet: :chord')).replace(':chord', suggestEdit.original)"></div>
+                    <input type="text" x-ref="suggestInput" x-model="suggestEdit.name" autocomplete="off" autocapitalize="off" spellcheck="false" @keydown.enter.prevent="applySuggest(suggestEdit.name)">
+                    <div class="row">
+                        <button type="button" class="btn btn-accent" @click="applySuggest(suggestEdit.name)">{{ __('Change') }}</button>
+                        <button type="button" class="btn" @click="applySuggest(null)">{{ __('Remove') }}</button>
+                    </div>
+                    <div class="row">
+                        <button type="button" class="btn" x-show="suggestEdit.changed" @click="undoSuggest()">{{ __('Keep as it was') }}</button>
+                        <button type="button" class="btn" @click="suggestEdit = null">{{ __('Cancel') }}</button>
+                    </div>
+                    <p class="hint" style="color: var(--danger); margin-top: .35rem;" x-show="suggestEdit.error" x-text="suggestEdit.error"></p>
+                </div>
+            </template>
+        </div>
+
         <div class="yt-mini" x-ref="video" x-show="settings.youtubeSound && videoId && !audioUrl" x-cloak :class="{ 'is-dragging': draggingVideo }" :style="videoStyle"
             @resize.window.debounce.200ms="keepVideoInView()">
             <button type="button" class="yt-mini-drag" @pointerdown="dragVideo($event)" @dblclick="resetVideoPosition()"
@@ -731,7 +785,7 @@
         // Per-viewer display preferences; the page works the same when storage is unavailable.
         // Toggles are shared by every song; size settings are stored per song_id.
         const SETTINGS_KEY = 'setlist-view-settings';
-        const DEFAULT_SETTINGS = { showDetails: true, showAnchors: true, showLyrics: false, twoColumns: true, viewMode: 'map', youtubeSound: false, instrument: '' };
+        const DEFAULT_SETTINGS = { showDetails: true, showAnchors: true, showLyrics: false, twoColumns: true, viewMode: 'map', youtubeSound: false, instrument: '', suggest: false };
 
         // YouTube player for the song sound, outside Alpine's reactive state.
         let soundPlayer = null;
@@ -832,6 +886,14 @@
                 editCancelled: false,
                 lastTap: null,
                 chordEdits: {},
+                // ---- Chord corrections suggested here (see the "Suggest chords" option): { [songId]: { [n]: { from, to } } },
+                // n: chord n of the song's map; from / to in the song's own key; to null: removed. Kept on this device
+                // until sent for review. ----
+                suggestions: (() => { try { return JSON.parse(localStorage.getItem('chord-suggestions') || '{}') || {}; } catch (e) { return {}; } })(),
+                suggestEdit: null,
+                suggestAuthor: (() => { try { return localStorage.getItem('suggest-author') || ''; } catch (e) { return ''; } })(),
+                suggestNote: '',
+                sendingSuggestion: false,
                 savingKey: false,
                 panelOpen: false,
                 // ---- Offline copy (see public/sw.js, which serves it): this setlist's page, the scripts and styles it
@@ -1168,6 +1230,95 @@
                 // Passing chords of a map section (positions); none when this device changed its chords.
                 sectionPassing(section) {
                     return !section?.edited && Array.isArray(section?.passing) ? section.passing : [];
+                },
+
+                saveSuggestions() { writeStorage('chord-suggestions', Object.keys(this.suggestions).length ? this.suggestions : null); },
+                saveSuggestAuthor() { try { localStorage.setItem('suggest-author', this.suggestAuthor); } catch (e) {} },
+                get songSuggestions() { return this.suggestions[this.currentId] || {}; },
+                get suggestCount() { return Object.keys(this.songSuggestions).length; },
+                get otherSuggestions() { return Object.entries(this.suggestions).filter(([id, changes]) => Number(id) !== this.currentId && Object.keys(changes).length).length; },
+                // Chord n of the song's base map (in its own key).
+                baseChord(n) {
+                    const list = (this.current?._base?.structure || this.current?.structure || []).flatMap(section => chordsOnly(Array.isArray(section?.chords) ? section.chords.map(String) : []));
+                    return list[n];
+                },
+                canSuggest(numbers) {
+                    return this.settings.suggest && !this.current?.instrumentVersion && numbers.length > 0 && numbers.every(n => Number.isInteger(n) && this.baseChord(n) !== undefined);
+                },
+                suggestClasses(numbers) {
+                    const change = numbers.length ? this.songSuggestions[numbers[0]] : null;
+                    return { 'is-suggested': !!change && change.to !== null, 'is-removed': !!change && change.to === null };
+                },
+                // The name shown: the suggested one (in the key on screen) when changed.
+                suggestedName(numbers, name) {
+                    const change = numbers.length ? this.songSuggestions[numbers[0]] : null;
+                    return change && change.to !== null ? this.chordFor(change.to) : name;
+                },
+                suggestClick(numbers, event) {
+                    if (!this.canSuggest(numbers)) return;
+                    event.stopPropagation();
+                    const box = event.currentTarget.getBoundingClientRect();
+                    const change = this.songSuggestions[numbers[0]];
+                    this.suggestEdit = {
+                        numbers,
+                        name: change && change.to !== null ? this.chordFor(change.to) : this.chordFor(this.baseChord(numbers[0])),
+                        original: this.chordFor(this.baseChord(numbers[0])),
+                        changed: !!change,
+                        error: '',
+                        left: Math.max(8, Math.min(box.left, window.innerWidth - 290)),
+                        top: Math.min(box.bottom + 6, window.innerHeight - 170),
+                    };
+                    this.$nextTick(() => this.$refs.suggestInput?.select());
+                },
+                // to: a chord name typed in the key on screen, or null to remove the chord.
+                applySuggest(to) {
+                    const edit = this.suggestEdit;
+                    if (!edit) return;
+                    if (to !== null) {
+                        to = to.trim();
+                        if (!/^[A-G][#b]?[^\s\[\]|]*$/.test(to)) { edit.error = this.messages.invalidChord; return; }
+                        to = ChordTransposer.transposeChord(to, this.selectedKey, this.current.original_key);
+                    }
+                    const changes = { ...this.songSuggestions };
+                    edit.numbers.forEach(n => {
+                        const from = this.baseChord(n);
+                        if (to === from) delete changes[n];
+                        else changes[n] = { from, to };
+                    });
+                    this.setSongSuggestions(changes);
+                    this.suggestEdit = null;
+                },
+                undoSuggest() {
+                    const changes = { ...this.songSuggestions };
+                    this.suggestEdit.numbers.forEach(n => delete changes[n]);
+                    this.setSongSuggestions(changes);
+                    this.suggestEdit = null;
+                },
+                setSongSuggestions(changes) {
+                    const all = { ...this.suggestions };
+                    if (Object.keys(changes).length) all[this.currentId] = changes;
+                    else delete all[this.currentId];
+                    this.suggestions = all;
+                    this.saveSuggestions();
+                },
+                discardSuggestion() {
+                    if (!confirm(this.messages.discardSuggestion)) return;
+                    this.setSongSuggestions({});
+                },
+                async sendSuggestion() {
+                    if (!this.suggestCount || !this.current) return;
+                    this.sendingSuggestion = true;
+                    try {
+                        const changes = Object.entries(this.songSuggestions).map(([n, change]) => ({ n: Number(n), from: change.from, to: change.to }));
+                        await this.request('POST', this.songUrl(this.current, '/suggestions'), { changes, author: this.suggestAuthor || null, note: this.suggestNote || null });
+                        this.setSongSuggestions({});
+                        this.suggestNote = '';
+                        this.notify(this.messages.suggestionSent);
+                    } catch (error) {
+                        this.notify(error.offline ? this.messages.suggestionOffline : error.message, true);
+                    } finally {
+                        this.sendingSuggestion = false;
+                    }
                 },
 
                 // ---- Versions for an instrument: whoever picks an instrument sees its version of each song that has

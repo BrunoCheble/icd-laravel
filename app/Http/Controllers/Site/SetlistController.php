@@ -6,6 +6,7 @@ use App\Enums\MusicalKey;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AddSongToSetlistRequest;
 use App\Http\Requests\ReorderSetlistSongsRequest;
+use App\Http\Requests\SongSuggestionRequest;
 use App\Http\Requests\UpdateSetlistSongKeyRequest;
 use App\Models\Setlist;
 use App\Models\Song;
@@ -16,6 +17,7 @@ use App\Services\ListPublicSetlistsService;
 use App\Services\RemoveSongFromSetlistService;
 use App\Services\ReorderSetlistSongsService;
 use App\Services\SearchSongsService;
+use App\Services\StoreSongSuggestionService;
 use App\Services\UpdateSetlistSongKeyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -83,6 +85,17 @@ class SetlistController extends Controller
         $keyOptions = MusicalKey::pairs();
 
         return view('site.setlist', compact('data', 'setlistOptions', 'keyOptions'));
+    }
+
+    /**
+     * Chord corrections suggested by a musician on the public page, kept for an admin to review.
+     */
+    public function suggest(SongSuggestionRequest $request, Setlist $setlist, Song $song, StoreSongSuggestionService $service): JsonResponse
+    {
+        $this->ensureSongInSetlist($setlist, $song);
+        $suggestion = $service->execute($song, $setlist, $request->validated());
+
+        return response()->json(['id' => $suggestion?->id], $suggestion ? 201 : 200);
     }
 
     private function ensureSongInSetlist(Setlist $setlist, Song $song): void

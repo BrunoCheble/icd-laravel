@@ -44,6 +44,14 @@ class Song extends Model
     }
 
     /**
+     * Chord corrections suggested on the public setlist page.
+     */
+    public function suggestions(): HasMany
+    {
+        return $this->hasMany(SongSuggestion::class);
+    }
+
+    /**
      * Earlier versions of the chord map, chord sheet, key and tempo (newest first).
      */
     public function revisions(): HasMany
