@@ -2001,6 +2001,24 @@
                     if (event.key === ' ' && this.current) { event.preventDefault(); this.liveMode ? this.toggleLive() : this.togglePlay(); }
                     if (['ArrowRight', 'PageDown'].includes(event.key)) { event.preventDefault(); this.go(this.currentIndex + 1); }
                     if (['ArrowLeft', 'PageUp'].includes(event.key)) { event.preventDefault(); this.go(this.currentIndex - 1); }
+                    if (['ArrowDown', 'ArrowUp'].includes(event.key) && this.current) { event.preventDefault(); this.moveBlock(event.key === 'ArrowDown' ? 1 : -1); }
+                },
+                // ↑ ↓: the block before / after the current one ("back to the start" markers skipped); in live mode
+                // the count goes on from the first bar of that block.
+                moveBlock(step) {
+                    if (this.liveMode) {
+                        const blocks = (this.liveGrid?.blocks || []).filter(block => !block.marker);
+                        if (!blocks.length) return;
+                        const current = blocks.filter(block => block.tick <= this.live.tick).length - 1;
+                        const target = blocks[Math.max(0, Math.min(blocks.length - 1, current + step))];
+                        this.goToLiveBar(Math.floor(target.tick / (this.liveGrid.perBar * 2)));
+                        return this.scrollToLiveBar();
+                    }
+                    const count = this.timedList.length;
+                    if (!count) return;
+                    let index = this.currentSection === null ? (step > 0 ? -1 : count) : this.currentSection;
+                    do { index += step; } while (index >= 0 && index < count && this.isReturn(index));
+                    if (index >= 0 && index < count) this.selectSection(index);
                 },
                 openSetlist(id) {
                     if (id) window.location.href = `${config.urls.setlist}/${id}`;
