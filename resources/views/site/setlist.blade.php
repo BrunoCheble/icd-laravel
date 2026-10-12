@@ -200,13 +200,7 @@
         /* Repeated cycles in columns: each column is as wide as its widest chord across the lines. */
         .section-chords.is-aligned { display: grid; grid-template-columns: repeat(var(--chord-columns, 1), max-content); column-gap: 1em; justify-content: start; }
         .section-chords.is-aligned .chord-line { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
-        .section-chords { touch-action: manipulation; cursor: text; }
-        .chord-edit {
-            display: block; width: 100%; box-sizing: border-box; resize: vertical;
-            padding: .3rem .5rem; font: inherit; font-weight: 700; line-height: 1.3;
-            color: var(--chord); background: var(--surface-2); border: 1px dashed var(--accent); border-radius: .4rem;
-        }
-        .chord-edit:focus { outline: 2px solid var(--accent); outline-offset: 1px; box-shadow: none; }
+        .section-chords { touch-action: manipulation; }
         .edited-badge { margin-left: .35rem; padding: 0 .35rem; border: 1px solid var(--accent); border-radius: 999px; font-size: .65rem; letter-spacing: .02em; text-transform: none; vertical-align: middle; }
         .empty { color: var(--muted); text-align: center; padding: 3rem 1rem; }
 
@@ -468,9 +462,9 @@
                     </template>
                 </div>
 
-                <div class="option-row" x-show="current">
+                {{-- Chords edited by block on this device before editing moved to each chord (suggestions) --}}
+                <div class="option-row" x-show="current && hasChordEdits">
                     <span class="option-label">{{ __('Chords') }}</span>
-                    <span class="hint">{{ __('Double-tap a block to edit its chords.') }}</span>
                     <button type="button" class="btn" @click="resetChords()" x-show="hasChordEdits">{{ __('Restore original chords') }}</button>
                     <span class="hint">{{ __('Edits are saved only on this device.') }}</span>
                 </div>
@@ -610,7 +604,7 @@
                                         </div>
                                         <div class="section-anchor" x-show="settings.showAnchors && section.anchor && !(settings.showLyrics && lyricsText(section))" x-text="section.anchor"></div>
                                     </div>
-                                    <div class="section-chords" @dblclick="startEdit(index)" @pointerup="tap($event, index)"
+                                    <div class="section-chords"
                                         x-data="{
                                             lines: [],
                                             aligned: true,
@@ -620,19 +614,10 @@
                                                 this.$nextTick(() => this.aligned = this.$el.scrollWidth <= this.$el.clientWidth + 1);
                                             },
                                         }"
-                                        x-effect="lines = editingIndex === index ? [] : chordLines(section, index); layout.fontScale; settings.twoColumns; editingIndex === index ? (aligned = false) : fit()"
+                                        x-effect="lines = chordLines(section, index); layout.fontScale; settings.twoColumns; fit()"
                                         @resize.window.debounce.200ms="fit()"
                                         :class="{ 'is-aligned': aligned }"
                                         :style="`--chord-columns: ${Math.max(1, ...lines.map(line => line.length))}`">
-                                        <template x-if="editingIndex === index">
-                                            <textarea class="chord-edit" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off"
-                                                :value="(section.chords || []).join(' ')"
-                                                x-init="$nextTick(() => { $el.focus(); $el.setSelectionRange($el.value.length, $el.value.length); })"
-                                                @blur="finishEdit(index, $event.target.value)"
-                                                @keydown.enter.prevent="$event.target.blur()"
-                                                @keydown.escape.prevent.stop="cancelEdit()"
-                                                :aria-label="`{{ __('Chords') }}: ${sectionName(section)}`"></textarea>
-                                        </template>
                                         <template x-for="(line, lineIndex) in lines" :key="lineIndex">
                                             <div class="chord-line">
                                                 <template x-for="(step, stepIndex) in line" :key="stepIndex">
@@ -875,8 +860,6 @@
 
         const originalChords = (section) => Array.isArray(section?.chords) ? section.chords.map(String) : [];
         const sameChords = (a, b) => Array.isArray(a) && a.length === b.length && a.every((chord, i) => chord === b[i]);
-        // Chords separated by spaces or new lines; arrows used as separators are ignored, "|" keeps the line breaks.
-        const parseChords = (text) => String(text).split(/\s+/).filter(token => token && !['->', '→', '-'].includes(token));
 
         function setlistPage(config) {
             const setlist = config.setlist;
@@ -889,7 +872,6 @@
                 optionsOpen: false,
                 settings: loadSettings(),
                 layout: { ...DEFAULT_LAYOUT },
-                editingIndex: null,
                 keyPickerOpen: false,
                 playing: false,
                 elapsed: 0,
@@ -900,8 +882,6 @@
                 // Last timed section reached by the clock; auto-advance only happens when it changes,
                 // so a block picked by hand is kept until the clock reaches the next start.
                 clockSection: null,
-                editCancelled: false,
-                lastTap: null,
                 chordEdits: {},
                 // ---- Chord corrections suggested here (see the "Suggest chords" option): { [songId]: { [n]: { from, to } } },
                 // n: chord n of the song's map; from / to in the song's own key; to null: removed. Kept on this device
@@ -1160,44 +1140,6 @@
                     });
                 },
                 get hasChordEdits() { return this.sections.some(section => section?.edited); },
-                // Saves the chords typed for a section; typing the original chords back removes the edit.
-                updateChords(index, text) {
-                    const original = originalChords(this.current.structure[index]);
-                    // Chords are typed in the selected key and stored in the song's original key.
-                    const chords = ChordTransposer.transposeChords(parseChords(text), this.selectedKey, this.current.original_key);
-                    const edits = { ...this.chordEdits };
-                    if (sameChords(chords, original)) {
-                        delete edits[index];
-                    } else {
-                        edits[index] = { original, chords };
-                    }
-                    this.chordEdits = edits;
-                    saveChordEdits(this.currentId, edits);
-                },
-                // Double click (desktop) or double tap (touch) opens a block for editing; leaving the field applies it.
-                tap(event, index) {
-                    if (event.pointerType === 'mouse' || this.editingIndex === index) return;
-                    const now = Date.now();
-                    if (this.lastTap?.index === index && now - this.lastTap.time < 350) {
-                        this.lastTap = null;
-                        this.startEdit(index);
-                    } else {
-                        this.lastTap = { index, time: now };
-                    }
-                },
-                startEdit(index) {
-                    this.editCancelled = false;
-                    this.editingIndex = index;
-                },
-                finishEdit(index, text) {
-                    if (this.editingIndex !== index) return;
-                    if (!this.editCancelled) this.updateChords(index, text);
-                    this.editingIndex = null;
-                },
-                cancelEdit() {
-                    this.editCancelled = true;
-                    this.editingIndex = null;
-                },
                 resetChords() {
                     this.chordEdits = {};
                     saveChordEdits(this.currentId, {});
@@ -1406,7 +1348,6 @@
                         this.liveBpm = this.loadLiveBpm();
                         this.layout = id ? loadLayout(id) : { ...DEFAULT_LAYOUT };
                         this.chordEdits = id ? loadChordEdits(id) : {};
-                        this.editingIndex = null;
                         this.keyPickerOpen = false;
                         this.resetPlayback();
                         this.$nextTick(() => this.setupSound());
@@ -1923,7 +1864,6 @@
                 // "Back to the start" marker of the map (no chords): tapping it goes to the first block.
                 isReturn(index) { return this.timedList?.[index]?.jump === 'start'; },
                 selectSection(index) {
-                    if (this.editingIndex !== null) return;
                     if (this.isReturn(index)) {
                         const first = this.timedList.findIndex((section, i) => !this.isReturn(i));
                         if (first === -1) return;
@@ -2063,9 +2003,8 @@
                 get blockScrollActive() {
                     return !!this.current && !this.liveMode && this.currentSection !== null && this.gesturesFree;
                 },
-                // No block being edited and no panel / popup open.
+                // No panel / popup open.
                 get gesturesFree() {
-                    if (this.editingIndex !== null) return false;
                     return !(this.panelOpen || this.optionsOpen || this.removing || this.installHelp || this.suggestEdit || this.keyPickerOpen);
                 },
                 gestureTarget(event) {
