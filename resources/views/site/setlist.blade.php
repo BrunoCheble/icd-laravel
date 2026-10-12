@@ -119,6 +119,8 @@
         .suggest-pop input { width: 100%; padding: .35rem .5rem; border: 1px solid var(--border); border-radius: .4rem; background: var(--surface-2); color: var(--text); font-weight: 700; font-size: 1.05rem; }
         .suggest-pop .row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
         .suggest-pop .row .btn { flex: 1; }
+        .suggest-pop .apply-all { display: flex; gap: .4rem; align-items: flex-start; margin-top: .45rem; font-size: .85rem; cursor: pointer; }
+        .suggest-pop .apply-all input { width: auto; margin-top: .15rem; }
         .instrument-badge { padding: .1rem .55rem; border-radius: 999px; background: var(--accent); color: var(--accent-text); font-size: .75rem; font-weight: 700; white-space: nowrap; }
         .song-meta strong { color: var(--text); font-weight: 600; }
         .hint { font-size: .85rem; color: var(--muted); }
@@ -745,7 +747,12 @@
             <template x-if="suggestEdit">
                 <div>
                     <div class="hint" style="margin-bottom: .35rem;" x-text="@js(__('Chord on the chord sheet: :chord')).replace(':chord', suggestEdit.original)"></div>
-                    <input type="text" x-ref="suggestInput" x-model="suggestEdit.name" autocomplete="off" autocapitalize="off" spellcheck="false" @keydown.enter.prevent="applySuggest(suggestEdit.name)">
+                    <input type="text" x-ref="suggestInput" :value="suggestEdit.name" autocomplete="off" autocapitalize="off" spellcheck="false"
+                        @input="typeChord($event.target)" @keydown.enter.prevent="applySuggest(suggestEdit.name)">
+                    <label class="apply-all" x-show="suggestEdit.others.length">
+                        <input type="checkbox" x-model="suggestEdit.applyAll">
+                        <span x-text="@js(__('Also in the other “:name” blocks (:count)')).replace(':name', suggestEdit.blockName).replace(':count', suggestEdit.otherBlocks)"></span>
+                    </label>
                     <div class="row">
                         <button type="button" class="btn btn-accent" @click="applySuggest(suggestEdit.name)">{{ __('Change') }}</button>
                         <button type="button" class="btn" @click="applySuggest(null)">{{ __('Remove') }}</button>
@@ -858,6 +865,8 @@
             return value.trim().split(':').reduce((total, part) => total * 60 + Number(part), 0);
         }
 
+        // Note letters of a chord in capitals: the root and the bass after "/" (am -> Am, bb -> Bb, c#m7/g -> C#m7/G).
+        const chordCase = (text) => String(text).replace(/^(\s*)([a-g])/, (match, space, note) => space + note.toUpperCase()).replace(/\/([a-g])/g, (match, note) => '/' + note.toUpperCase());
         const originalChords = (section) => Array.isArray(section?.chords) ? section.chords.map(String) : [];
         const sameChords = (a, b) => Array.isArray(a) && a.length === b.length && a.every((chord, i) => chord === b[i]);
 
@@ -1222,28 +1231,73 @@
                     event.stopPropagation();
                     const box = event.currentTarget.getBoundingClientRect();
                     const change = this.songSuggestions[numbers[0]];
+                    const same = this.sameBlockChords(numbers);
                     this.suggestEdit = {
                         numbers,
+                        others: same.numbers,
+                        blockName: same.name,
+                        otherBlocks: same.blocks,
+                        applyAll: false,
                         name: change && change.to !== null ? this.chordFor(change.to) : this.chordFor(this.baseChord(numbers[0])),
                         original: this.chordFor(this.baseChord(numbers[0])),
                         changed: !!change,
                         error: '',
                         left: Math.max(8, Math.min(box.left, window.innerWidth - 290)),
-                        top: Math.min(box.bottom + 6, window.innerHeight - 170),
+                        top: Math.min(box.bottom + 6, window.innerHeight - (same.numbers.length ? 205 : 170)),
                     };
                     this.$nextTick(() => this.$refs.suggestInput?.select());
                 },
                 // to: a chord name typed in the key on screen, or null to remove the chord.
+                // Chord typed: note letters in capitals (am -> Am, c#m7/g -> C#m7/G), keeping the cursor in place.
+                typeChord(input) {
+                    const position = input.selectionStart;
+                    input.value = chordCase(input.value);
+                    input.setSelectionRange(position, position);
+                    this.suggestEdit.name = input.value;
+                },
+                // The same chord in the other blocks with the same name (e.g. every "Refrão"): the chord at the same
+                // position of each of them, when it is the same chord there.
+                sameBlockChords(numbers) {
+                    const structure = this.current?._base?.structure || this.current?.structure || [];
+                    let offset = 0;
+                    const blocks = structure.map(section => {
+                        const count = chordsOnly(originalChords(section)).length;
+                        const block = { name: this.sectionName(section).trim(), start: offset, count };
+                        offset += count;
+                        return block;
+                    });
+                    const block = blocks.find(item => numbers[0] >= item.start && numbers[0] < item.start + item.count);
+                    const found = new Set();
+                    const matched = new Set();
+                    if (block?.name) {
+                        blocks.forEach(other => {
+                            if (other === block || other.name.toUpperCase() !== block.name.toUpperCase()) return;
+                            numbers.forEach(n => {
+                                const position = n - block.start;
+                                const m = other.start + position;
+                                if (position < other.count && !numbers.includes(m) && this.baseChord(m) === this.baseChord(n)) {
+                                    found.add(m);
+                                    matched.add(other);
+                                }
+                            });
+                        });
+                    }
+                    return { name: block?.name || '', numbers: [...found], blocks: matched.size };
+                },
+                // Chords the change goes to: the one tapped, and the same chord in the blocks with the same name when chosen.
+                suggestNumbers(edit) {
+                    return edit.applyAll ? [...edit.numbers, ...edit.others] : edit.numbers;
+                },
                 applySuggest(to) {
                     const edit = this.suggestEdit;
                     if (!edit) return;
                     if (to !== null) {
-                        to = to.trim();
+                        to = chordCase(to.trim());
                         if (!/^[A-G][#b]?[^\s\[\]|]*$/.test(to)) { edit.error = this.messages.invalidChord; return; }
                         to = ChordTransposer.transposeChord(to, this.selectedKey, this.current.original_key);
                     }
                     const changes = { ...this.songSuggestions };
-                    edit.numbers.forEach(n => {
+                    this.suggestNumbers(edit).forEach(n => {
                         const from = this.baseChord(n);
                         if (to === from) delete changes[n];
                         else changes[n] = { from, to };
@@ -1253,7 +1307,7 @@
                 },
                 undoSuggest() {
                     const changes = { ...this.songSuggestions };
-                    this.suggestEdit.numbers.forEach(n => delete changes[n]);
+                    this.suggestNumbers(this.suggestEdit).forEach(n => delete changes[n]);
                     this.setSongSuggestions(changes);
                     this.suggestEdit = null;
                 },
