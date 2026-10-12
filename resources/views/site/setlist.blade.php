@@ -1400,6 +1400,9 @@
                     });
                     this.$watch('currentId', id => {
                         this.stopLive();
+                        // The count of the new song starts from its first bar.
+                        this.live.tick = 0;
+                        this.live.usedMarkers = [];
                         this.liveBpm = this.loadLiveBpm();
                         this.layout = id ? loadLayout(id) : { ...DEFAULT_LAYOUT };
                         this.chordEdits = id ? loadChordEdits(id) : {};
