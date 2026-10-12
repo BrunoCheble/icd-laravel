@@ -2035,12 +2035,22 @@
                 // Past the first / last block the page scrolls as usual.
                 blockScroll: { wheel: 0, wheelAt: 0, lockedUntil: 0, touchX: null, touchY: null, lastY: 0, touch: null },
                 get blockScrollActive() {
-                    if (!this.current || this.liveMode || this.currentSection === null || this.editingIndex !== null) return false;
+                    return !!this.current && !this.liveMode && this.currentSection !== null && this.gesturesFree;
+                },
+                // No block being edited and no panel / popup open.
+                get gesturesFree() {
+                    if (this.editingIndex !== null) return false;
                     return !(this.panelOpen || this.optionsOpen || this.removing || this.installHelp || this.suggestEdit || this.keyPickerOpen);
                 },
+                gestureTarget(event) {
+                    return !event.ctrlKey && !event.target.closest?.('.panel, .options, .modal, .suggest-pop, .jump-bar, textarea, select, input');
+                },
                 scrollSelectsBlock(event) {
-                    return this.blockScrollActive && !event.ctrlKey
-                        && !event.target.closest?.('.panel, .options, .modal, .suggest-pop, .jump-bar, textarea, select, input');
+                    return this.blockScrollActive && this.gestureTarget(event);
+                },
+                // Horizontal swipe: next / previous song, like ← →.
+                swipeChangesSong(event) {
+                    return !!this.current && this.gesturesFree && this.gestureTarget(event);
                 },
                 onWheel(event) {
                     if (!this.scrollSelectsBlock(event) || !event.deltaY) return;
@@ -2074,14 +2084,23 @@
                     const x = event.touches[0].clientX;
                     const y = event.touches[0].clientY;
                     const delta = state.touchY - y;
+                    const sideways = state.touchX - x;
                     if (state.touch === null) {
+                        if (Math.abs(delta) < 8 && Math.abs(sideways) < 8) return this.scrollSelectsBlock(event) && event.cancelable && event.preventDefault();
+                        // Sideways: next / previous song. Otherwise a block in that direction is selected; above the
+                        // first / below the last one the page follows the finger.
+                        if (Math.abs(sideways) > Math.abs(delta)) return state.touch = this.swipeChangesSong(event) ? 'song' : 'native';
                         if (!this.scrollSelectsBlock(event)) return state.touch = 'native';
-                        if (Math.abs(delta) < 8 && Math.abs(state.touchX - x) < 8) return event.cancelable && event.preventDefault();
-                        // Sideways: left to the browser (e.g. a long chord line). Otherwise a block in that direction is
-                        // selected; above the first / below the last one the page follows the finger.
-                        if (Math.abs(state.touchX - x) > Math.abs(delta)) return state.touch = 'native';
                         state.touch = this.blockStepTarget(Math.sign(delta)) === null ? 'page' : 'block';
                         state.lastY = state.touchY;
+                    }
+                    if (state.touch === 'song') {
+                        // A clear sideways move (not a slanted scroll) changes the song once per swipe.
+                        if (Math.abs(sideways) >= 70 && Math.abs(sideways) > Math.abs(delta) * 1.5) {
+                            state.touch = 'done';
+                            this.go(this.currentIndex + Math.sign(sideways));
+                        }
+                        return;
                     }
                     if (event.cancelable) event.preventDefault();
                     if (state.touch === 'page') {
