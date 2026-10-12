@@ -1352,10 +1352,12 @@
                     this.checkOffline();
                     this.loadPending();
                     this.applyInstruments();
+                    this.selectFirstBlock();
                     this.$watch('settings.instrument', () => {
                         this.stopLive();
                         this.resetPlayback();
                         this.applyInstruments();
+                        this.selectFirstBlock();
                     });
                     // Back online: the changes stay on screen until the app is opened again, but are no longer kept.
                     window.addEventListener('online', () => { this.online = true; this.forgetPending(); this.saveOfflineShell(); });
@@ -1379,6 +1381,7 @@
                         this.editingIndex = null;
                         this.keyPickerOpen = false;
                         this.resetPlayback();
+                        this.selectFirstBlock();
                         this.$nextTick(() => this.setupSound());
                     });
                     this.$watch('settings.youtubeSound', () => {
@@ -1874,6 +1877,11 @@
                     this.clockSection = this.hasTimeline ? this.sectionAt(time) : null;
                     this.playingChord = this.chordAt(time);
                 },
+                // A song opens with its first block selected (lit), the clock at its start and not playing.
+                selectFirstBlock() {
+                    const first = this.timedList.findIndex((section, index) => !this.isReturn(index));
+                    this.currentSection = first >= 0 ? first : null;
+                },
                 resetPlayback() {
                     this.pause();
                     this.elapsed = 0;
@@ -1884,6 +1892,8 @@
                 restart() {
                     const wasPlaying = this.playing;
                     this.resetPlayback();
+                    this.selectFirstBlock();
+                    if (this.currentSection !== null) this.showSection(this.currentSection);
                     if (wasPlaying) this.play();
                 },
 
