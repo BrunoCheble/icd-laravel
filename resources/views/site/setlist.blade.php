@@ -1364,6 +1364,10 @@
                     window.addEventListener('load', () => setTimeout(() => this.saveOfflineShell(), 1500), { once: true });
                     if (document.readyState === 'complete') setTimeout(() => this.saveOfflineShell(), 1500);
                     window.addEventListener('appinstalled', () => this.installPrompt = null);
+                    // Not passive, so the page scroll can be replaced by going to the block above / below.
+                    window.addEventListener('wheel', event => this.onWheel(event), { passive: false });
+                    window.addEventListener('touchstart', event => this.onTouchStart(event), { passive: true });
+                    window.addEventListener('touchmove', event => this.onTouchMove(event), { passive: false });
                     this.$watch('settings', value => saveSettings(value), { deep: true });
                     // Each song opens with its own saved layout.
                     this.layout = this.currentId ? loadLayout(this.currentId) : { ...DEFAULT_LAYOUT };
@@ -2014,11 +2018,66 @@
                         this.goToLiveBar(Math.floor(target.tick / (this.liveGrid.perBar * 2)));
                         return this.scrollToLiveBar();
                     }
-                    const count = this.timedList.length;
-                    if (!count) return;
+                    const index = this.blockStepTarget(step);
+                    if (index !== null) this.selectSection(index);
+                },
+                // Block before / after the current one in the map or sheet (null when there is none).
+                blockStepTarget(step) {
+                    const count = this.timedList?.length || 0;
+                    if (!count || !step) return null;
                     let index = this.currentSection === null ? (step > 0 ? -1 : count) : this.currentSection;
                     do { index += step; } while (index >= 0 && index < count && this.isReturn(index));
-                    if (index >= 0 && index < count) this.selectSection(index);
+                    return index >= 0 && index < count ? index : null;
+                },
+                // With a block selected, scrolling the page (wheel or swipe) goes to the block above / below, like ↑ ↓.
+                // Past the first / last block the page scrolls as usual.
+                blockScroll: { wheel: 0, wheelAt: 0, lockedUntil: 0, touchY: null, touch: null },
+                scrollSelectsBlock(event) {
+                    if (!this.current || this.liveMode || this.currentSection === null || this.editingIndex !== null) return false;
+                    if (this.panelOpen || this.optionsOpen || this.removing || this.installHelp || this.suggestEdit || this.keyPickerOpen) return false;
+                    return !event.ctrlKey && !event.target.closest?.('.panel, .options, .modal, .suggest-pop, .jump-bar, textarea, select, input');
+                },
+                onWheel(event) {
+                    if (!this.scrollSelectsBlock(event) || !event.deltaY) return;
+                    const state = this.blockScroll;
+                    const now = performance.now();
+                    // One block per gesture: a trackpad keeps sending events while it slows down.
+                    if (now < state.lockedUntil) {
+                        state.lockedUntil = Math.max(state.lockedUntil, now + 200);
+                        return event.preventDefault();
+                    }
+                    if (now - state.wheelAt > 200) state.wheel = 0;
+                    state.wheelAt = now;
+                    state.wheel += event.deltaMode ? event.deltaY * 40 : event.deltaY;
+                    const step = Math.sign(state.wheel);
+                    if (this.blockStepTarget(step) === null) return;
+                    event.preventDefault();
+                    if (Math.abs(state.wheel) < 30) return;
+                    state.wheel = 0;
+                    state.lockedUntil = now + 400;
+                    this.moveBlock(step);
+                },
+                onTouchStart(event) {
+                    this.blockScroll.touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
+                    this.blockScroll.touch = null;
+                },
+                onTouchMove(event) {
+                    const state = this.blockScroll;
+                    if (state.touchY === null || event.touches.length !== 1 || state.touch === 'native') return;
+                    if (state.touch === null) {
+                        if (!this.scrollSelectsBlock(event)) return state.touch = 'native';
+                        const delta = state.touchY - event.touches[0].clientY;
+                        if (Math.abs(delta) < 8) return;
+                        // The swipe is taken over only when there is a block in that direction.
+                        state.touch = this.blockStepTarget(Math.sign(delta)) === null ? 'native' : 'block';
+                        if (state.touch === 'native') return;
+                    }
+                    event.preventDefault();
+                    const delta = state.touchY - event.touches[0].clientY;
+                    if (state.touch === 'block' && Math.abs(delta) >= 40) {
+                        state.touch = 'done';
+                        this.moveBlock(Math.sign(delta));
+                    }
                 },
                 openSetlist(id) {
                     if (id) window.location.href = `${config.urls.setlist}/${id}`;
