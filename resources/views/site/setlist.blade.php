@@ -87,6 +87,8 @@
         .font-size { font-variant-numeric: tabular-nums; font-size: .85rem; min-width: 3rem; text-align: center; }
 
         .stage { flex: 1; width: 100%; max-width: 72rem; margin: 0 auto; padding: .6rem .9rem 1rem; box-sizing: border-box; }
+        /* Song dragged sideways (see dragSong): no horizontal page scroll while it is off its place */
+        .stage.is-swiping { overflow-x: clip; }
         .song-head { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
         .song-title { margin: 0; font-size: clamp(1.15rem, 3.4vw, 1.75rem); font-weight: 700; line-height: 1.15; }
         .key-badge { border: 1px solid var(--accent); color: var(--accent); background: none; border-radius: 999px; padding: .1rem .6rem; font-weight: 700; font-size: .95rem; cursor: pointer; white-space: nowrap; }
@@ -122,6 +124,8 @@
         .hint { font-size: .85rem; color: var(--muted); }
 
         .sections { margin-top: .6rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--section-gap, 1) * .6rem); font-size: calc(clamp(1.1rem, 3.6vw, 1.7rem) * var(--chord-scale, 1)); }
+        /* A block selected: a vertical swipe on the blocks goes to the block above / below (see onTouchMove), never a page scroll */
+        .sections.block-swipe { touch-action: pan-x pinch-zoom; }
         /* Each block: a side line and its chords in the color of its kind (intro, chorus...) */
         .sections section {
             break-inside: avoid; position: relative; border-radius: .5rem;
@@ -566,7 +570,7 @@
                         </template>
 
                         <template x-if="sheetMode">
-                        <div class="sections" :class="{ 'two-columns': settings.twoColumns }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
+                        <div class="sections" :class="{ 'two-columns': settings.twoColumns, 'block-swipe': blockScrollActive }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
                             <template x-for="(section, index) in current.chord_sheet" :key="`${current.id}-${index}`">
                                 <section :class="sectionState(index)" :style="typeStyle(timedName(index))" @click="selectSection(index)">
                                     <div class="return-label" x-show="section.jump === 'start'"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</div>
@@ -596,7 +600,7 @@
                         </template>
 
                         <template x-if="!sheetMode && !liveMode">
-                        <div class="sections" :class="{ 'two-columns': settings.twoColumns }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
+                        <div class="sections" :class="{ 'two-columns': settings.twoColumns, 'block-swipe': blockScrollActive }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
                             <template x-for="(section, index) in sections" :key="`${current.id}-${index}`">
                                 <section :class="sectionState(index)" :style="typeStyle(sectionName(section))" @click="selectSection(index)">
                                     <div class="return-label" x-show="section?.jump === 'start'"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</div>
@@ -1368,6 +1372,8 @@
                     window.addEventListener('wheel', event => this.onWheel(event), { passive: false });
                     window.addEventListener('touchstart', event => this.onTouchStart(event), { passive: true });
                     window.addEventListener('touchmove', event => this.onTouchMove(event), { passive: false });
+                    window.addEventListener('touchend', () => this.onTouchEnd(), { passive: true });
+                    window.addEventListener('touchcancel', () => this.onTouchEnd(true), { passive: true });
                     this.$watch('settings', value => saveSettings(value), { deep: true });
                     // Each song opens with its own saved layout.
                     this.layout = this.currentId ? loadLayout(this.currentId) : { ...DEFAULT_LAYOUT };
@@ -2031,11 +2037,24 @@
                 },
                 // With a block selected, scrolling the page (wheel or swipe) goes to the block above / below, like ↑ ↓.
                 // Past the first / last block the page scrolls as usual.
-                blockScroll: { wheel: 0, wheelAt: 0, lockedUntil: 0, touchY: null, touch: null },
-                scrollSelectsBlock(event) {
-                    if (!this.current || this.liveMode || this.currentSection === null || this.editingIndex !== null) return false;
-                    if (this.panelOpen || this.optionsOpen || this.removing || this.installHelp || this.suggestEdit || this.keyPickerOpen) return false;
+                blockScroll: { wheel: 0, wheelAt: 0, lockedUntil: 0, touchX: null, touchY: null, lastY: 0, dragX: 0, touch: null },
+                get blockScrollActive() {
+                    return !!this.current && !this.liveMode && this.currentSection !== null && this.gesturesFree;
+                },
+                // No block being edited and no panel / popup open.
+                get gesturesFree() {
+                    if (this.editingIndex !== null) return false;
+                    return !(this.panelOpen || this.optionsOpen || this.removing || this.installHelp || this.suggestEdit || this.keyPickerOpen);
+                },
+                gestureTarget(event) {
                     return !event.ctrlKey && !event.target.closest?.('.panel, .options, .modal, .suggest-pop, .jump-bar, textarea, select, input');
+                },
+                scrollSelectsBlock(event) {
+                    return this.blockScrollActive && this.gestureTarget(event);
+                },
+                // Horizontal drag: next / previous song, like ← →.
+                swipeChangesSong(event) {
+                    return !!this.current && this.gesturesFree && this.gestureTarget(event);
                 },
                 onWheel(event) {
                     if (!this.scrollSelectsBlock(event) || !event.deltaY) return;
@@ -2058,26 +2077,68 @@
                     this.moveBlock(step);
                 },
                 onTouchStart(event) {
-                    this.blockScroll.touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
-                    this.blockScroll.touch = null;
+                    const touch = event.touches.length === 1 ? event.touches[0] : null;
+                    Object.assign(this.blockScroll, { touchX: touch?.clientX ?? null, touchY: touch?.clientY ?? null, touch: null });
                 },
+                // The blocks have no native vertical scroll while one is selected (touch-action, see .block-swipe):
+                // a fast swipe would otherwise start the page scroll before it can be stopped, and fling past the block.
                 onTouchMove(event) {
                     const state = this.blockScroll;
                     if (state.touchY === null || event.touches.length !== 1 || state.touch === 'native') return;
+                    const x = event.touches[0].clientX;
+                    const y = event.touches[0].clientY;
+                    const delta = state.touchY - y;
+                    const sideways = state.touchX - x;
                     if (state.touch === null) {
-                        if (!this.scrollSelectsBlock(event)) return state.touch = 'native';
-                        const delta = state.touchY - event.touches[0].clientY;
-                        if (Math.abs(delta) < 8) return;
-                        // The swipe is taken over only when there is a block in that direction.
-                        state.touch = this.blockStepTarget(Math.sign(delta)) === null ? 'native' : 'block';
-                        if (state.touch === 'native') return;
+                        if (Math.abs(delta) < 8 && Math.abs(sideways) < 8) return this.scrollSelectsBlock(event) && event.cancelable && event.preventDefault();
+                        // Clearly sideways: the song is dragged (next / previous one). Otherwise a block in that direction is
+                        // selected; above the first / below the last one the page follows the finger.
+                        if (Math.abs(sideways) > Math.abs(delta) * 1.5 && this.swipeChangesSong(event)) state.touch = 'song';
+                        else if (Math.abs(sideways) > Math.abs(delta) || !this.scrollSelectsBlock(event)) return state.touch = 'native';
+                        else state.touch = this.blockStepTarget(Math.sign(delta)) === null ? 'page' : 'block';
+                        state.lastY = state.touchY;
                     }
-                    event.preventDefault();
-                    const delta = state.touchY - event.touches[0].clientY;
-                    if (state.touch === 'block' && Math.abs(delta) >= 40) {
+                    if (event.cancelable) event.preventDefault();
+                    if (state.touch === 'song') {
+                        this.dragSong(-sideways);
+                    } else if (state.touch === 'page') {
+                        window.scrollBy(0, state.lastY - y);
+                        state.lastY = y;
+                    } else if (state.touch === 'block' && Math.abs(delta) >= 40) {
                         state.touch = 'done';
                         this.moveBlock(Math.sign(delta));
                     }
+                },
+                // The song follows the finger; it only changes when let go past a third of the screen, otherwise it
+                // goes back to its place. Past the first / last song it barely moves.
+                songView() { return document.querySelector('.stage article'); },
+                dragSong(offset) {
+                    const view = this.songView();
+                    if (!view) return;
+                    const shown = this.songs[this.currentIndex + (offset < 0 ? 1 : -1)] ? offset : offset * .2;
+                    this.blockScroll.dragX = offset;
+                    view.parentElement.classList.add('is-swiping');
+                    view.style.transition = 'none';
+                    view.style.transform = `translateX(${shown}px)`;
+                    view.style.opacity = String(1 - Math.min(Math.abs(shown) / window.innerWidth, 1) * .6);
+                },
+                onTouchEnd(cancelled = false) {
+                    const state = this.blockScroll;
+                    if (state.touch !== 'song') return;
+                    state.touch = 'done';
+                    const view = this.songView();
+                    if (!view) return;
+                    const offset = state.dragX;
+                    const step = offset < 0 ? 1 : -1;
+                    const change = !cancelled && Math.abs(offset) >= window.innerWidth / 3 && !!this.songs[this.currentIndex + step];
+                    view.style.transition = 'transform .18s ease-out, opacity .18s ease-out';
+                    view.style.transform = change ? `translateX(${offset < 0 ? '-' : ''}100vw)` : '';
+                    view.style.opacity = change ? '0' : '';
+                    setTimeout(() => {
+                        if (change) this.go(this.currentIndex + step);
+                        view.style.transition = view.style.transform = view.style.opacity = '';
+                        view.parentElement?.classList.remove('is-swiping');
+                    }, 180);
                 },
                 openSetlist(id) {
                     if (id) window.location.href = `${config.urls.setlist}/${id}`;
