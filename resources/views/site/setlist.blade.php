@@ -122,6 +122,8 @@
         .hint { font-size: .85rem; color: var(--muted); }
 
         .sections { margin-top: .6rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--section-gap, 1) * .6rem); font-size: calc(clamp(1.1rem, 3.6vw, 1.7rem) * var(--chord-scale, 1)); }
+        /* A block selected: a vertical swipe on the blocks goes to the block above / below (see onTouchMove), never a page scroll */
+        .sections.block-swipe { touch-action: pan-x pinch-zoom; }
         /* Each block: a side line and its chords in the color of its kind (intro, chorus...) */
         .sections section {
             break-inside: avoid; position: relative; border-radius: .5rem;
@@ -566,7 +568,7 @@
                         </template>
 
                         <template x-if="sheetMode">
-                        <div class="sections" :class="{ 'two-columns': settings.twoColumns }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
+                        <div class="sections" :class="{ 'two-columns': settings.twoColumns, 'block-swipe': blockScrollActive }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
                             <template x-for="(section, index) in current.chord_sheet" :key="`${current.id}-${index}`">
                                 <section :class="sectionState(index)" :style="typeStyle(timedName(index))" @click="selectSection(index)">
                                     <div class="return-label" x-show="section.jump === 'start'"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</div>
@@ -596,7 +598,7 @@
                         </template>
 
                         <template x-if="!sheetMode && !liveMode">
-                        <div class="sections" :class="{ 'two-columns': settings.twoColumns }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
+                        <div class="sections" :class="{ 'two-columns': settings.twoColumns, 'block-swipe': blockScrollActive }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
                             <template x-for="(section, index) in sections" :key="`${current.id}-${index}`">
                                 <section :class="sectionState(index)" :style="typeStyle(sectionName(section))" @click="selectSection(index)">
                                     <div class="return-label" x-show="section?.jump === 'start'"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</div>
@@ -2031,11 +2033,14 @@
                 },
                 // With a block selected, scrolling the page (wheel or swipe) goes to the block above / below, like ↑ ↓.
                 // Past the first / last block the page scrolls as usual.
-                blockScroll: { wheel: 0, wheelAt: 0, lockedUntil: 0, touchY: null, touch: null },
-                scrollSelectsBlock(event) {
+                blockScroll: { wheel: 0, wheelAt: 0, lockedUntil: 0, touchX: null, touchY: null, lastY: 0, touch: null },
+                get blockScrollActive() {
                     if (!this.current || this.liveMode || this.currentSection === null || this.editingIndex !== null) return false;
-                    if (this.panelOpen || this.optionsOpen || this.removing || this.installHelp || this.suggestEdit || this.keyPickerOpen) return false;
-                    return !event.ctrlKey && !event.target.closest?.('.panel, .options, .modal, .suggest-pop, .jump-bar, textarea, select, input');
+                    return !(this.panelOpen || this.optionsOpen || this.removing || this.installHelp || this.suggestEdit || this.keyPickerOpen);
+                },
+                scrollSelectsBlock(event) {
+                    return this.blockScrollActive && !event.ctrlKey
+                        && !event.target.closest?.('.panel, .options, .modal, .suggest-pop, .jump-bar, textarea, select, input');
                 },
                 onWheel(event) {
                     if (!this.scrollSelectsBlock(event) || !event.deltaY) return;
@@ -2058,23 +2063,31 @@
                     this.moveBlock(step);
                 },
                 onTouchStart(event) {
-                    this.blockScroll.touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
-                    this.blockScroll.touch = null;
+                    const touch = event.touches.length === 1 ? event.touches[0] : null;
+                    Object.assign(this.blockScroll, { touchX: touch?.clientX ?? null, touchY: touch?.clientY ?? null, touch: null });
                 },
+                // The blocks have no native vertical scroll while one is selected (touch-action, see .block-swipe):
+                // a fast swipe would otherwise start the page scroll before it can be stopped, and fling past the block.
                 onTouchMove(event) {
                     const state = this.blockScroll;
                     if (state.touchY === null || event.touches.length !== 1 || state.touch === 'native') return;
+                    const x = event.touches[0].clientX;
+                    const y = event.touches[0].clientY;
+                    const delta = state.touchY - y;
                     if (state.touch === null) {
                         if (!this.scrollSelectsBlock(event)) return state.touch = 'native';
-                        const delta = state.touchY - event.touches[0].clientY;
-                        if (Math.abs(delta) < 8) return;
-                        // The swipe is taken over only when there is a block in that direction.
-                        state.touch = this.blockStepTarget(Math.sign(delta)) === null ? 'native' : 'block';
-                        if (state.touch === 'native') return;
+                        if (Math.abs(delta) < 8 && Math.abs(state.touchX - x) < 8) return event.cancelable && event.preventDefault();
+                        // Sideways: left to the browser (e.g. a long chord line). Otherwise a block in that direction is
+                        // selected; above the first / below the last one the page follows the finger.
+                        if (Math.abs(state.touchX - x) > Math.abs(delta)) return state.touch = 'native';
+                        state.touch = this.blockStepTarget(Math.sign(delta)) === null ? 'page' : 'block';
+                        state.lastY = state.touchY;
                     }
-                    event.preventDefault();
-                    const delta = state.touchY - event.touches[0].clientY;
-                    if (state.touch === 'block' && Math.abs(delta) >= 40) {
+                    if (event.cancelable) event.preventDefault();
+                    if (state.touch === 'page') {
+                        window.scrollBy(0, state.lastY - y);
+                        state.lastY = y;
+                    } else if (state.touch === 'block' && Math.abs(delta) >= 40) {
                         state.touch = 'done';
                         this.moveBlock(Math.sign(delta));
                     }
