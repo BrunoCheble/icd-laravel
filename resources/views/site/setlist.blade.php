@@ -87,6 +87,8 @@
         .font-size { font-variant-numeric: tabular-nums; font-size: .85rem; min-width: 3rem; text-align: center; }
 
         .stage { flex: 1; width: 100%; max-width: 72rem; margin: 0 auto; padding: .6rem .9rem 1rem; box-sizing: border-box; }
+        /* Song dragged sideways (see dragSong): no horizontal page scroll while it is off its place */
+        .stage.is-swiping { overflow-x: clip; }
         .song-head { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
         .song-title { margin: 0; font-size: clamp(1.15rem, 3.4vw, 1.75rem); font-weight: 700; line-height: 1.15; }
         .key-badge { border: 1px solid var(--accent); color: var(--accent); background: none; border-radius: 999px; padding: .1rem .6rem; font-weight: 700; font-size: .95rem; cursor: pointer; white-space: nowrap; }
@@ -1370,6 +1372,8 @@
                     window.addEventListener('wheel', event => this.onWheel(event), { passive: false });
                     window.addEventListener('touchstart', event => this.onTouchStart(event), { passive: true });
                     window.addEventListener('touchmove', event => this.onTouchMove(event), { passive: false });
+                    window.addEventListener('touchend', () => this.onTouchEnd(), { passive: true });
+                    window.addEventListener('touchcancel', () => this.onTouchEnd(true), { passive: true });
                     this.$watch('settings', value => saveSettings(value), { deep: true });
                     // Each song opens with its own saved layout.
                     this.layout = this.currentId ? loadLayout(this.currentId) : { ...DEFAULT_LAYOUT };
@@ -2033,7 +2037,7 @@
                 },
                 // With a block selected, scrolling the page (wheel or swipe) goes to the block above / below, like ↑ ↓.
                 // Past the first / last block the page scrolls as usual.
-                blockScroll: { wheel: 0, wheelAt: 0, lockedUntil: 0, touchX: null, touchY: null, lastY: 0, touch: null },
+                blockScroll: { wheel: 0, wheelAt: 0, lockedUntil: 0, touchX: null, touchY: null, lastY: 0, dragX: 0, touch: null },
                 get blockScrollActive() {
                     return !!this.current && !this.liveMode && this.currentSection !== null && this.gesturesFree;
                 },
@@ -2048,7 +2052,7 @@
                 scrollSelectsBlock(event) {
                     return this.blockScrollActive && this.gestureTarget(event);
                 },
-                // Horizontal swipe: next / previous song, like ← →.
+                // Horizontal drag: next / previous song, like ← →.
                 swipeChangesSong(event) {
                     return !!this.current && this.gesturesFree && this.gestureTarget(event);
                 },
@@ -2087,29 +2091,54 @@
                     const sideways = state.touchX - x;
                     if (state.touch === null) {
                         if (Math.abs(delta) < 8 && Math.abs(sideways) < 8) return this.scrollSelectsBlock(event) && event.cancelable && event.preventDefault();
-                        // Sideways: next / previous song. Otherwise a block in that direction is selected; above the
-                        // first / below the last one the page follows the finger.
-                        if (Math.abs(sideways) > Math.abs(delta)) return state.touch = this.swipeChangesSong(event) ? 'song' : 'native';
-                        if (!this.scrollSelectsBlock(event)) return state.touch = 'native';
-                        state.touch = this.blockStepTarget(Math.sign(delta)) === null ? 'page' : 'block';
+                        // Clearly sideways: the song is dragged (next / previous one). Otherwise a block in that direction is
+                        // selected; above the first / below the last one the page follows the finger.
+                        if (Math.abs(sideways) > Math.abs(delta) * 1.5 && this.swipeChangesSong(event)) state.touch = 'song';
+                        else if (Math.abs(sideways) > Math.abs(delta) || !this.scrollSelectsBlock(event)) return state.touch = 'native';
+                        else state.touch = this.blockStepTarget(Math.sign(delta)) === null ? 'page' : 'block';
                         state.lastY = state.touchY;
                     }
-                    if (state.touch === 'song') {
-                        // A clear sideways move (not a slanted scroll) changes the song once per swipe.
-                        if (Math.abs(sideways) >= 70 && Math.abs(sideways) > Math.abs(delta) * 1.5) {
-                            state.touch = 'done';
-                            this.go(this.currentIndex + Math.sign(sideways));
-                        }
-                        return;
-                    }
                     if (event.cancelable) event.preventDefault();
-                    if (state.touch === 'page') {
+                    if (state.touch === 'song') {
+                        this.dragSong(-sideways);
+                    } else if (state.touch === 'page') {
                         window.scrollBy(0, state.lastY - y);
                         state.lastY = y;
                     } else if (state.touch === 'block' && Math.abs(delta) >= 40) {
                         state.touch = 'done';
                         this.moveBlock(Math.sign(delta));
                     }
+                },
+                // The song follows the finger; it only changes when let go past a third of the screen, otherwise it
+                // goes back to its place. Past the first / last song it barely moves.
+                songView() { return document.querySelector('.stage article'); },
+                dragSong(offset) {
+                    const view = this.songView();
+                    if (!view) return;
+                    const shown = this.songs[this.currentIndex + (offset < 0 ? 1 : -1)] ? offset : offset * .2;
+                    this.blockScroll.dragX = offset;
+                    view.parentElement.classList.add('is-swiping');
+                    view.style.transition = 'none';
+                    view.style.transform = `translateX(${shown}px)`;
+                    view.style.opacity = String(1 - Math.min(Math.abs(shown) / window.innerWidth, 1) * .6);
+                },
+                onTouchEnd(cancelled = false) {
+                    const state = this.blockScroll;
+                    if (state.touch !== 'song') return;
+                    state.touch = 'done';
+                    const view = this.songView();
+                    if (!view) return;
+                    const offset = state.dragX;
+                    const step = offset < 0 ? 1 : -1;
+                    const change = !cancelled && Math.abs(offset) >= window.innerWidth / 3 && !!this.songs[this.currentIndex + step];
+                    view.style.transition = 'transform .18s ease-out, opacity .18s ease-out';
+                    view.style.transform = change ? `translateX(${offset < 0 ? '-' : ''}100vw)` : '';
+                    view.style.opacity = change ? '0' : '';
+                    setTimeout(() => {
+                        if (change) this.go(this.currentIndex + step);
+                        view.style.transition = view.style.transform = view.style.opacity = '';
+                        view.parentElement?.classList.remove('is-swiping');
+                    }, 180);
                 },
                 openSetlist(id) {
                     if (id) window.location.href = `${config.urls.setlist}/${id}`;
