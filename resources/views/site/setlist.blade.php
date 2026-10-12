@@ -791,6 +791,19 @@
         const SETTINGS_KEY = 'setlist-view-settings';
         const DEFAULT_SETTINGS = { showDetails: true, showAnchors: true, showLyrics: false, twoColumns: true, viewMode: 'map', youtubeSound: false, instrument: '', suggest: false };
 
+        // Values worked out once per song data, outside Alpine's reactive state: the songs' structure and chord sheet
+        // are replaced (never changed in place), so the same objects give the same result. Read by every bar, beat and
+        // chord on screen, they would otherwise be worked out again thousands of times when the song changes.
+        const memoStore = new Map();
+        let lastSongIndex = -1;
+        function memo(name, deps, compute) {
+            const entry = memoStore.get(name);
+            if (entry && entry.deps.length === deps.length && entry.deps.every((dep, i) => dep === deps[i])) return entry.value;
+            const value = compute();
+            memoStore.set(name, { deps, value });
+            return value;
+        }
+
         // YouTube player for the song sound, outside Alpine's reactive state.
         let soundPlayer = null;
         // Audio file of the song, played instead of the YouTube video when the song has one (works offline).
@@ -1109,7 +1122,11 @@
                     writeStorage(VIDEO_POSITION_KEY, null);
                 },
 
-                get currentIndex() { return this.songs.findIndex(song => song.id === this.currentId); },
+                // The position found last is checked first: read by every chord on screen, a search each time adds up.
+                get currentIndex() {
+                    if (this.songs[lastSongIndex]?.id === this.currentId) return lastSongIndex;
+                    return lastSongIndex = this.songs.findIndex(song => song.id === this.currentId);
+                },
                 get current() { return this.songs[this.currentIndex] ?? null; },
 
                 // Key used in this setlist, falling back to the song's original key.
@@ -1383,6 +1400,9 @@
                     });
                     this.$watch('currentId', id => {
                         this.stopLive();
+                        // The count of the new song starts from its first bar.
+                        this.live.tick = 0;
+                        this.live.usedMarkers = [];
                         this.liveBpm = this.loadLiveBpm();
                         this.layout = id ? loadLayout(id) : { ...DEFAULT_LAYOUT };
                         this.chordEdits = id ? loadChordEdits(id) : {};
@@ -1419,11 +1439,11 @@
                 live: { running: false, tick: 0, startTick: 0, startedAt: 0, click: false, usedMarkers: [], frame: null, lastBeat: -1 },
                 liveBpm: 80,
                 taps: [],
-                liveCache: { key: null, value: null },
                 get liveGrid() {
                     const structure = Array.isArray(this.current?.structure) ? this.current.structure : [];
-                    const key = `${this.currentId}:${JSON.stringify(structure)}`;
-                    if (this.liveCache.key === key) return this.liveCache.value;
+                    return memo('liveGrid', [this.currentId, structure], () => this.buildLiveGrid(structure));
+                },
+                buildLiveGrid(structure) {
                     let value = null;
                     const ticks = [];
                     const blocks = [];
@@ -1454,7 +1474,6 @@
                         }
                         value = { perBar, ticks, bars, blocks: blocks.filter(block => !block.marker), markers: blocks.filter(block => block.marker).map(block => block.tick) };
                     }
-                    this.liveCache = { key, value };
                     return value;
                 },
                 get hasLive() { return !!this.liveGrid; },
@@ -1606,6 +1625,9 @@
                 get sheetPassing() {
                     const structure = Array.isArray(this.current?.structure) ? this.current.structure : [];
                     const sheet = Array.isArray(this.current?.chord_sheet) ? this.current.chord_sheet : [];
+                    return memo('sheetPassing', [structure, sheet], () => this.buildSheetPassing(structure, sheet));
+                },
+                buildSheetPassing(structure, sheet) {
                     const mapChords = structure.flatMap(section => chordsOnly(Array.isArray(section?.chords) ? section.chords.map(String) : []));
                     const sheetLists = sheet.map(section => (section.lines || []).flatMap(line => sheetChords(line)));
                     if (JSON.stringify(mapChords) !== JSON.stringify(sheetLists.flat())) return sheetLists.map(() => []);
