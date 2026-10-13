@@ -73,6 +73,20 @@
         .beat.is-on { background: #f59e0b; }
         .beat.is-on .chord, .beat.is-on .count { color: #fff; }
         .bars-page.is-editing .beat { cursor: text; }
+        .block-actions { display: inline-flex; gap: .25rem; margin-left: auto; }
+        .block-grip { color: #9ca3af; cursor: grab; padding: .15rem .2rem; touch-action: none; }
+        .line-head { cursor: grab; }
+        .line-head button { cursor: pointer; }
+        .line-block.is-dragging { opacity: .45; }
+        .line-block.drop-before { box-shadow: 0 -3px 0 0 #4f46e5; }
+        .line-block.drop-after { box-shadow: 0 3px 0 0 #4f46e5; }
+        .bars-page.is-moving-block, .bars-page.is-moving-block * { cursor: grabbing !important; user-select: none; }
+        .block-actions .ws-btn { padding: .15rem .45rem; }
+        .inline-chord { width: 100%; min-width: 0; padding: 0 .2rem; border: 1px solid #4f46e5; border-radius: .25rem; font: inherit; font-weight: 800; font-size: .95rem; background: #fff; outline: none; }
+        .inline-chord.is-invalid { border-color: #dc2626; background: #fef2f2; }
+        .bars-page.is-editing .chord.can-drag { cursor: grab; touch-action: none; border-radius: .2rem; }
+        .bars-page.is-editing .chord.can-drag:hover { outline: 1px dashed #4f46e5; }
+        .bars-page.is-dragging, .bars-page.is-dragging * { cursor: grabbing !important; user-select: none; }
         .bars-page.is-editing .beat:hover { outline: 1px dashed #f59e0b; }
 
         .sheet-col { min-width: 0; }
@@ -87,6 +101,14 @@
         .sheet-seg .c { min-height: 1.05em; font-size: .82rem; font-weight: 800; color: #4f46e5; padding-right: .3rem; }
         .sheet-seg .c.is-playing > span { padding: 0 .2rem; margin: 0 -.2rem; border-radius: .25rem; background: #4f46e5; color: #fff; }
         .sheet-seg .t { white-space: pre; }
+        .sheet-seg .c.can-move { cursor: grab; touch-action: none; }
+        .sheet-seg .c.is-added > span { color: #16a34a; text-decoration: underline; text-underline-offset: .15em; }
+        .sheet-preview-note { margin: 0 0 .4rem; font-size: .75rem; color: #b45309; }
+        .sheet-seg .c.can-move:hover > span { outline: 1px dashed #4f46e5; border-radius: .2rem; }
+        .sheet-seg .c.is-moving > span { padding: 0 .2rem; margin: 0 -.2rem; border-radius: .25rem; background: #f59e0b; color: #fff; }
+        .chord-move { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; margin: .3rem 0 .4rem; font-size: .78rem; }
+        .chord-move .ws-btn { padding: .15rem .5rem; }
+        .chord-move .error { color: #dc2626; }
         .sheet-comment { margin-top: .15rem; font-size: .82rem; font-style: italic; color: #6b7280; }
         .sheet-head { display: flex; align-items: center; gap: .35rem; }
         .sheet-edit-btn { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
@@ -120,7 +142,7 @@
                 @include('songs.partials.tabs', ['song' => $song, 'current' => 'layout'])
                 @include('layouts.alert')
 
-                <div class="bars-page" :class="{ 'is-editing': mode === 'edit' }" x-data="songBars(@js([
+                <div class="bars-page" :class="{ 'is-editing': mode === 'edit', 'is-dragging': drag && drag.moved, 'is-moving-block': blockDrag?.moved }" x-data="songBars(@js([
                     'structure' => $blocks,
                     'sheet' => $sheet,
                     'key' => $song->musical_key,
@@ -156,7 +178,7 @@
                         <button type="button" class="ws-btn" @click="undo()" :disabled="!history.length" title="{{ __('Undo') }}" aria-label="{{ __('Undo') }}"><i class="fa-solid fa-rotate-left"></i></button>
                         <button type="button" class="ws-btn" x-show="canPlay" :class="{ 'is-active': loop }" @click="toggleLoop()"
                             :title="loop ? @js(__('Stop repeating')) : @js(__('Repeat the marked bars (or the current bar)'))" aria-label="{{ __('Repeat') }}"><i class="fa-solid fa-repeat"></i></button>
-                        <button type="button" class="ws-btn" x-show="canPlay" :class="{ 'is-active': metronome }" @click="metronome = !metronome"
+                        <button type="button" class="ws-btn" x-show="canPlay && !clickOnly" :class="{ 'is-active': metronome }" @click="metronome = !metronome"
                             title="{{ __('Metronome') }}" aria-label="{{ __('Metronome') }}"><i class="fa-solid fa-stopwatch"></i></button>
                         <span class="ws-spacer"></span>
                         <label class="ws-btn" style="padding-right: .3rem;" title="{{ __('Beats per minute') }}" x-show="!versionId">
@@ -207,11 +229,17 @@
                                         <span class="ws-note" style="white-space: normal;" x-text="lineTool === 'break' ? @js(__('Click a chord to start a new line on it; click the first chord of a line to join it to the line above.')) : @js(__('Click a chord to mark it as a passing chord (underlined); click it again to unmark it. Passing chords do not count when looking for repetitions.'))"></span>
                                     </div>
                                     <template x-for="item in lineBlocks" :key="`${revision}-${item.block.id}`">
-                                        <div class="line-block" :class="{ 'is-current': linePlaying?.id === item.block.id }" :style="typeStyle(item.name)">
-                                            <div class="line-head">
+                                        <div class="line-block" :class="{ 'is-current': linePlaying?.id === item.block.id, 'is-dragging': blockDrag?.moved && blockDrag.id === item.block.id, 'drop-before': blockDrag?.moved && blockDrag.target === item.block.id && blockDrag.before, 'drop-after': blockDrag?.moved && blockDrag.target === item.block.id && !blockDrag.before }"
+                                            :style="typeStyle(item.name)" :data-line-block="item.block.id">
+                                            <div class="line-head" @pointerdown="!versionId && startBlockDrag($event, item.block)">
+                                                <span class="block-grip" x-show="!versionId" title="{{ __('Drag to move the block') }}"><i class="fa-solid fa-grip-vertical"></i></span>
                                                 <button type="button" class="line-name block-chip" @click="canPlay && playFromTick(item.block.startTick)" :title="canPlay ? @js(__('Play from here')) : ''"><i class="fa-solid fa-play play" x-show="canPlay"></i> <span x-text="item.name"></span></button>
                                                 <span class="line-state" x-text="item.manual ? @js(__('Lines set by hand')) : @js(__('Automatic lines'))"></span>
                                                 <button type="button" class="ws-btn" x-show="item.manual" @click="automaticLines(item.block)">{{ __('Back to automatic') }}</button>
+                                                <span class="block-actions" x-show="!versionId">
+                                                    <button type="button" class="ws-btn" @click="duplicateBlock(item.block)" title="{{ __('Duplicate') }}" aria-label="{{ __('Duplicate') }}"><i class="fa-solid fa-clone"></i></button>
+                                                    <button type="button" class="ws-btn" @click="removeBlock(item.block)" :disabled="lineBlocks.length < 2" title="{{ __('Remove') }}" aria-label="{{ __('Remove') }}"><i class="fa-solid fa-trash"></i></button>
+                                                </span>
                                             </div>
                                             <template x-for="(line, l) in item.lines" :key="l">
                                                 <div class="line-row">
@@ -243,11 +271,21 @@
                                         </div>
                                         <div class="bar-beats" :style="`grid-template-columns: repeat(${bar.beats.length}, minmax(0, 1fr))`">
                                             <template x-for="(beat, i) in bar.beats" :key="i">
-                                                <span class="beat" :class="{ 'is-on': b === currentBar && i === currentBeat }" @click.stop="clickBeat(b, i, $event.currentTarget, $event)"
+                                                <span class="beat" :class="{ 'is-on': b === currentBar && i === currentBeat }" :data-beat="i" @click.stop="clickBeat(b, i, $event.currentTarget, $event)" @dblclick.stop="mode === 'edit' && editBeat(b, i, $event)"
                                                     :title="`${@js(__('Beat'))} ${i + 1}: ${beat.chord || '–'}${beat.and !== null ? ' → ' + (beat.and || '–') + ' (e)' : ''}`">
-                                                    <span class="halves">
-                                                        <span class="chord" :class="{ 'is-repeat': beat.repeat, 'is-long': !beat.repeat && beat.chord.length > 4 }" x-text="beat.repeat ? '/' : (beat.chord || '–')"></span>
-                                                        <template x-if="beat.and !== null"><span class="chord is-and" :class="{ 'is-long': beat.and.length > 4 }" x-text="beat.and || '–'"></span></template>
+                                                    <template x-if="inline && Math.floor(inline.tick / 2) === b * perBar + i">
+                                                        <input type="text" class="inline-chord" :class="{ 'is-invalid': inline?.invalid }" :value="inline?.text ?? ''" autocomplete="off" spellcheck="false"
+                                                            x-init="$nextTick(() => { $el.focus(); inline?.select ? $el.select() : $el.setSelectionRange($el.value.length, $el.value.length); })"
+                                                            @click.stop @dblclick.stop @pointerdown.stop
+                                                            @input="if (inline) { inline.text = $event.target.value; inline.invalid = false; }"
+                                                            @keydown.enter.prevent="commitInline()" @keydown.escape.stop.prevent="inline = null" @keydown.tab.prevent="commitInline()"
+                                                            @blur="commitInline(true)">
+                                                    </template>
+                                                    <span class="halves" x-show="!(inline && Math.floor(inline.tick / 2) === b * perBar + i)">
+                                                        <span class="chord" :class="{ 'is-repeat': beat.repeat, 'is-long': !beat.repeat && beat.chord.length > 4, 'can-drag': mode === 'edit' && isChangeAt((b * perBar + i) * 2) }" x-text="beat.repeat ? '/' : (beat.chord || '–')"
+                                                            @pointerdown="startDrag($event, b, i, 0)"></span>
+                                                        <template x-if="beat.and !== null"><span class="chord is-and" :class="{ 'is-long': beat.and.length > 4, 'can-drag': mode === 'edit' && isChangeAt((b * perBar + i) * 2 + 1) }" x-text="beat.and || '–'"
+                                                            @pointerdown="startDrag($event, b, i, 1)"></span></template>
                                                     </span>
                                                     <span class="count" x-text="i + 1"></span>
                                                 </span>
@@ -261,6 +299,7 @@
                         {{-- Chord sheet with lyrics, split like the blocks; the block being played is lit --}}
                         <div class="sheet-col" x-show="sheet.length">
                             <div class="sheet-box">
+                                <p class="sheet-preview-note" x-show="!versionId && dirty && previewSheet.changed">{{ __('Preview: the chord sheet will look like this when the map is saved (new chords in green).') }}</p>
                                 <template x-for="(section, s) in shownSheet" :key="`${sheetRevision}-${versionId}-${s}`">
                                     <div class="sheet-section" :class="{ 'is-current': s === currentSheetSection }" :style="typeStyle(section.label)" :data-sheet="s">
                                         <div class="sheet-head">
@@ -275,19 +314,34 @@
                                                     @keydown.enter.meta.prevent="saveSheetSection()" @keydown.enter.ctrl.prevent="saveSheetSection()"></textarea>
                                                 <div class="row">
                                                     <button type="button" class="ws-btn ws-btn-primary" @click="saveSheetSection()" :disabled="sheetEdit.saving">
-                                                        <i class="fa-solid" :class="sheetEdit.saving ? 'fa-spinner fa-spin' : 'fa-check'"></i> {{ __('Save') }}
+                                                        <i class="fa-solid" :class="sheetEdit.saving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                                                        <span x-text="sheetEdit.copies ? @js(__('Save only this one')) : @js(__('Save'))"></span>
                                                     </button>
+                                                    <button type="button" class="ws-btn" x-show="sheetEdit.copies" @click="saveSheetSection(true)" :disabled="sheetEdit.saving"
+                                                        x-text="@js(__('Save in every :name (:count)')).replace(':name', sheetEdit.name).replace(':count', sheetEdit.copies + 1)"></button>
                                                     <button type="button" class="ws-btn" @click="sheetEdit = null">{{ __('Cancel') }}</button>
                                                 </div>
-                                                <p class="help">{{ __('Chords stay in brackets, e.g. Esp[G]írito Santo: change the lyrics or move a chord, but keep the same chords.') }}</p>
+                                                <p class="help">{{ __('Chords stay in brackets, e.g. Esp[G]írito Santo: change the lyrics, move a chord or swap it for another one (the map changes too).') }}</p>
                                                 <p class="error" x-show="sheetEdit.error" x-text="sheetEdit.error"></p>
                                             </div>
                                         </template>
-                                        <template x-for="(line, l) in (sheetEdit?.index === s ? [] : section.lines)" :key="l">
+                                        <template x-for="(line, l) in (sheetEdit?.index === s ? [] : section.lines)" :key="sheetLineKey(line, l)">
                                             <div>
                                                 <template x-if="line.comment !== undefined"><div class="sheet-comment" x-text="line.comment"></div></template>
                                                 <template x-if="line.comment === undefined">
-                                                    <div class="sheet-line"><template x-for="(unit, u) in line.units" :key="u"><span class="sheet-seg"><span class="c" :class="{ 'is-playing': unit.n !== undefined && unit.n === currentSheetChord }" :data-chord="unit.n"><span x-text="unit.chord ? transposeName(unit.chord) : ''"></span></span><span class="t" x-text="unit.text"></span></span></template></div>
+                                                    <div>
+                                                        <div class="sheet-line" :data-sheet-line="`${s}-${l}`"><template x-for="(unit, u) in (chordMove && chordMove.s === s && chordMove.l === l ? chordMove.units : line.units)" :key="`${u}:${unit.chord}:${unit.text}:${unit.added || unit.changed ? 'a' : ''}`"><span class="sheet-seg"><span class="c" :class="{ 'is-playing': unit.n !== undefined && unit.n === currentSheetChord, 'is-moving': chordMove && chordMove.s === s && chordMove.l === l && unit.ordinal === chordMove.k, 'can-move': mode === 'edit' && !versionId && !section.marker && unit.chord && (!dirty || sheetLinked), 'is-added': unit.added || unit.changed }" :data-chord="unit.n"
+                                                            @pointerdown="unit.chord && startSheetDrag($event, s, l, unit.ordinal)"><span x-text="unit.chord ? transposeName(unit.chord) : ''"></span></span><span class="t" :data-from="unit.from" x-text="unit.text"></span></span></template></div>
+                                                        <template x-if="chordMove && !chordMove.dragging && chordMove.s === s && chordMove.l === l">
+                                                            <div class="chord-move" @click.stop>
+                                                                <button type="button" class="ws-btn ws-btn-primary" @click="saveChordMove(false)" :disabled="chordMove.saving"><i class="fa-solid" :class="chordMove.saving ? 'fa-spinner fa-spin' : 'fa-check'"></i> <span x-text="chordMove.copies ? @js(__('Save only this one')) : @js(__('Save'))"></span></button>
+                                                                <button type="button" class="ws-btn" x-show="chordMove.copies" @click="saveChordMove(true)" :disabled="chordMove.saving"
+                                                                    x-text="@js(__('Save in every :name (:count)')).replace(':name', chordMove.name).replace(':count', chordMove.copies + 1)"></button>
+                                                                <button type="button" class="ws-btn" @click="chordMove = null">{{ __('Cancel') }}</button>
+                                                                <span class="error" x-show="chordMove.error" x-text="chordMove.error"></span>
+                                                            </div>
+                                                        </template>
+                                                    </div>
                                                 </template>
                                             </div>
                                         </template>
@@ -297,7 +351,7 @@
                         </div>
                     </div>
 
-                    {{-- Chord of a beat --}}
+                    {{-- Chord of a beat, on touch screens (with a mouse the chord is typed right in the cell) --}}
                     <div class="popover" x-show="editor" x-cloak x-ref="editor" @click.outside="editor = null" @keydown.escape.stop="editor = null">
                         <p class="title" x-text="editor ? `${@js(__('Bar'))} ${editor.bar + 1}, ${@js(__('beat'))} ${editor.beat + 1}${editor.half ? ' (e)' : ''}` : ''"></p>
                         <input type="text" x-ref="editorChord" autocomplete="off" spellcheck="false" placeholder="G, Am7, C/E, D4" @keydown.enter.prevent="applyChord()">
@@ -310,6 +364,15 @@
                             <button type="button" class="ws-btn" @click="removeChange()" :disabled="!canRemoveChange()" title="{{ __('The chord before goes on from here') }}">{{ __('Remove change') }}</button>
                         </div>
                         <p class="title mt-2" x-show="editorError" x-text="editorError" style="color: #dc2626;"></p>
+                    </div>
+
+                    {{-- After a chord change in a block that has equal copies: the same change there too? --}}
+                    <div class="popover" x-show="copyOffer" x-cloak x-ref="copyOffer" @click.outside="if (copyOffer && performance.now() - copyOffer.at > 400) copyOffer = null" @keydown.escape.window="copyOffer = null">
+                        <p class="title" x-text="copyOffer ? @js(__('Also in the other :count :name blocks?')).replace(':count', copyOffer.copies.length).replace(':name', copyOffer.name) : ''"></p>
+                        <div class="row">
+                            <button type="button" class="ws-btn ws-btn-primary" x-ref="copyOfferAll" @click="applyToCopies()">{{ __('In all of them') }}</button>
+                            <button type="button" class="ws-btn" @click="copyOffer = null">{{ __('Only this one') }}</button>
+                        </div>
                     </div>
 
                     {{-- Block of a bar: new, rename, join; play from the bar --}}
@@ -437,9 +500,12 @@
             };
 
             // Structure -> ticks + blocks.
+            // `splits`: ticks where a chord starts right after the same chord ("G G" are two chords of the map, each
+            // with its place in the chord sheet), so they are not joined into one.
             const parseStructure = (structure) => {
             const ticks = [];
             const blocks = [];
+            const splits = [];
             let perBar = 4;
             (Array.isArray(structure) ? structure : []).forEach(section => {
                 if (!section || typeof section !== 'object') return;
@@ -454,33 +520,63 @@
                 list.forEach(chord => { if (chord !== '|') position++; else if (position > 0 && !breaks.includes(position)) breaks.push(position); });
                 if (section.beats_per_bar) perBar = section.beats_per_bar;
                 blocks.push({ id: nextId++, startTick: ticks.length, data: { ...data, lineChords: chords, breaks } });
-                chords.forEach((chord, i) => { for (let k = 0; k < Math.round((durations?.[i] ?? perBar) * 2); k++) ticks.push(chord); });
+                chords.forEach((chord, i) => {
+                    if (i > 0 && chord === chords[i - 1]) splits.push(ticks.length);
+                    for (let k = 0; k < Math.round((durations?.[i] ?? perBar) * 2); k++) ticks.push(chord);
+                });
             });
-            return { ticks, blocks, perBar };
+            return { ticks, blocks, perBar, splits };
             };
-            const { ticks, blocks, perBar } = parseStructure(config.structure);
+            const { ticks, blocks, perBar, splits } = parseStructure(config.structure);
 
             // ChordPro lines -> { comment } or { units: [{ chord, text }] }.
             const parseLine = (line) => {
                 const text = String(line ?? '');
                 const comment = /^\{\s*(?:c|comment)\s*:\s*(.*?)\s*\}$/i.exec(text.trim());
-                if (comment) return { comment: comment[1] };
-                if (/^\s*\{/.test(text)) return { comment: '' };
+                if (comment) return { comment: comment[1], raw: text };
+                if (/^\s*\{/.test(text)) return { comment: '', raw: text };
                 const units = [];
-                let last = 0, chord = null;
+                let last = 0, chord = null, ordinal = 0, plain = 0;
                 for (const match of text.matchAll(/\[([^\]]+)\]/g)) {
                     const before = text.slice(last, match.index);
-                    if (chord !== null || before) units.push({ chord, text: before });
+                    if (chord !== null || before) units.push({ chord, text: before, from: plain, ordinal: chord === null ? undefined : ordinal++ });
+                    plain += before.length;
                     chord = match[1];
                     last = match.index + match[0].length;
                 }
-                units.push({ chord, text: text.slice(last) });
+                units.push({ chord, text: text.slice(last), from: plain, ordinal: chord === null ? undefined : ordinal });
                 return { units };
             };
+            // How a list of chords became another (same rule as the server, UpdateChordSheetChordsService): for each
+            // old chord, what takes its place (none: removed), and the chords added after it (-1: before the first).
+            const chordChanges = (old, now) => {
+                const n = old.length, m = now.length;
+                const lcs = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+                for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) lcs[i][j] = old[i] === now[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+                const replace = {}, after = {};
+                let removed = [], added = [], previous = -1;
+                const flush = () => {
+                    removed.forEach((i, k) => { replace[i] = k < added.length ? [added[k]] : []; previous = i; });
+                    added.slice(removed.length).forEach(chord => (after[previous] ||= []).push(chord));
+                    removed = [];
+                    added = [];
+                };
+                let i = 0, j = 0;
+                while (i < n || j < m) {
+                    if (i < n && j < m && old[i] === now[j]) { flush(); replace[i] = [old[i]]; previous = i; i++; j++; }
+                    else if (j >= m || (i < n && lcs[i + 1][j] >= lcs[i][j + 1])) removed.push(i++);
+                    else added.push(now[j++]);
+                }
+                flush();
+                return { replace, after };
+            };
+            // A parsed line back to its text ("[G]Digno é o [D]Cordeiro").
+            const lineText = (units) => units.map(unit => (unit.chord !== null ? `[${unit.chord}]` : '') + unit.text).join('');
             // Each chord of the sheet gets its number ("n"), counted from the start of the sheet.
             const parseSheet = (sections) => {
                 let n = 0;
                 const view = (sections || []).map(section => ({
+                    section: section.section ?? null,
                     label: section.label || String(section.section ?? '').replaceAll('_', ' '),
                     lines: (section.lines || []).map(parseLine),
                     marker: section.jump === 'start',
@@ -492,6 +588,7 @@
                 return view;
             };
 
+            let rootElement = null;
             return withYoutubeMini({
                 ticks,
                 blocks,
@@ -527,8 +624,6 @@
                 saveState: '',
                 keyOpen: false,
                 optionsOpen: false,
-                editor: null,
-                editorError: '',
                 barMenu: null,
                 clock: 0,
                 currentTick: -1,
@@ -539,6 +634,8 @@
                 notice: '',
                 // Chords as they were when the page was opened or last saved (to restore bars).
                 originalTicks: [...ticks],
+                splits: [...splits],
+                originalSplits: [...splits],
                 // Passage repeated while playing: { from, to } (bars).
                 loop: null,
                 loopCooldown: 0,
@@ -549,7 +646,11 @@
                 commonNames: ['INTRO', 'PRIMEIRA PARTE', 'SEGUNDA PARTE', 'PRÉ-REFRÃO', 'REFRÃO', 'PONTE', 'INTERLÚDIO', 'SOLO', 'RIFF', 'FINAL',
                     'VERSE', 'PRE CHORUS', 'CHORUS', 'BRIDGE', 'INTERLUDE', 'TAG', 'OUTRO'],
 
+                // An element of the page marked with x-ref, found from the page itself (not from the element a handler
+                // was called from, which may have been drawn again meanwhile).
+                ref(name) { return (rootElement || this.$el).querySelector(`[x-ref="${name}"]`); },
                 init() {
+                    rootElement = this.$el;
                     if (audio) {
                         // The MP3 drives the same "playing" as the YouTube player (see youtube-mini.js).
                         audio.addEventListener('play', () => { this.playing = true; });
@@ -557,11 +658,17 @@
                     } else {
                         this.$nextTick(() => this.initVideo('yt-bars'));
                     }
+                    // The last pointer used: a finger opens the chord editor, a mouse types right in the cell.
+                    window.addEventListener('pointerdown', event => { this.touch = event.pointerType === 'touch' || event.pointerType === 'pen'; }, true);
+                    window.addEventListener('pointermove', event => { this.onDragMove(event); this.onSheetDragMove(event); this.onBlockDragMove(event); });
+                    window.addEventListener('pointerup', () => { this.onDragEnd(); this.onSheetDragEnd(); this.onBlockDragEnd(); });
+                    window.addEventListener('pointercancel', () => { this.onDragEnd(); this.onSheetDragEnd(); this.blockDrag = null; });
                     window.addEventListener('beforeunload', event => {
                         if (this.dirty && !this.saving) event.preventDefault();
                     });
                     const follow = () => {
                         this.clock = this.now();
+                        if (this.clickOnly && this.playing && this.atEnd()) { this.stopClock(); this.clickOffset = 0; }
                         if (this.isPlaying()) this.keepLoop();
                         this.scheduleClicks();
                         const tick = this.isPlaying() ? this.tickAt(this.clock) : this.currentTick;
@@ -593,8 +700,8 @@
                             const previous = start + i > 0 ? this.ticks[start + i - 1] : null;
                             beats.push({
                                 chord: this.transposeName(onBeat),
-                                repeat: i > 0 && onBeat === previous,
-                                and: part[i + 1] !== undefined && part[i + 1] !== onBeat ? this.transposeName(part[i + 1]) : null,
+                                repeat: i > 0 && onBeat === previous && !this.splits.includes(start + i),
+                                and: part[i + 1] !== undefined && (part[i + 1] !== onBeat || this.splits.includes(start + i + 1)) ? this.transposeName(part[i + 1]) : null,
                             });
                         }
                         bars.push({ beats, blocks: this.blocks.filter(block => block.startTick >= start && block.startTick < start + size) });
@@ -678,13 +785,28 @@
                     this.currentTick = tick;
                     const time = Math.max(0, this.timeOfTick(tick));
                     if (audio) audio.currentTime = time;
+                    else if (this.clickOnly) this.clickOffset = time;
                     else if (this.playerReady) this.seekVideo(time, false);
                     this.scrollToBar(this.currentBar);
                 },
-                get canPlay() { return !!audio || !!this.videoId; },
+                get canPlay() { return !!audio || !!this.videoId || this.clickOnly; },
+                // Without an MP3 or a video the song plays on its own clock, at the BPM, with the metronome.
+                get clickOnly() { return !audio && !this.videoId && this.bpm > 0; },
+                clickStartedAt: 0,
+                clickOffset: 0,
+                startClock(time) {
+                    this.clickOffset = Math.max(0, time);
+                    this.clickStartedAt = performance.now();
+                    this.playing = true;
+                },
+                stopClock() {
+                    this.clickOffset = this.now();
+                    this.playing = false;
+                },
                 isPlaying() { return this.playing; },
                 // The player's time. The MP3's time moves in small steps: between them it is estimated from the clock.
                 now() {
+                    if (this.clickOnly) return this.clickOffset + (this.playing ? (performance.now() - this.clickStartedAt) / 1000 : 0);
                     if (!audio) return this.playerReady ? this.videoCurrentTime() : 0;
                     const time = audio.currentTime;
                     if (audio.paused || time !== this.mediaTime) {
@@ -696,6 +818,7 @@
                 },
                 togglePlay() {
                     if (audio) return audio.paused ? audio.play() : audio.pause();
+                    if (this.clickOnly) return this.playing ? this.stopClock() : this.startClock(this.atEnd() ? 0 : this.clickOffset);
                     this.toggleVideo();
                 },
                 playFromTick(tick) {
@@ -704,10 +827,14 @@
                     if (audio) {
                         audio.currentTime = time;
                         audio.play();
+                    } else if (this.clickOnly) {
+                        this.startClock(time);
                     } else {
                         this.seekVideo(time);
                     }
                 },
+                // The clock went past the last bar.
+                atEnd() { return this.ticks.length > 0 && this.clock >= this.timeOfTick(this.ticks.length - 1) + this.halfBeat; },
                 formatTime(seconds) {
                     const total = Math.max(0, Math.floor(seconds || 0));
                     return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
@@ -730,7 +857,7 @@
                         let last = null;
                         for (let tick = block.startTick; tick < end; tick++) {
                             const chord = this.ticks[tick];
-                            if (chord && chord !== last) { starts.push(tick); last = chord; }
+                            if (chord && (chord !== last || this.splits.includes(tick))) { starts.push(tick); last = chord; }
                         }
                     });
                     return starts;
@@ -762,6 +889,302 @@
                         }
                     });
                 },
+                // ---- Moving a chord along the lyrics of the chord sheet (only where it falls changes) ----
+                chordMove: null,
+                // Edit mode: a chord of the sheet dragged along its line, letter by letter (never past its neighbours);
+                // dropped, it waits to be saved.
+                // When the sheet has the map's chords, the move joins the changes not saved yet (saved with the map, undone
+                // with them); otherwise it is saved on its own.
+                startSheetDrag(event, s, l, k) {
+                    if (this.mode !== 'edit' || this.versionId || this.shownSheet[s]?.marker) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const draft = this.sheetLinked;
+                    if (this.dirty && !draft) {
+                        this.saveError = true;
+                        this.saveState = @js(__('Save the changes to the map before editing the lyrics.'));
+                        return;
+                    }
+                    const shown = this.shownSheet;
+                    const section = shown[s];
+                    const textOf = (i) => JSON.stringify((shown[i]?.lines || []).map(item => (item.units ? lineText(item.units) : item.raw)));
+                    const own = textOf(s);
+                    const copies = shown.map((other, i) => i).filter(i => i !== s && !shown[i].marker && section.section && shown[i].section === section.section && textOf(i) === own);
+                    const line = draft ? lineText(shown[s]?.lines?.[l]?.units || []) : String(this.sheet[s]?.lines?.[l] ?? '');
+                    const same = !draft && this.chordMove && this.chordMove.s === s && this.chordMove.l === l;
+                    const text = same ? this.chordMove.text : line;
+                    const n = (draft ? shown[s] : this.sheetView[s])?.lines?.[l]?.units?.filter(unit => unit.chord !== null)[k]?.n;
+                    this.chordMove = { s, l, k, n, text, original: same ? this.chordMove.original : line, units: parseLine(text).units, copies: copies.length, copyList: copies, draft, saving: false, error: '',
+                        name: String(section.label || section.section || '').replaceAll('_', ' '), dragging: true, moved: false, x: event.clientX, y: event.clientY };
+                },
+                onSheetDragMove(event) {
+                    const move = this.chordMove;
+                    if (!move?.dragging) return;
+                    if (!move.moved && Math.hypot(event.clientX - move.x, event.clientY - move.y) < 4) return;
+                    move.moved = true;
+                    const at = this.letterAt(move.s, move.l, event.clientX, event.clientY);
+                    if (at !== null) this.placeChord(at);
+                },
+                // The place between letters of a sheet line nearest to the pointer (0: before the first letter). Only
+                // across matters: the pointer may be on the chords' row, above the lyrics; on a line that wraps, the row
+                // of lyrics nearest to the pointer is used.
+                letterAt(s, l, x, y) {
+                    const line = document.querySelector(`[data-sheet-line="${s}-${l}"]`);
+                    if (!line) return null;
+                    const letters = [];
+                    line.querySelectorAll('.t').forEach(element => {
+                        const from = Number(element.dataset.from);
+                        const node = element.firstChild;
+                        if (!node || node.nodeType !== 3 || !Number.isFinite(from)) return;
+                        const range = document.createRange();
+                        for (let i = 0; i < node.length; i++) {
+                            range.setStart(node, i);
+                            range.setEnd(node, i + 1);
+                            const box = range.getBoundingClientRect();
+                            if (box.width || box.height) letters.push({ at: from + i, left: box.left, right: box.right, middle: (box.top + box.bottom) / 2 });
+                        }
+                    });
+                    if (!letters.length) return null;
+                    // The chords sit a row above the lyrics: the pointer counts as being on the row below it.
+                    const chord = line.querySelector('.c.is-moving') || line.querySelector('.c');
+                    const text = chord?.closest('.sheet-seg')?.querySelector('.t');
+                    const shift = chord && text ? text.getBoundingClientRect().top - chord.getBoundingClientRect().top : 0;
+                    const row = letters.reduce((best, letter) => (Math.abs(letter.middle - (y + shift)) < Math.abs(best - (y + shift)) ? letter.middle : best), letters[0].middle);
+                    const inRow = letters.filter(letter => Math.abs(letter.middle - row) < 2);
+                    for (const letter of inRow) {
+                        if (x < (letter.left + letter.right) / 2) return letter.at;
+                    }
+                    return inRow[inRow.length - 1].at + 1;
+                },
+                onSheetDragEnd() {
+                    const move = this.chordMove;
+                    if (!move?.dragging) return;
+                    move.dragging = false;
+                    if (!move.moved) this.selectSheetChord(move.n);
+                    if (move.text === move.original) { this.chordMove = null; return; }
+                    if (!move.draft) return;
+                    this.chordMove = null;
+                    this.remember();
+                    this.sheetMoves = { ...this.sheetMoves, [`${move.s}:${move.l}`]: move.text };
+                    if (!move.copyList.length) return;
+                    this.askCopies({ copies: move.copyList, name: move.name }, (i) => {
+                        this.sheetMoves = { ...this.sheetMoves, [`${i}:${move.l}`]: move.text };
+                    }, () => document.querySelector(`[data-sheet-line="${move.s}-${move.l}"]`));
+                },
+                // The beat where chord `n` of the sheet starts, selected on the grid.
+                selectSheetChord(n) {
+                    const starts = this.chordStarts();
+                    if (n === undefined || this.isPlaying() || starts.length !== this.shownSheet.chordCount || starts[n] === undefined) return;
+                    this.currentTick = starts[n];
+                    this.selectAnchor(this.currentBar);
+                    this.scrollToBar(this.currentBar);
+                },
+                sheetMoves: {},
+                // ---- Blocks moved, duplicated or removed (Lines view): the bars and the chord sheet's sections go along ----
+                // `sheetBase`: the chord sheet as reshaped, and the chords it has (the preview starts from it).
+                sheetBase: null,
+                sheetBaseRevision: 0,
+                baseViewCache: { key: null, value: null },
+                get baseSheetView() {
+                    if (!this.sheetBase) return this.sheetView;
+                    if (this.baseViewCache.key !== this.sheetBaseRevision) this.baseViewCache = { key: this.sheetBaseRevision, value: parseSheet(this.sheetBase.sections) };
+                    return this.baseViewCache.value;
+                },
+                // The blocks in order, each with its ticks and its splits (counted from its start).
+                blockItems() {
+                    const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
+                    const timed = list.filter(block => !this.isMarker(block));
+                    return list.map(block => {
+                        if (this.isMarker(block)) return { block, ticks: [], splits: [] };
+                        const next = timed[timed.indexOf(block) + 1];
+                        const end = next ? next.startTick : this.ticks.length;
+                        return { block, ticks: this.ticks.slice(block.startTick, end), splits: this.splits.filter(tick => tick >= block.startTick && tick < end).map(tick => tick - block.startTick) };
+                    });
+                },
+                // The chord sheet as shown, one section per block (when it follows the map block by block), as text.
+                sheetSections() {
+                    const view = this.dirty ? this.previewSheet.view : this.sheetView;
+                    if (!this.sheetLinked || view.length !== this.blocks.length) return null;
+                    const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
+                    if (view.some((section, i) => !!section.marker !== this.isMarker(list[i]))) return null;
+                    return view.map(section => ({
+                        section: section.section, label: section.label, ...(section.marker ? { jump: 'start' } : {}),
+                        lines: section.lines.map(line => (line.units ? lineText(line.units) : line.raw ?? '')),
+                    }));
+                },
+                // Blocks and sheet sections reshaped by `change(list)` (the same change for both lists). From the first
+                // block that changed on, the blocks follow one another at the tempo (the recording's times no longer
+                // apply there); that first one starts where the block at its place used to start.
+                reshapeBlocks(change) {
+                    const items = this.blockItems();
+                    const sections = this.sheetSections();
+                    const before = items.map(item => item.block.id);
+                    const slotStarts = items.map(item => (this.isMarker(item.block) ? null : this.blockStart(item.block)));
+                    this.remember();
+                    const reshaped = change([...items]);
+                    const first = reshaped.findIndex((item, i) => item.block.id !== before[i]);
+                    let tick = 0;
+                    const ticks = [];
+                    const splits = [];
+                    this.blocks = reshaped.map((item, i) => {
+                        const block = { ...item.block, startTick: tick, data: { ...item.block.data } };
+                        if (first >= 0 && i >= first && !this.isMarker(block)) {
+                            const at = i === first ? slotStarts.slice(i).find(start => start !== null) : null;
+                            if (at !== null && at !== undefined) block.data.start = formatStart(at);
+                            else delete block.data.start;
+                        }
+                        ticks.push(...item.ticks);
+                        item.splits.forEach(offset => splits.push(tick + offset));
+                        tick += item.ticks.length;
+                        return block;
+                    });
+                    this.ticks = ticks;
+                    this.splits = splits;
+                    if (sections) {
+                        this.sheetBase = { sections: change(sections), chords: this.timedBlocks().flatMap(block => this.blockChords(block)) };
+                        this.sheetMoves = {};
+                    } else if (this.sheet.length) {
+                        this.notice = @js(__('The chord sheet does not follow the map block by block: only the bars changed.'));
+                    }
+                    this.sheetBaseRevision++;
+                    this.revision++;
+                },
+                // Index of a block among all blocks in order (markers too).
+                blockIndex(block) { return [...this.blocks].sort((a, b) => a.startTick - b.startTick).findIndex(item => item.id === block.id); },
+                // ---- Dragging a block to another place (Lines view): by its grip, or by its header with a mouse ----
+                blockDrag: null,
+                startBlockDrag(event, block) {
+                    if (event.target.closest('button')) return;
+                    if (event.pointerType === 'touch' && !event.target.closest('.block-grip')) return;
+                    event.preventDefault();
+                    this.blockDrag = { id: block.id, x: event.clientX, y: event.clientY, moved: false, target: null, before: true };
+                },
+                onBlockDragMove(event) {
+                    const drag = this.blockDrag;
+                    if (!drag) return;
+                    if (!drag.moved && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 6) return;
+                    drag.moved = true;
+                    // The block under the pointer, and which half of it: the dragged one goes before or after it.
+                    const boxes = [...document.querySelectorAll('[data-line-block]')].map(element => ({ id: Number(element.dataset.lineBlock), box: element.getBoundingClientRect() }));
+                    const over = boxes.find(item => event.clientY < item.box.bottom) ?? boxes[boxes.length - 1];
+                    if (over) {
+                        drag.target = over.id;
+                        drag.before = event.clientY < over.box.top + over.box.height / 2;
+                    }
+                    // Near the edges of the window, the page scrolls.
+                    if (event.clientY < 60) window.scrollBy(0, -12);
+                    else if (event.clientY > window.innerHeight - 60) window.scrollBy(0, 12);
+                },
+                onBlockDragEnd() {
+                    const drag = this.blockDrag;
+                    this.blockDrag = null;
+                    if (!drag?.moved || drag.target === null || drag.target === drag.id) return;
+                    const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
+                    const from = list.findIndex(block => block.id === drag.id);
+                    let to = list.findIndex(block => block.id === drag.target) + (drag.before ? 0 : 1);
+                    if (from < to) to--;
+                    if (from < 0 || to === from) return;
+                    this.reshapeBlocks(items => {
+                        const [moved] = items.splice(from, 1);
+                        items.splice(to, 0, moved);
+                        return items;
+                    });
+                },
+                duplicateBlock(block) {
+                    const at = this.blockIndex(block);
+                    const id = nextId++;
+                    this.reshapeBlocks(items => {
+                        const copy = items[at].block ? { ...items[at], block: { ...items[at].block, id, data: JSON.parse(JSON.stringify(items[at].block.data)) } } : JSON.parse(JSON.stringify(items[at]));
+                        items.splice(at + 1, 0, copy);
+                        return items;
+                    });
+                },
+                removeBlock(block) {
+                    if (this.timedBlocks().length < 2) return;
+                    const at = this.blockIndex(block);
+                    this.reshapeBlocks(items => { items.splice(at, 1); return items; });
+                    this.notice = @js(__('Block removed (Undo brings it back).'));
+                },
+                // A line of the sheet drawn again whenever its chords, their places or their marks change.
+                sheetLineKey(line, l) {
+                    return `${l}:` + (line.units ? line.units.map(unit => `${unit.chord ?? ''}|${unit.text}${unit.added || unit.changed ? '+' : ''}`).join('~') : (line.comment ?? ''));
+                },
+                // The chord sheet has exactly the chords of the saved map (chord n of the sheet is chord n of the map).
+                linkedCache: { key: null, base: null, value: false },
+                get sheetLinked() {
+                    if (this.sheetBase) return true;
+                    if (this.linkedCache.key === this.sheetRevision && this.linkedCache.base === this.baseStructure) return this.linkedCache.value;
+                    const saved = chordsOnly(this.baseStructure.flatMap(block => (Array.isArray(block?.chords) ? block.chords.map(String) : [])));
+                    const inSheet = this.sheetView.flatMap(section => section.lines.flatMap(line => (line.units || []).filter(unit => unit.chord !== null).map(unit => unit.chord)));
+                    const value = inSheet.length > 0 && JSON.stringify(inSheet) === JSON.stringify(saved);
+                    this.linkedCache = { key: this.sheetRevision, base: this.baseStructure, value };
+                    return value;
+                },
+                // The moving chord at letter `at` of the line's lyrics.
+                placeChord(at) {
+                    const move = this.chordMove;
+                    const marks = [];
+                    let plain = '';
+                    let last = 0;
+                    for (const match of move.text.matchAll(/\[([^\]]+)\]/g)) {
+                        plain += move.text.slice(last, match.index);
+                        marks.push({ at: plain.length, chord: match[1] });
+                        last = match.index + match[0].length;
+                    }
+                    plain += move.text.slice(last);
+                    const mark = marks[move.k];
+                    if (!mark) return;
+                    const low = move.k > 0 ? marks[move.k - 1].at : 0;
+                    const high = move.k < marks.length - 1 ? marks[move.k + 1].at : plain.length;
+                    const place = Math.max(low, Math.min(high, at));
+                    if (place === mark.at) return;
+                    mark.at = place;
+                    let text = '';
+                    let from = 0;
+                    marks.forEach(item => { text += plain.slice(from, item.at) + `[${item.chord}]`; from = item.at; });
+                    move.text = text + plain.slice(from);
+                    move.units = parseLine(move.text).units;
+                },
+                async saveChordMove(same) {
+                    const move = this.chordMove;
+                    if (!move || move.saving) return;
+                    move.saving = true;
+                    move.error = '';
+                    try {
+                        const lines = [...(this.sheet[move.s]?.lines || [])];
+                        lines[move.l] = move.text;
+                        await this.putSheetSection(move.s, lines, same);
+                        this.chordMove = null;
+                    } catch (error) {
+                        move.error = error.message;
+                    } finally {
+                        move.saving = false;
+                    }
+                },
+                // Saves one section of the chord sheet (and its copies when `same`); the page takes the new sheet and lyrics.
+                async putSheetSection(index, lines, same) {
+                    const response = await fetch(config.sheetSectionUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                        body: JSON.stringify({ index, lines, updated_at: this.updatedAt, same }),
+                    });
+                    const result = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(Object.values(result.errors || {})[0]?.[0] || result.message || @js(__('Something went wrong')));
+                    }
+                    this.updatedAt = result.updated_at;
+                    this.sheet = result.sheet || [];
+                    this.sheetView = parseSheet(this.sheet);
+                    this.sheetRevision++;
+                    // The map's blocks keep the same lyrics (saved with the map later).
+                    [...this.blocks].sort((a, b) => a.startTick - b.startTick).forEach((block, i) => {
+                        if (i in (result.lyrics || [])) block.data = { ...block.data, lyrics: result.lyrics[i], anchor: result.anchors?.[i] ?? block.data.anchor };
+                    });
+                    this.saveError = false;
+                    this.saveState = @js(__('Lyrics saved ✓'));
+                    return result;
+                },
+
                 // ---- Editing the lyrics of a section of the chord sheet (saved on its own) ----
                 editSheetSection(s) {
                     if (this.dirty) {
@@ -769,34 +1192,26 @@
                         this.saveState = @js(__('Save the changes to the map before editing the lyrics.'));
                         return;
                     }
-                    this.sheetEdit = { index: s, text: (this.sheet[s]?.lines || []).join('\n'), error: '', saving: false };
+                    const section = this.sheet[s] || {};
+                    const lines = JSON.stringify(section.lines || []);
+                    // Copies: the other sections with the same name written exactly the same way.
+                    const copies = this.sheet.filter((other, i) => i !== s && !other.jump && section.section && other.section === section.section
+                        && JSON.stringify(other.lines || []) === lines).length;
+                    this.sheetEdit = { index: s, text: (section.lines || []).join('\n'), error: '', saving: false, copies,
+                        name: String(section.label || section.section || '').replaceAll('_', ' ') };
                 },
-                async saveSheetSection() {
+                async saveSheetSection(same = false) {
                     const edit = this.sheetEdit;
                     if (!edit || edit.saving) return;
                     edit.saving = true;
                     edit.error = '';
+                    // Chords swapped: the map changed too, the page reads it again.
+                    const chordsOf = (text) => [...text.matchAll(/\[([^\]]+)\]/g)].map(match => match[1]).join(' ');
+                    const swapped = chordsOf(edit.text) !== chordsOf((this.sheet[edit.index]?.lines || []).join('\n'));
                     try {
-                        const response = await fetch(config.sheetSectionUrl, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-                            body: JSON.stringify({ index: edit.index, lines: edit.text.split('\n'), updated_at: this.updatedAt }),
-                        });
-                        const result = await response.json().catch(() => ({}));
-                        if (!response.ok) {
-                            throw new Error(Object.values(result.errors || {})[0]?.[0] || result.message || @js(__('Something went wrong')));
-                        }
-                        this.updatedAt = result.updated_at;
-                        this.sheet = result.sheet || [];
-                        this.sheetView = parseSheet(this.sheet);
-                        this.sheetRevision++;
-                        // The map's blocks keep the same lyrics (saved with the map later).
-                        [...this.blocks].sort((a, b) => a.startTick - b.startTick).forEach((block, i) => {
-                            if (i in (result.lyrics || [])) block.data = { ...block.data, lyrics: result.lyrics[i], anchor: result.anchors?.[i] ?? block.data.anchor };
-                        });
+                        await this.putSheetSection(edit.index, edit.text.split('\n'), same);
+                        if (swapped) return window.location.reload();
                         this.sheetEdit = null;
-                        this.saveError = false;
-                        this.saveState = @js(__('Lyrics saved ✓'));
                     } catch (error) {
                         edit.error = error.message;
                     } finally {
@@ -817,12 +1232,70 @@
                 get currentVersion() { return this.versions.find(version => version.id === this.versionId) ?? null; },
                 // The chord sheet as shown: in a version, with the version's chords.
                 get shownSheet() {
-                    if (!this.versionId) return this.sheetView;
+                    if (!this.versionId) return this.dirty ? this.previewSheet.view : this.sheetView;
                     const key = `${this.versionId}:${this.revision}:${this.sheetRevision}`;
                     if (this.shownSheetCache.key !== key) {
                         this.shownSheetCache = { key, value: parseSheet(sheetWithChords(this.sheet, this.baseStructure, this.toBlocks())) };
                     }
                     return this.shownSheetCache.value;
+                },
+                // ---- The chord sheet as it will be once the map is saved: chords removed on the grid left out, added or
+                // changed ones marked (an added chord goes right after the chord before it, as when saved) ----
+                previewCache: { key: null, value: null },
+                get previewSheet() {
+                    const key = `${this.revision}:${this.sheetRevision}:${this.sheetBaseRevision}:${this.splits.join(',')}:${JSON.stringify(this.sheetMoves)}`;
+                    if (this.previewCache.key === key) return this.previewCache.value;
+                    const sheetView = this.baseSheetView;
+                    const saved = this.sheetBase ? this.sheetBase.chords : chordsOnly(this.baseStructure.flatMap(block => (Array.isArray(block?.chords) ? block.chords.map(String) : [])));
+                    const now = this.timedBlocks().flatMap(block => this.blockChords(block));
+                    let value = { view: sheetView, changed: false };
+                    if (this.sheetLinked && JSON.stringify(saved) !== JSON.stringify(now)) {
+                        const { replace, after } = chordChanges(saved, now);
+                        const added = (chords, text) => chords.map((chord, k) => ({ chord, text: k === chords.length - 1 ? text : '', added: true }));
+                        const view = sheetView.map(section => ({ ...section, lines: section.lines.map(line => {
+                            if (!line.units) return line;
+                            const units = [];
+                            line.units.forEach(unit => {
+                                if (unit.chord === null) return units.push(unit);
+                                const n = unit.n;
+                                const before = n === 0 ? (after[-1] || []) : [];
+                                if (before.length) units.push(...added(before, ''));
+                                const place = replace[n] || [];
+                                const extra = after[n] || [];
+                                const own = place.length === 0 ? { ...unit, chord: null }
+                                    : { ...unit, chord: place[0], changed: place[0] !== unit.chord };
+                                if (!extra.length) return units.push(own);
+                                units.push({ ...own, text: '' }, ...added(extra, unit.text));
+                            });
+                            return { ...line, units };
+                        }) }));
+                        // Chords counted again: in each line (for moving them) and in the whole sheet (to light the chord of
+                        // the selected or playing beat, the n-th chord of the map as it is now).
+                        let n = 0;
+                        view.forEach(section => section.lines.forEach(line => {
+                            let k = 0;
+                            if (line.units) line.units = line.units.map(unit => (unit.chord !== null ? { ...unit, ordinal: k++, n: n++ } : { ...unit, ordinal: undefined }));
+                        }));
+                        view.chordCount = n;
+                        value = { view, changed: true };
+                    }
+                    // Chords moved by hand along the lyrics (kept while the line has the same chords).
+                    if (Object.keys(this.sheetMoves).length) {
+                        const chordsOf = (units) => units.filter(unit => unit.chord !== null).map(unit => unit.chord).join(' ');
+                        const view = value.view.map((section, s) => ({ ...section, lines: section.lines.map((line, l) => {
+                            const moved = this.sheetMoves[`${s}:${l}`];
+                            if (moved === undefined || !line.units) return line;
+                            const units = parseLine(moved).units;
+                            if (chordsOf(units) !== chordsOf(line.units)) return line;
+                            const marks = line.units.filter(unit => unit.chord !== null);
+                            return { ...line, units: units.map(unit => (unit.chord === null ? unit
+                                : { ...unit, n: marks[unit.ordinal]?.n, added: marks[unit.ordinal]?.added, changed: marks[unit.ordinal]?.changed })) };
+                        }) }));
+                        view.chordCount = value.view.chordCount;
+                        value = { view, changed: value.changed };
+                    }
+                    this.previewCache = { key, value };
+                    return value;
                 },
                 // Shows the base or a version on the grid (changes not saved must be saved or undone first).
                 selectVersion(id) {
@@ -837,6 +1310,10 @@
                     const parsed = parseStructure(structure);
                     this.ticks = parsed.ticks;
                     this.blocks = parsed.blocks;
+                    this.splits = parsed.splits;
+                    this.originalSplits = [...parsed.splits];
+                    this.sheetMoves = {};
+                    this.sheetBase = null;
                     this.perBar = parsed.perBar;
                     this.versionId = version ? version.id : null;
                     this.key = this.savedKey;
@@ -844,6 +1321,7 @@
                     this.originalTicks = [...this.ticks];
                     this.selection = { anchor: null, from: null, to: null };
                     this.loop = null;
+                    this.inline = null;
                     this.editor = null;
                     this.barMenu = null;
                     this.notice = '';
@@ -854,9 +1332,9 @@
                 openVersionMenu(element) {
                     this.versionError = '';
                     this.versionMenu = true;
-                    this.place(this.$refs.versionMenu, element);
-                    this.$refs.instrumentName.value = '';
-                    this.$nextTick(() => this.$refs.instrumentName.focus());
+                    this.place(this.ref('versionMenu'), element);
+                    this.ref('instrumentName').value = '';
+                    this.$nextTick(() => this.ref('instrumentName').focus());
                 },
                 async sendJson(method, url, body) {
                     const response = await fetch(url, {
@@ -869,8 +1347,8 @@
                     return result;
                 },
                 async createVersion() {
-                    const instrument = this.$refs.instrumentName.value.trim();
-                    if (!instrument) return this.$refs.instrumentName.focus();
+                    const instrument = this.ref('instrumentName').value.trim();
+                    if (!instrument) return this.ref('instrumentName').focus();
                     if (this.dirty) { this.versionError = @js(__('Save (or undo) the changes before switching versions.')); return; }
                     this.versionBusy = true;
                     this.versionError = '';
@@ -1017,6 +1495,7 @@
                         const changed = ticks.filter((chord, i) => chord !== this.ticks[i]).length;
                         this.remember();
                         this.ticks = ticks;
+                        this.splits = this.splits.filter(tick => ticks[tick] !== undefined && ticks[tick] === ticks[tick - 1]);
                         if (blocks) this.blocks = blocks;
                         this.revision++;
                         this.csvMessage = @js(__('Imported: :changed half beats changed:blocks. Review and save (or undo).'))
@@ -1028,9 +1507,9 @@
                 },
 
                 // ---- Editing ----
-                setMode(mode) { this.mode = mode; this.editor = null; this.barMenu = null; },
+                setMode(mode) { this.mode = mode; this.inline = null; this.editor = null; this.barMenu = null; },
                 remember() {
-                    this.history.push(JSON.stringify({ ticks: this.ticks, blocks: this.blocks }));
+                    this.history.push(JSON.stringify({ ticks: this.ticks, blocks: this.blocks, splits: this.splits, sheetMoves: this.sheetMoves, sheetBase: this.sheetBase }));
                     if (this.history.length > 80) this.history.shift();
                     this.markDirty();
                 },
@@ -1039,63 +1518,343 @@
                     const state = JSON.parse(this.history.pop());
                     this.ticks = state.ticks;
                     this.blocks = state.blocks;
+                    this.splits = state.splits || [];
+                    this.sheetMoves = state.sheetMoves || {};
+                    this.sheetBase = state.sheetBase || null;
+                    this.sheetBaseRevision++;
                     this.revision++;
                     this.markDirty();
                 },
                 markDirty() {
                     this.dirty = true;
                     this.saveError = false;
-                    this.saveState = @js(__('Not saved yet'));
+                    this.saveState = '';
                 },
                 clickBeat(bar, beat, cell, event) {
-                    if (this.pressDone()) return;
+                    if (this.pressDone() || performance.now() - this.dragEnded < 300) return;
                     if (event?.metaKey || event?.ctrlKey) return this.openBarMenu(bar, cell.closest('.bar'));
                     if (event?.shiftKey) return this.selectTo(bar);
                     this.selectAnchor(bar);
-                    const tick = (bar * this.perBar + beat) * 2;
+                    // The "and" of the beat when it was clicked, or when only there a chord starts.
+                    const onBeat = (bar * this.perBar + beat) * 2;
+                    const andStarts = this.ticks[onBeat + 1] !== undefined && this.startsChord(onBeat + 1);
+                    const onAnd = andStarts && (!!event?.target?.closest?.('.is-and') || !(onBeat === 0 || this.startsChord(onBeat)));
+                    const tick = onBeat + (onAnd ? 1 : 0);
                     if (this.mode === 'play') return this.canPlay ? this.playFromTick(tick) : (this.currentTick = tick);
+                    // Edit mode: a click selects the beat (Backspace removes its change); a double click edits its chord.
+                    // On a beat where no chord starts, the chord can be typed right there. A tap opens the editor.
                     if (!this.isPlaying()) this.currentTick = tick;
-                    const hasAnd = this.ticks[tick + 1] !== this.ticks[tick];
                     this.barMenu = null;
-                    this.editor = { bar, beat, half: hasAnd ? 1 : 0 };
-                    this.place(this.$refs.editor, cell);
+                    this.scrollToSheetChord(this.currentSheetChord);
+                    if (this.touch) return this.openBeatEditor(bar, beat, cell, onAnd ? 1 : (andStarts && !this.chordStartsAt(onBeat) ? 1 : 0));
+                    if (!this.isPlaying() && !andStarts && !this.chordStartsAt(onBeat)) this.openInline(onBeat, '');
+                },
+                // Double click: the chord of the beat (or of its "and" when that was clicked, or when only there a chord
+                // starts) typed again right in the cell.
+                editBeat(bar, beat, event) {
+                    const onBeat = (bar * this.perBar + beat) * 2;
+                    const andStarts = this.ticks[onBeat + 1] !== undefined && this.startsChord(onBeat + 1);
+                    const onAnd = andStarts && (!!event?.target?.closest?.('.is-and') || !this.chordStartsAt(onBeat));
+                    this.editTick(onBeat + (onAnd ? 1 : 0));
+                },
+                editTick(tick) {
+                    const existing = this.chordStartsAt(tick);
+                    this.openInline(tick, existing ? this.transposeName(this.ticks[tick]) || '' : '', existing);
+                },
+                // ---- Dragging where a chord starts, half a beat at a time (Edit mode) ----
+                drag: null,
+                dragEnded: 0,
+                // A chord starts at `tick` inside its block (the first chord of a block stays where the block starts).
+                isChangeAt(tick) {
+                    return tick > 0 && this.ticks[tick] !== undefined && this.startsChord(tick) && this.blockOfTick(tick)?.startTick !== tick;
+                },
+                startsChord(tick, ticks = this.ticks, splits = this.splits) {
+                    return ticks[tick] !== ticks[tick - 1] || splits.includes(tick);
+                },
+                startDrag(event, bar, beat, half) {
+                    const tick = (bar * this.perBar + beat) * 2 + half;
+                    if (this.mode !== 'edit' || !this.isChangeAt(tick)) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.inline = null;
+                    this.editor = null;
+                    this.copyOffer = null;
+                    this.drag = { from: tick, to: tick, base: [...this.ticks], baseSplits: [...this.splits], x: event.clientX, y: event.clientY, moved: false };
+                },
+                onDragMove(event) {
+                    const drag = this.drag;
+                    if (!drag) return;
+                    if (!drag.moved && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 6) return;
+                    drag.moved = true;
+                    const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest('.beat');
+                    const bar = Number(cell?.closest('.bar')?.dataset.bar);
+                    const beat = Number(cell?.dataset.beat);
+                    if (!cell || !Number.isFinite(bar) || !Number.isFinite(beat)) return;
+                    const box = cell.getBoundingClientRect();
+                    const [to, ticks, splits] = this.dragResult(drag.base, drag.baseSplits, drag.from, (bar * this.perBar + beat) * 2 + (event.clientX > box.left + box.width / 2 ? 1 : 0));
+                    if (to === drag.to) return;
+                    drag.to = to;
+                    this.ticks = ticks;
+                    this.splits = splits;
+                    this.revision++;
+                },
+                onDragEnd() {
+                    const drag = this.drag;
+                    if (!drag) return;
+                    this.drag = null;
+                    if (!drag.moved) return;
+                    this.dragEnded = performance.now();
+                    if (drag.to === drag.from) return;
+                    // Undo goes back to before the drag; the equal blocks are offered (compared as they were).
+                    const moved = [this.ticks, this.splits];
+                    this.ticks = drag.base;
+                    this.splits = drag.baseSplits;
+                    this.remember();
+                    const found = this.copiesBefore(drag.from);
+                    [this.ticks, this.splits] = moved;
+                    this.revision++;
+                    this.offerCopies(found, drag.to, start => {
+                        const from = start + drag.from - found.block.startTick;
+                        const to = start + drag.to - found.block.startTick;
+                        if (from > 0 && this.startsChord(from)) [, this.ticks, this.splits] = this.dragResult(this.ticks, this.splits, from, to);
+                    });
+                },
+                // A chord starting at `from` dragged to `to`, always inside its block: between its neighbours only where
+                // it starts changes; passed over another chord, it is taken out from where it was and put where it was
+                // dropped, as a new chord. Returns [to, ticks, splits].
+                dragResult(ticks, splits, from, to) {
+                    const [blockStart, blockEnd] = this.blockBounds(from);
+                    to = Math.max(blockStart + 1, Math.min(blockEnd - 1, to));
+                    let before = from - 1;
+                    while (before > blockStart && ticks[before - 1] === ticks[from - 1] && !splits.includes(before)) before--;
+                    if (to > before && to < this.chordEnd(ticks, splits, from)) return [to, ...this.movedChange(ticks, from, to, splits)];
+                    const chord = ticks[from];
+                    const [without, withoutSplits] = this.withoutChord(ticks, splits, from);
+                    return [to, ...this.withChord(without, withoutSplits, to, chord)];
+                },
+                // [start, end) of the block of `tick`.
+                blockBounds(tick) {
+                    const list = this.timedBlocks();
+                    const block = this.blockOfTick(tick);
+                    const next = block ? list[list.indexOf(block) + 1] : null;
+                    return [block?.startTick ?? 0, next ? next.startTick : this.ticks.length];
+                },
+                // Where the chord starting at `from` ends: at the next chord, inside the block.
+                chordEnd(ticks, splits, from) {
+                    const blockEnd = this.blockBounds(from)[1];
+                    let end = from + 1;
+                    while (end < blockEnd && ticks[end] === ticks[from] && !splits.includes(end)) end++;
+                    return end;
+                },
+                // The chord starting at `from` taken out (all its beats): the chord before goes on over them. A chord
+                // after it equal to the one before stays a chord of its own. Returns [ticks, splits].
+                withoutChord(ticks, splits, from) {
+                    if (splits.includes(from)) return [ticks, splits.filter(tick => tick !== from)];
+                    const end = this.chordEnd(ticks, splits, from);
+                    const before = ticks[from - 1];
+                    const out = [...ticks];
+                    for (let t = from; t < end; t++) out[t] = before;
+                    const outSplits = [...splits];
+                    if (end < this.blockBounds(from)[1] && ticks[end] === before && !outSplits.includes(end)) outSplits.push(end);
+                    return [out, outSplits];
+                },
+                // A new chord at `at`, as when typed: until the next chord or the end of the bar, inside the block; next
+                // to the same chord it stays a chord of its own. Returns [ticks, splits].
+                withChord(ticks, splits, at, chord) {
+                    const [blockStart, blockEnd] = this.blockBounds(at);
+                    const end = Math.min((Math.floor(at / (this.perBar * 2)) + 1) * this.perBar * 2, blockEnd);
+                    const old = ticks[at];
+                    const out = [...ticks];
+                    let t = at;
+                    for (; t < end && (t === at || (ticks[t] === old && !splits.includes(t))); t++) out[t] = chord;
+                    const outSplits = splits.filter(tick => tick !== at);
+                    if (at > blockStart && out[at - 1] === chord) outSplits.push(at);
+                    if (t < blockEnd && out[t] === chord && !outSplits.includes(t)) outSplits.push(t);
+                    return [out, outSplits];
+                },
+                // The chord starting at `from` starts at `to` instead: earlier, it takes over the end of the chord
+                // before; later, the chord before goes on until there. Returns [ticks, splits].
+                movedChange(ticks, from, to, splits = this.splits) {
+                    const moved = [...ticks];
+                    if (to < from) for (let t = to; t < from; t++) moved[t] = ticks[from];
+                    else for (let t = from; t < to; t++) moved[t] = ticks[from - 1];
+                    return [moved, splits.includes(from) ? [...splits.filter(tick => tick !== from), to] : splits];
+                },
+                // Blocks like `block`: the same name and the same length (a change goes to the same place in each one).
+                copiesOf(block) {
+                    const list = this.timedBlocks();
+                    const length = (item) => {
+                        const next = list[list.indexOf(item) + 1];
+                        return (next ? next.startTick : this.ticks.length) - item.startTick;
+                    };
+                    const own = length(block);
+                    return list.filter(item => item !== block && item.data.section === block.data.section && length(item) === own);
+                },
+                // The chord starting at `tick` goes: the chord before goes on over its beats.
+                removeStart(tick) {
+                    [this.ticks, this.splits] = this.withoutChord(this.ticks, this.splits, tick);
+                    this.revision++;
+                },
+                // ---- The same change in the equal blocks, asked right after a change ----
+                copyOffer: null,
+                // Called before a change at `tick`: the equal blocks as they are now, to be offered afterwards.
+                copiesBefore(tick) {
+                    const block = this.blockOfTick(tick);
+                    if (!block || this.versionId) return null;
+                    const copies = this.copiesOf(block);
+                    return copies.length ? { block, copies: copies.map(copy => copy.startTick), name: this.blockName(block) } : null;
+                },
+                // Asks next to the beat at `tick`; `change(start)` does the change in the copy starting at `start`.
+                offerCopies(found, tick, change) {
+                    if (!found) return;
+                    const size = this.perBar * 2;
+                    this.askCopies(found, change, () => document.querySelector(`[data-bar="${Math.floor(tick / size)}"] .beat[data-beat="${(tick % size) >> 1}"]`));
+                },
+                // The question next to `anchor()`; "In all of them" calls `change` for each copy.
+                askCopies(found, change, anchor) {
+                    // Taken now: the element this was called from (the box typed in) may be gone in a moment.
+                    const popover = this.ref('copyOffer');
+                    const button = this.ref('copyOfferAll');
+                    this.copyOffer = { ...found, change, at: performance.now() };
+                    this.$nextTick(() => {
+                        const element = anchor();
+                        if (element && popover) this.place(popover, element);
+                        setTimeout(() => button?.focus(), 30);
+                    });
+                },
+                applyToCopies() {
+                    const offer = this.copyOffer;
+                    this.copyOffer = null;
+                    if (!offer) return;
+                    this.remember();
+                    offer.copies.forEach(start => offer.change(start));
+                    this.revision++;
+                },
+                // A chord typed at a tick goes on until the chord changes (at most to the end of its bar or block).
+                setFrom(tick, chord, remember = true) {
+                    if (remember) this.remember();
+                    const old = this.ticks[tick];
+                    // To the end of the bar at most, and never into the next block.
+                    const list = this.timedBlocks();
+                    const block = this.blockOfTick(tick);
+                    const next = block ? list[list.indexOf(block) + 1] : null;
+                    const end = Math.min((Math.floor(tick / (this.perBar * 2)) + 1) * this.perBar * 2, next ? next.startTick : Infinity);
+                    for (let t = tick; t < Math.min(end, this.ticks.length) && (t === tick || (this.ticks[t] === old && !this.splits.includes(t))); t++) this.ticks[t] = chord;
+                    this.revision++;
+                },
+                isChordName(typed) { return /^[A-G][#b]?[^\s\[\]|]*$/.test(typed); },
+                // A chord typed at `tick` (in the key on screen; stored in the song's key); the equal blocks are offered.
+                typeChordAt(tick, typed) {
+                    const chord = this.key && this.savedKey && this.key !== this.savedKey ? ChordTransposer.transposeChord(typed, this.key, this.savedKey) : typed;
+                    const found = this.copiesBefore(tick);
+                    this.setFrom(tick, chord);
+                    this.offerCopies(found, tick, start => this.setFrom(start + tick - found.block.startTick, chord, false));
+                },
+                // ---- Typing a chord right in a beat of the grid ----
+                inline: null,
+                // ---- The chord editor of a beat, on touch screens ----
+                editor: null,
+                editorError: '',
+                touch: false,
+                openBeatEditor(bar, beat, cell, half = null) {
+                    const tick = (bar * this.perBar + beat) * 2;
+                    this.inline = null;
+                    this.barMenu = null;
+                    this.copyOffer = null;
+                    this.editor = { bar, beat, half: half ?? (this.ticks[tick + 1] !== this.ticks[tick] ? 1 : 0) };
+                    this.place(this.ref('editor'), cell);
                     this.fillEditor();
-                    this.$nextTick(() => { this.$refs.editorChord.focus(); this.$refs.editorChord.select(); });
+                    this.$nextTick(() => { this.ref('editorChord').focus(); this.ref('editorChord').select(); });
                 },
                 editorTick() { return (this.editor.bar * this.perBar + this.editor.beat) * 2 + this.editor.half; },
                 fillEditor() {
                     this.editorError = '';
-                    this.$refs.editorChord.value = this.ticks[this.editorTick()] || '';
+                    this.ref('editorChord').value = this.transposeName(this.ticks[this.editorTick()]) || '';
                 },
-                canRemoveChange() {
-                    if (!this.editor) return false;
-                    const tick = this.editorTick();
-                    return tick > 0 && this.ticks[tick - 1] !== this.ticks[tick];
-                },
-                // A chord typed at a tick goes on until the chord changes (at most to the end of its bar).
-                setFrom(tick, chord) {
-                    this.remember();
-                    const old = this.ticks[tick];
-                    const end = (Math.floor(tick / (this.perBar * 2)) + 1) * this.perBar * 2;
-                    for (let t = tick; t < Math.min(end, this.ticks.length) && (t === tick || this.ticks[t] === old); t++) this.ticks[t] = chord;
-                    this.revision++;
-                },
+                canRemoveChange() { return !!this.editor && this.isChangeAt(this.editorTick()); },
+                // As typed in the cell: a chord that starts there is renamed, otherwise a new one starts.
                 applyChord() {
-                    const typed = this.$refs.editorChord.value.trim();
-                    if (!/^[A-G][#b]?[^\s\[\]|]*$/.test(typed)) {
+                    const typed = this.ref('editorChord').value.trim();
+                    if (!this.isChordName(typed)) {
                         this.editorError = @js(__('Use a chord name, e.g. G, Am7, C/E, D4.'));
                         return;
                     }
-                    // Typed in the key on screen; stored in the song's key.
-                    const chord = this.key && this.savedKey && this.key !== this.savedKey ? ChordTransposer.transposeChord(typed, this.key, this.savedKey) : typed;
                     const tick = this.editorTick();
                     this.editor = null;
-                    this.setFrom(tick, chord);
+                    if (this.chordStartsAt(tick)) {
+                        if (typed !== this.transposeName(this.ticks[tick])) this.renameChordAt(tick, typed);
+                    } else {
+                        this.typeChordAt(tick, typed);
+                    }
                 },
                 removeChange() {
                     const tick = this.editorTick();
                     this.editor = null;
-                    this.setFrom(tick, this.ticks[tick - 1]);
+                    this.removeChangeAt(tick);
+                },
+                // A chord starts on this tick (a change, a chord repeated right after itself, or the start of a block).
+                chordStartsAt(tick) {
+                    return tick === 0 || this.startsChord(tick) || this.timedBlocks().some(block => block.startTick === tick);
+                },
+                // `existing`: a chord starts there (its name comes selected; what is typed renames it).
+                openInline(tick, text, existing = this.chordStartsAt(tick)) {
+                    this.copyOffer = null;
+                    this.editor = null;
+                    this.inline = { tick, text, original: text, existing, select: existing && text === this.transposeName(this.ticks[tick]), invalid: false };
+                },
+                // Enter (or leaving the box with a chord name in it) applies. On a chord that is there, the new name
+                // replaces it (all its beats) and an emptied box removes it; on an empty beat a new chord starts.
+                commitInline(leaving = false) {
+                    const inline = this.inline;
+                    if (!inline) return;
+                    const typed = inline.text.trim();
+                    if (typed === inline.original && inline.existing) { this.inline = null; return; }
+                    if (typed === '') {
+                        this.inline = null;
+                        if (inline.existing && !leaving) this.removeChangeAt(inline.tick);
+                        return;
+                    }
+                    if (!this.isChordName(typed)) {
+                        if (leaving) this.inline = null;
+                        else inline.invalid = true;
+                        return;
+                    }
+                    this.inline = null;
+                    if (inline.existing) this.renameChordAt(inline.tick, typed);
+                    else this.typeChordAt(inline.tick, typed);
+                },
+                // The chord starting at `tick` gets another name, over all its beats; the equal blocks are offered.
+                renameChordAt(tick, typed) {
+                    const chord = this.key && this.savedKey && this.key !== this.savedKey ? ChordTransposer.transposeChord(typed, this.key, this.savedKey) : typed;
+                    const found = this.copiesBefore(tick);
+                    this.remember();
+                    [this.ticks, this.splits] = this.withRenamed(this.ticks, this.splits, tick, chord);
+                    this.revision++;
+                    this.offerCopies(found, tick, start => {
+                        const at = start + tick - found.block.startTick;
+                        if (this.chordStartsAt(at)) [this.ticks, this.splits] = this.withRenamed(this.ticks, this.splits, at, chord);
+                    });
+                },
+                // [ticks, splits] with the chord starting at `at` renamed; next to the same chord it stays a chord of its own.
+                withRenamed(ticks, splits, at, chord) {
+                    const [blockStart, blockEnd] = this.blockBounds(at);
+                    const end = this.chordEnd(ticks, splits, at);
+                    const out = [...ticks];
+                    for (let t = at; t < end; t++) out[t] = chord;
+                    const outSplits = [...splits];
+                    if (at > blockStart && out[at - 1] === chord && !outSplits.includes(at)) outSplits.push(at);
+                    if (end < blockEnd && out[end] === chord && !outSplits.includes(end)) outSplits.push(end);
+                    return [out, outSplits];
+                },
+                removeChangeAt(tick) {
+                    if (!this.isChangeAt(tick)) return;
+                    const found = this.copiesBefore(tick);
+                    this.remember();
+                    this.removeStart(tick);
+                    this.offerCopies(found, tick, start => {
+                        const at = start + tick - found.block.startTick;
+                        if (at > 0 && this.startsChord(at)) this.removeStart(at);
+                    });
                 },
 
                 // ---- Marked bars, copying and pasting chords, restoring, repeating ----
@@ -1193,7 +1952,9 @@
                     const size = this.perBar * 2;
                     if (this.originalTicks.length !== this.ticks.length) return;
                     this.remember();
-                    for (let tick = from * size; tick < Math.min((to + 1) * size, this.ticks.length); tick++) this.ticks[tick] = this.originalTicks[tick];
+                    const end = Math.min((to + 1) * size, this.ticks.length);
+                    for (let tick = from * size; tick < end; tick++) this.ticks[tick] = this.originalTicks[tick];
+                    this.splits = [...this.splits.filter(tick => tick < from * size || tick >= end), ...this.originalSplits.filter(tick => tick >= from * size && tick < end)];
                     this.revision++;
                     this.notice = @js(__('Restored: :what, as when the page was opened (or last saved).')).replace(':what', this.barsLabel(from, to));
                 },
@@ -1210,7 +1971,7 @@
                     const end = this.timeOfTick(Math.min((this.loop.to + 1) * size, this.ticks.length));
                     if (this.clock >= end - 0.03 || this.clock < start - 0.5) {
                         // The player reports the old time for a moment after a jump: no new jump meanwhile.
-                        this.loopCooldown = performance.now() + (audio ? 250 : 1000);
+                        this.loopCooldown = performance.now() + (audio || this.clickOnly ? 250 : 1000);
                         this.playFromTick(this.loop.from * size);
                     }
                 },
@@ -1218,7 +1979,7 @@
                 // sounds right on its beat (clicking when a frame notices the beat passed comes late).
                 clickUntil: null,
                 scheduleClicks() {
-                    if (!this.metronome || !this.isPlaying()) { this.clickUntil = null; return; }
+                    if (!(this.metronome || this.clickOnly) || !this.isPlaying()) { this.clickUntil = null; return; }
                     let context;
                     try {
                         context = this.clickContext = this.clickContext || new AudioContext();
@@ -1250,18 +2011,12 @@
                         oscillator.stop(when + 0.06);
                     } catch (e) {}
                 },
-                // Enter: edits the chord of the current beat.
+                // Enter: the chord of the selected beat (or of its "and"), typed again in the cell.
                 editCurrentBeat() {
-                    const bar = this.cursorBar();
-                    const beat = Math.max(0, this.currentBeat);
-                    const cell = document.querySelector(`[data-bar="${bar}"] .beat:nth-child(${beat + 1})`);
-                    if (!cell) return;
-                    const hasAnd = this.ticks[(bar * this.perBar + beat) * 2 + 1] !== this.ticks[(bar * this.perBar + beat) * 2];
-                    this.barMenu = null;
-                    this.editor = { bar, beat, half: hasAnd ? 1 : 0 };
-                    this.place(this.$refs.editor, cell);
-                    this.fillEditor();
-                    this.$nextTick(() => { this.$refs.editorChord.focus(); this.$refs.editorChord.select(); });
+                    if (this.currentTick < 0) return;
+                    const tick = this.currentTick;
+                    const onBeat = tick - (tick % 2);
+                    this.editTick(tick % 2 || this.chordStartsAt(onBeat) || !this.chordStartsAt(onBeat + 1) ? tick : onBeat + 1);
                 },
 
                 // ---- Lines of the map and passing chords (the bars do not change) ----
@@ -1270,8 +2025,8 @@
                     const timed = this.timedBlocks();
                     const next = timed[timed.indexOf(block) + 1];
                     const chords = [];
-                    this.ticks.slice(block.startTick, next ? next.startTick : this.ticks.length).forEach(chord => {
-                        if (chord && chord !== chords.at(-1)) chords.push(chord);
+                    this.ticks.slice(block.startTick, next ? next.startTick : this.ticks.length).forEach((chord, i) => {
+                        if (chord && (chord !== chords.at(-1) || this.splits.includes(block.startTick + i))) chords.push(chord);
                     });
                     return chords;
                 },
@@ -1290,7 +2045,7 @@
                         const state = states[index];
                         const lines = chordSegments(this.withBreaks(state.chords, state.breaks), cycles, state.passing)
                             .map(line => line.map(step => step.chords.map((name, i) => ({ name, position: step.positions[i], passing: state.passing.includes(step.positions[i]) }))));
-                        return { block, name: this.blockName(block), manual: state.breaks.length > 0, lines, cycles };
+                        return { block, index, name: this.blockName(block), manual: state.breaks.length > 0, lines, cycles };
                     });
                 },
                 // Chord being played in the lines view: its block and position (chord index in the block).
@@ -1355,12 +2110,13 @@
                 },
                 endPress() { clearTimeout(this.pressTimer); },
                 openBarMenu(bar, element) {
+                    this.inline = null;
                     this.editor = null;
                     this.barMenu = { bar };
-                    this.place(this.$refs.barMenu, element);
+                    this.place(this.ref('barMenu'), element);
                     const block = this.blockAtBar(bar);
-                    this.$refs.blockName.value = block ? this.blockName(block) : '';
-                    this.$nextTick(() => this.$refs.blockName.focus());
+                    this.ref('blockName').value = block ? this.blockName(block) : '';
+                    this.$nextTick(() => this.ref('blockName').focus());
                 },
                 barMenuTitle() {
                     if (!this.barMenu) return '';
@@ -1370,8 +2126,8 @@
                     return `${@js(__('Bar'))} ${this.barMenu.bar + 1}` + (block ? ` · ${this.blockName(block)}${where}` : ` · ${@js(__('new block from here'))}`);
                 },
                 saveBlockName() {
-                    const name = this.$refs.blockName.value.trim().toUpperCase().replace(/\s+/g, ' ');
-                    if (!name) return this.$refs.blockName.focus();
+                    const name = this.ref('blockName').value.trim().toUpperCase().replace(/\s+/g, ' ');
+                    if (!name) return this.ref('blockName').focus();
                     const bar = this.barMenu.bar;
                     this.barMenu = null;
                     this.remember();
@@ -1443,8 +2199,9 @@
                         const next = timed[timed.indexOf(block) + 1];
                         const chords = [];
                         const durations = [];
-                        this.ticks.slice(block.startTick, next ? next.startTick : this.ticks.length).forEach(chord => {
-                            if (chords.length && (chord === chords.at(-1) || !chord)) durations[durations.length - 1] += 0.5;
+                        this.ticks.slice(block.startTick, next ? next.startTick : this.ticks.length).forEach((chord, i) => {
+                            const split = this.splits.includes(block.startTick + i);
+                            if (chords.length && (!chord || (chord === chords.at(-1) && !split))) durations[durations.length - 1] += 0.5;
                             else if (chord) { chords.push(chord); durations.push(0.5); }
                         });
                         // Line breaks and passing chords go back while the block has the chords they were set for.
@@ -1464,10 +2221,13 @@
                         const response = await fetch(config.saveUrl, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-                            body: JSON.stringify({ blocks: this.toBlocks(), updated_at: this.updatedAt, bpm: this.bpm, musical_key: this.key }),
+                            body: JSON.stringify({ blocks: this.toBlocks(), updated_at: this.updatedAt, bpm: this.bpm, musical_key: this.key, chord_sheet: this.sheetToSave() }),
                         });
                         const result = await response.json().catch(() => ({}));
-                        if (!response.ok) throw new Error(result.message || @js(__('Something went wrong')));
+                        if (!response.ok) throw new Error(Object.values(result.errors || {})[0]?.[0] || result.message || @js(__('Something went wrong')));
+                        this.sheetMoves = {};
+                        this.sheetBase = null;
+                        this.sheetBaseRevision++;
                         this.updatedAt = result.updated_at;
                         // Stored in the new key from now on.
                         if (this.key !== this.savedKey) {
@@ -1483,6 +2243,7 @@
                         this.sheetView = parseSheet(this.sheet);
                         this.sheetRevision++;
                         this.originalTicks = [...this.ticks];
+                        this.originalSplits = [...this.splits];
                         this.baseStructure = this.toBlocks();
                         this.dirty = false;
                         this.saveError = false;
@@ -1495,6 +2256,19 @@
                     }
                 },
 
+                // The chord sheet sent with the map when chords were moved on it: as shown (the grid's chord changes and
+                // the moves), in the key on screen like the map; null otherwise (the server follows the map's changes).
+                sheetToSave() {
+                    if ((!Object.keys(this.sheetMoves).length && !this.sheetBase) || !this.sheetLinked) return null;
+                    const transpose = (chord) => (this.key && this.savedKey && this.key !== this.savedKey ? ChordTransposer.transposeChord(chord, this.savedKey, this.key) : chord);
+                    return this.previewSheet.view.filter(section => !section.marker).map(section => ({
+                        section: section.section ?? null,
+                        label: section.label ?? null,
+                        lines: section.lines.map(line => (line.units
+                            ? lineText(line.units.map(unit => (unit.chord === null ? unit : { ...unit, chord: transpose(unit.chord) })))
+                            : line.raw ?? '')),
+                    }));
+                },
                 // A version: only its chords (in the song's key), at its own address.
                 async saveVersion() {
                     const version = this.currentVersion;
@@ -1517,7 +2291,16 @@
                 },
 
                 onKey(event) {
-                    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
+                    // Keys typed in a box or on a button of a popover belong to them.
+                    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName) || event.target.closest?.('.popover')) return;
+                    if (this.chordMove && event.key === 'Escape') { event.preventDefault(); this.chordMove = null; return; }
+                    // The question open: Enter is "In all of them", Esc "Only this one".
+                    if (this.copyOffer && (event.key === 'Enter' || event.key === 'Escape')) {
+                        event.preventDefault();
+                        if (event.key === 'Enter') this.applyToCopies();
+                        else this.copyOffer = null;
+                        return;
+                    }
                     const key = event.key.toLowerCase();
                     if (event.metaKey || event.ctrlKey) {
                         if (key === 'z') { event.preventDefault(); return this.undo(); }
@@ -1529,11 +2312,21 @@
                         }
                         return;
                     }
-                    if (event.altKey || this.editor || this.barMenu || this.sheetEdit) return;
+                    if (event.altKey || this.inline || this.editor || this.barMenu || this.sheetEdit) return;
                     if (event.code === 'Space' && this.canPlay) { event.preventDefault(); return this.togglePlay(); }
                     if (event.shiftKey && key === 'r') { event.preventDefault(); return this.restoreBars(); }
                     if (event.key === 'Escape') return this.clearSelection();
                     if (event.key === 'Enter' && this.mode === 'edit') { event.preventDefault(); return this.editCurrentBeat(); }
+                    if (/^[a-g]$/i.test(event.key) && !event.shiftKey && this.mode === 'edit' && this.currentTick >= 0 && !this.isPlaying()) {
+                        event.preventDefault();
+                        return this.openInline(this.currentTick, event.key.toUpperCase());
+                    }
+                    if ((event.key === 'Backspace' || event.key === 'Delete') && this.mode === 'edit' && this.currentTick >= 0) {
+                        event.preventDefault();
+                        // The change selected: on the "and" when that was clicked, otherwise on the beat (or on its "and").
+                        const tick = (this.currentTick % 2 ? [this.currentTick] : [this.currentTick, this.currentTick + 1]).find(at => this.isChangeAt(at));
+                        return tick === undefined ? null : this.removeChangeAt(tick);
+                    }
                     const size = this.perBar * 2;
                     const tick = Math.max(0, this.currentTick);
                     const beatStart = tick - (tick % 2);

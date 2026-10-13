@@ -58,6 +58,8 @@ class SongLayoutController extends Controller
             $request->validated('updated_at'),
             $bpm === null ? null : (float) $bpm,
             $request->validated('musical_key'),
+            // The chord sheet as shown on the page, when chords were moved on it.
+            $request->validated('chord_sheet'),
         );
         $song->refresh();
         $sheet = $song->chord_sheet['sections'] ?? [];
@@ -74,7 +76,7 @@ class SongLayoutController extends Controller
      */
     public function updateSheetSection(SongSheetSectionRequest $request, Song $song, UpdateChordSheetSectionService $service, SyncChordSheetWithStructureService $syncSheet): JsonResponse
     {
-        $song = $service->execute($song, (int) $request->validated('index'), $request->validated('lines'), $request->validated('updated_at'));
+        $song = $service->execute($song, (int) $request->validated('index'), $request->validated('lines'), $request->validated('updated_at'), $request->boolean('same'));
         $sheet = $song->chord_sheet['sections'] ?? [];
         $blocks = collect(json_decode(json_encode($song->structure ?? []), true) ?? []);
 

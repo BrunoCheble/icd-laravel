@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
  * into sections whose lines use ChordPro notation: each chord is written as [Chord] at the exact
  * column of the lyric it sits on, e.g. "Que não v[C9]im a este mundo".
  *
- * Output: ['sections' => [['section' => 'FIRST_PART', 'label' => 'Primeira Parte', 'lines' => [...]]]]
+ * Output: ['sections' => [['section' => 'VERSE_1', 'label' => 'VERSE 1', 'lines' => [...]]]]
  * Section times are not stored here: they come from the chord map (structure).
  */
 class ParseChordSheetService
@@ -23,27 +23,32 @@ class ParseChordSheetService
 
     private const CHORD_PATTERN = '/^[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add|M|°|º|\+|-|\d|\(|\)|b|#)*(?:\/[A-G](?:#|b)?)?$/u';
 
-    private const SECTION_KEYS = [
-        'intro' => 'INTRO',
-        'introducao' => 'INTRO',
-        'primeira parte' => 'FIRST_PART',
-        'segunda parte' => 'SECOND_PART',
-        'terceira parte' => 'THIRD_PART',
-        'verso' => 'VERSE',
-        'pre-refrao' => 'PRE_CHORUS',
-        'pre refrao' => 'PRE_CHORUS',
-        'refrao' => 'CHORUS',
-        'coro' => 'CHORUS',
-        'ponte' => 'BRIDGE',
-        'solo' => 'SOLO',
-        'interludio' => 'INTERLUDE',
-        'riff' => 'RIFF',
-        'passagem' => 'TRANSITION',
-        'transicao' => 'TRANSITION',
-        'final' => 'FINAL',
-        'outro' => 'OUTRO',
-        'tag' => 'TAG',
+    // Kind of block by the words of its marker, checked in order ("Pré-refrão" before "Refrão", "Refrão Final" is a
+    // chorus, "Parte instrumental" is an interlude).
+    private const TYPES = [
+        'PRE_CHORUS' => '/\bpre[\s-]*(refrao|chorus|coro)\b|\bprechorus\b/',
+        'CHORUS'     => '/\b(refrao|chorus|coro)\b/',
+        'BRIDGE'     => '/\b(ponte|bridge)\b/',
+        'INTRO'      => '/\bintro(ducao)?\b/',
+        'SOLO'       => '/\bsolo\b/',
+        'RIFF'       => '/\briff\b/',
+        'INTERLUDE'  => '/\b(interludio|interlude|instrumental|passagem|transicao|transition)\b/',
+        'TAG'        => '/\btag\b/',
+        'FINAL'      => '/\b(final|outro|ending|fim|encerramento)\b/',
+        'VERSE'      => '/\b(verso|verse|estrofe|parte|part)\b/',
     ];
+
+    // Blocks whose lyrics are at least this similar are the same block (a word changed, other punctuation).
+    private const SAME_LYRICS = 0.85;
+
+    // Blocks with the same marker are the same when the shorter one has at least this share of its words in the other.
+    private const SAME_PART = 0.7;
+
+    // How many times a block is played, as written in a sheet: "2x", "x2", "(3x)", "2 vezes", "Bis".
+    private const COUNTER = '/\(?\s*(?:(\d+)\s*x\b|\bx\s*(\d+)|(\d+)\s*vezes\b|\b(bis)\b)\s*\)?/iu';
+
+    // Kinds without lyrics of their own: a marker of these is kept even over lyrics.
+    private const INSTRUMENTAL = ['INTRO', 'SOLO', 'RIFF', 'INTERLUDE', 'FINAL'];
 
     public function execute(string $input): array
     {
@@ -62,7 +67,7 @@ class ParseChordSheetService
 
         $addLine = function (string $line) use (&$sections, &$current, &$riff, &$resume) {
             if ($current !== null && $current === $riff) {
-                $sections[] = ['section' => $resume['section'] ?? 'PART', 'label' => $resume['label'] ?? null, 'lines' => []];
+                $sections[] = ['section' => $resume['section'] ?? 'PART', 'label' => $resume['label'] ?? null, 'lines' => [], 'continues' => true];
                 $current = array_key_last($sections);
                 $riff = null;
             }
@@ -107,10 +112,12 @@ class ParseChordSheetService
 
             // "[Primeira Parte]" starts a section; chords on the same line ("[Intro] Dm Bb2") belong to it.
             if (preg_match('/^\s*\[([^\]' . self::OPEN . self::CLOSE . ']+)\]\s*(.*)$/u', $line, $match)) {
-                $sections[] = ['section' => $this->sectionKey($match[1]), 'label' => trim($match[1]), 'lines' => []];
+                // A counter in the marker or after it ("[Refrão] (2x)") repeats the block.
+                $repeat = self::repeatCount($match[1]) ?? (self::isCounter($match[2]) ? self::repeatCount($match[2]) : null);
+                $sections[] = ['section' => $this->sectionType($match[1]), 'label' => trim($match[1]), 'lines' => [], 'repeat' => $repeat];
                 $current = array_key_last($sections);
                 $riff = $resume = null;
-                $line = $match[2];
+                $line = self::isCounter($match[2]) ? '' : $match[2];
                 if (trim($line) === '') {
                     continue;
                 }
@@ -139,14 +146,62 @@ class ParseChordSheetService
         }
 
         $sections = array_values(array_filter($sections, fn (array $section) => $section['lines'] !== []));
-        $sections = $this->nameStanzas($sections);
+        $sections = $this->nameSections($this->expandRepeats($sections));
 
         return [
             'sections' => array_map(function (array $section) {
-                unset($section['riff']);
+                unset($section['riff'], $section['continues'], $section['repeat']);
                 return $section;
             }, $sections),
         ];
+    }
+
+    /**
+     * Each block written to be played more than once ("[Refrão] (2x)", or a "(2x)" line at its end) becomes that
+     * many blocks, one after the other, so the sheet follows the song as played and each time can be picked alone.
+     */
+    private function expandRepeats(array $sections): array
+    {
+        $expanded = [];
+
+        foreach ($sections as $section) {
+            $last = end($section['lines']);
+            if (is_string($last) && preg_match('/^\{c:\s*(.+?)\s*\}$/u', $last, $note) && self::isCounter($note[1])) {
+                array_pop($section['lines']);
+                $section['repeat'] ??= self::repeatCount($note[1]);
+            }
+            if ($section['lines'] === []) {
+                continue;
+            }
+            $times = max(1, min(8, $section['repeat'] ?? 1));
+            $section['repeat'] = null;
+            array_push($expanded, ...array_fill(0, $times, $section));
+        }
+
+        return $expanded;
+    }
+
+    /**
+     * Times written in a counter ("2x", "(3x)", "Bis" is 2), or null without one.
+     */
+    private static function repeatCount(string $text): ?int
+    {
+        if (! preg_match(self::COUNTER, Str::ascii($text), $match)) {
+            return null;
+        }
+        $number = (int) ($match[1] ?: ($match[2] ?? '') ?: ($match[3] ?? ''));
+
+        return ! empty($match[4]) ? 2 : ($number > 0 ? $number : null);
+    }
+
+    /**
+     * True when the text is only a counter, e.g. "(2x)" or "Bis".
+     */
+    private static function isCounter(string $text): bool
+    {
+        $text = trim(Str::ascii($text));
+
+        return $text !== '' && trim(preg_replace(self::COUNTER, '', $text)) === '';
     }
 
     /**
@@ -169,51 +224,149 @@ class ParseChordSheetService
     }
 
     /**
-     * Names unlabeled stanzas (those without a "[Section]" marker) by how their lyrics repeat: the most
-     * repeated one is the chorus, another repeated one first seen after the chorus is the bridge, the others
-     * are parts; chord-only stanzas are intro (first), final (last) or interlude.
+     * Gives every block a conventional name, the same in the chord sheet and in the map: INTRO, VERSE_1, VERSE_2,
+     * PRE_CHORUS, CHORUS, BRIDGE, INTERLUDE, SOLO, RIFF, TAG, FINAL.
+     *
+     * The lyrics decide which blocks are the same: a block with (nearly) the lyrics of an earlier one gets its name,
+     * whatever its marker says ("[Refrão Final]" with the chorus lyrics is CHORUS). The kind comes from the marker;
+     * unmarked blocks are named by how their lyrics repeat (the most repeated is the chorus, another repeated one
+     * first seen after it is the bridge, the others are verses) and chord-only ones by where they are (intro, final,
+     * interlude). Verses are always numbered; other kinds only when there is more than one different block of them.
+     * A block that continues after a riff keeps the name of the block it continues.
      */
-    private function nameStanzas(array $sections): array
+    private function nameSections(array $sections): array
     {
-        $keys = array_map(
-            fn (array $section) => ! empty($section['riff']) ? '' : Str::lower(preg_replace('/\s+/u', ' ', BuildStructureFromChordSheetService::lyrics($section['lines']))),
-            $sections,
-        );
-        $counts = array_count_values(array_filter($keys, fn (string $key) => $key !== ''));
-        arsort($counts);
-
-        $chorus = ($counts !== [] && reset($counts) > 1) ? array_key_first($counts) : null;
-        $firstChorus = $chorus === null ? null : array_search($chorus, $keys, true);
-        $bridge = collect($counts)
-            ->filter(fn (int $count, string $key) => $count > 1 && $key !== $chorus && array_search($key, $keys, true) > $firstChorus)
-            ->keys()
-            ->first();
-
-        $partNames = [
-            ['FIRST_PART', 'Primeira Parte'],
-            ['SECOND_PART', 'Segunda Parte'],
-            ['THIRD_PART', 'Terceira Parte'],
-        ];
-        $parts = [];
         $last = count($sections) - 1;
+        $groups = [];   // each: ['type' => ?string, 'lyrics' => string, 'chords' => string, 'members' => int[]]
+        $groupOf = [];
 
         foreach ($sections as $index => $section) {
-            if (! empty($section['riff']) || $section['label'] !== null) {
+            if (! empty($section['continues'])) {
                 continue;
             }
-            $key = $keys[$index];
+            $marked = ! empty($section['riff']) ? 'RIFF' : ($section['label'] !== null ? $section['section'] : null);
+            $lyrics = self::plain(BuildStructureFromChordSheetService::lyrics($section['lines']));
+            $chords = implode(' ', array_filter(BuildStructureFromChordSheetService::chords($section['lines']), fn (string $chord) => $chord !== UpdateSongLayoutService::LINE_BREAK));
 
-            [$sections[$index]['section'], $sections[$index]['label']] = match (true) {
-                $key === '' && $index === 0 => ['INTRO', 'Intro'],
-                $key === '' && $index === $last => ['FINAL', 'Final'],
-                $key === '' => ['INTERLUDE', 'Interlúdio'],
-                $key === $chorus => ['CHORUS', 'Refrão'],
-                $key === $bridge => ['BRIDGE', 'Ponte'],
-                default => $partNames[$parts[$key] ??= count($parts)] ?? ['PART_' . ($parts[$key] + 1), 'Parte ' . ($parts[$key] + 1)],
-            };
+            if ($lyrics === '') {
+                // Chord-only blocks are the same when they are of the same kind and have the same chords.
+                $marked ??= match ($index) { 0 => 'INTRO', $last => 'FINAL', default => 'INTERLUDE' };
+                $found = collect($groups)->search(fn (array $group) => $group['lyrics'] === '' && $group['type'] === $marked && $group['chords'] === $chords);
+            } elseif (in_array($marked, self::INSTRUMENTAL, true)) {
+                // A solo or interlude written over lyrics stays what its marker says.
+                $found = collect($groups)->search(fn (array $group) => $group['type'] === $marked && self::similarity($group['lyrics'], $lyrics) >= self::SAME_LYRICS);
+            } else {
+                $found = collect($groups)->search(fn (array $group) => $group['lyrics'] !== ''
+                    && ! in_array($group['type'], self::INSTRUMENTAL, true)
+                    && (self::similarity($group['lyrics'], $lyrics) >= self::SAME_LYRICS
+                        // Two choruses (bridges...) where one has most of the other's lyrics, e.g. the last chorus
+                        // with a line sung again, are the same block; verses are told apart by their lyrics only.
+                        || ($marked !== null && $marked !== 'VERSE' && $group['type'] === $marked && self::containment($group['lyrics'], $lyrics) >= self::SAME_PART)));
+            }
+
+            if ($found === false) {
+                $groups[] = ['type' => $marked, 'lyrics' => $lyrics, 'chords' => $chords, 'members' => []];
+                $found = array_key_last($groups);
+            }
+            // The first marker found for a block decides its kind.
+            $groups[$found]['type'] ??= $marked;
+            $groups[$found]['members'][] = $index;
+            $groupOf[$index] = $found;
+        }
+
+        $this->guessTypes($groups);
+
+        // Numbers per kind, in the order the blocks first appear.
+        $byType = [];
+        foreach ($groups as $id => $group) {
+            $byType[$group['type']][] = $id;
+        }
+        $names = [];
+        foreach ($byType as $type => $ids) {
+            foreach ($ids as $position => $id) {
+                $names[$id] = ($type === 'VERSE' || count($ids) > 1) ? $type . '_' . ($position + 1) : $type;
+            }
+        }
+
+        $previous = null;
+        foreach ($sections as $index => $section) {
+            $name = isset($groupOf[$index]) ? $names[$groupOf[$index]] : ($previous ?? 'VERSE_1');
+            $sections[$index]['section'] = $name;
+            $sections[$index]['label'] = str_replace('_', ' ', $name);
+            if (empty($section['riff'])) {
+                $previous = $name;
+            }
         }
 
         return $sections;
+    }
+
+    /**
+     * Kinds of the blocks without a marker: the most repeated lyrics are the chorus, another repeated block first
+     * seen after the chorus is the bridge, the others are verses (only when the sheet has no chorus or bridge yet).
+     */
+    private function guessTypes(array &$groups): void
+    {
+        $open = collect($groups)->filter(fn (array $group) => $group['type'] === null);
+        $types = collect($groups)->pluck('type')->filter();
+
+        $repeated = $open->filter(fn (array $group) => count($group['members']) > 1)
+            ->sortByDesc(fn (array $group) => count($group['members']));
+        $chorus = $types->contains('CHORUS') ? null : $repeated->keys()->first();
+        if ($chorus !== null) {
+            $groups[$chorus]['type'] = 'CHORUS';
+        }
+
+        $firstChorus = collect($groups)->filter(fn (array $group) => $group['type'] === 'CHORUS')->min(fn (array $group) => $group['members'][0]);
+        if ($firstChorus !== null && ! $types->contains('BRIDGE')) {
+            $bridge = $repeated->keys()->first(fn (int $id) => $id !== $chorus && $groups[$id]['members'][0] > $firstChorus);
+            if ($bridge !== null) {
+                $groups[$bridge]['type'] = 'BRIDGE';
+            }
+        }
+
+        foreach ($groups as $id => $group) {
+            $groups[$id]['type'] ??= 'VERSE';
+        }
+    }
+
+    /**
+     * Lyrics compared without case, accents, punctuation and spacing.
+     */
+    private static function plain(string $text): string
+    {
+        return trim(preg_replace('/[^a-z0-9]+/', ' ', Str::lower(Str::ascii($text))));
+    }
+
+    /**
+     * Share of the shorter text's words that are also in the other one (each word counted as often as it appears).
+     */
+    private static function containment(string $a, string $b): float
+    {
+        [$short, $long] = str_word_count($a) <= str_word_count($b) ? [$a, $b] : [$b, $a];
+        $words = explode(' ', $short);
+        $other = array_count_values(explode(' ', $long));
+        $common = 0;
+        foreach ($words as $word) {
+            if (($other[$word] ?? 0) > 0) {
+                $other[$word]--;
+                $common++;
+            }
+        }
+
+        return $common / count($words);
+    }
+
+    /**
+     * 1 for the same text, less the more characters must change to turn one into the other.
+     */
+    private static function similarity(string $a, string $b): float
+    {
+        if ($a === $b) {
+            return 1.0;
+        }
+
+        return 1 - levenshtein($a, $b) / max(strlen($a), strlen($b));
     }
 
     /**
@@ -386,6 +539,9 @@ class ParseChordSheetService
         if (preg_match('/^\s*\(\s*([^()]+?)\s*\)\s*$/u', $line, $match)) {
             return '{c: ' . $match[1] . '}';
         }
+        if (self::isCounter($line)) {
+            return '{c: ' . trim($line) . '}';
+        }
 
         return trim($line);
     }
@@ -404,16 +560,25 @@ class ParseChordSheetService
             && ! $this->isTablature($line)
             && ! str_contains($line, self::OPEN)
             && ! preg_match('/^\s*\[[^\]]+\]/u', $line)
-            && ! preg_match('/^\s*\([^()]*\)\s*$/u', $line);
+            && ! preg_match('/^\s*\([^()]*\)\s*$/u', $line)
+            && ! self::isCounter($line);
     }
 
-    private function sectionKey(string $label): string
+    /**
+     * Kind of block written in a marker: "[Refrão Final]" is CHORUS, "[Primeira Parte]" is VERSE; a marker of
+     * another kind ("[Coda]") keeps its own name, without numbers.
+     */
+    private function sectionType(string $label): string
     {
         $normalized = Str::lower(Str::ascii($label));
-        $normalized = trim(preg_replace('/\(.*?\)|\b\d+\s*x\b|\s+/u', ' ', $normalized));
-        $normalized = preg_replace('/\s+/', ' ', $normalized);
+        $normalized = trim(preg_replace('/\s+/', ' ', preg_replace(['/\(.*?\)/u', self::COUNTER], ' ', $normalized)));
 
-        return self::SECTION_KEYS[$normalized]
-            ?? (trim(preg_replace('/[^A-Z0-9]+/', '_', Str::upper(Str::ascii($label))), '_') ?: 'PART');
+        foreach (self::TYPES as $type => $pattern) {
+            if (preg_match($pattern, $normalized)) {
+                return $type;
+            }
+        }
+
+        return trim(preg_replace('/[^A-Z]+/', '_', Str::upper($normalized)), '_') ?: 'VERSE';
     }
 }

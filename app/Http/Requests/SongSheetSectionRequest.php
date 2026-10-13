@@ -22,6 +22,8 @@ class SongSheetSectionRequest extends FormRequest
             'lines'      => ['present', 'array', 'list', 'max:200'],
             'lines.*'    => ['nullable', 'string', 'max:500'],
             'updated_at' => ['required', 'string'],
+            // Also save the copies of this section: the other ones with the same name and the same lines.
+            'same'       => ['sometimes', 'boolean'],
         ];
     }
 }

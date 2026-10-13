@@ -111,10 +111,10 @@
         .key-option:disabled { opacity: .5; cursor: default; }
         .song-meta { margin: .15rem 0 0; font-size: .85rem; color: var(--muted); }
         /* Suggesting chord corrections: chords can be clicked; a changed one in orange, a removed one struck out */
-        .is-suggesting .seg-chord, .is-suggesting .chord-step > span { cursor: pointer; }
-        .is-suggesting .seg-chord:hover > span, .is-suggesting .chord-step > span:hover { outline: 1px dashed var(--accent); border-radius: .2rem; }
-        .seg-chord.is-suggested > span, .chord-step .is-suggested { color: #ea580c; text-decoration: underline wavy #ea580c; text-underline-offset: .2em; }
-        .seg-chord.is-removed > span, .chord-step .is-removed { color: #9ca3af; text-decoration: line-through; }
+        .is-suggesting .seg-chord, .is-suggesting .chord-step > span, .is-suggesting .live-beat > span { cursor: pointer; }
+        .is-suggesting .seg-chord:hover > span, .is-suggesting .chord-step > span:hover, .is-suggesting .live-beat > span:hover { outline: 1px dashed var(--accent); border-radius: .2rem; }
+        .seg-chord.is-suggested > span, .chord-step .is-suggested, .live-beat .is-suggested { color: #ea580c; text-decoration: underline wavy #ea580c; text-underline-offset: .2em; }
+        .seg-chord.is-removed > span, .chord-step .is-removed, .live-beat .is-removed { color: #9ca3af; text-decoration: line-through; }
         .suggest-pop { position: fixed; z-index: 70; width: min(17rem, calc(100vw - 1.5rem)); padding: .6rem; border: 1px solid var(--accent); border-radius: .6rem; background: var(--surface); color: var(--text); box-shadow: 0 12px 30px rgba(0, 0, 0, .3); }
         .suggest-pop input { width: 100%; padding: .35rem .5rem; border: 1px solid var(--border); border-radius: .4rem; background: var(--surface-2); color: var(--text); font-weight: 700; font-size: 1.05rem; }
         .suggest-pop .row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
@@ -173,7 +173,8 @@
         .sheet-line.only-chords .seg-text { display: none; }
         .sheet-comment { font-size: calc(.85rem * var(--label-scale, 1)); font-style: italic; color: var(--muted); }
         /* Live mode: bars counted by the BPM, the current beat lit */
-        .live-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .35rem; }
+        /* Room below the last bars, so any block can be brought to the top of the screen. */
+        .live-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .35rem; padding-bottom: 70vh; align-content: start; }
         @media (max-width: 700px) { .live-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         .live-bar { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: .5rem; padding: .3rem .4rem .45rem; cursor: pointer; }
         .live-bar.is-current { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
@@ -185,6 +186,26 @@
         .live-beat.is-repeat { color: var(--muted); font-weight: 400; }
         .live-beat.is-on { background: var(--accent); color: var(--accent-text); }
         .live-beat .and { font-size: .8em; border-left: 1px dashed var(--muted); padding-left: .2rem; margin-left: .2rem; }
+        .live-beat .and.is-empty { color: var(--muted); font-weight: 400; opacity: .6; }
+        /* Live mode, current and next bar only: big chords, the next one dimmed (tapping it goes there). */
+        /* The two bars in the middle of the visible part of the page (below the top bars, above the blocks bar). */
+        .live-focus { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; align-content: center;
+            max-width: 64rem; margin-inline: auto; min-height: calc(100vh - 16rem); min-height: calc(100dvh - 16rem); }
+        .focus-bar { background: var(--surface); border: 1px solid var(--border); border-top: 4px solid var(--type-color, var(--accent)); border-radius: .75rem; padding: .6rem .8rem 1rem; }
+        .focus-bar.is-now { box-shadow: 0 0 0 2px var(--accent) inset; }
+        /* The bars around the current one: smaller and dimmed (tapping them goes there). */
+        .focus-bar.is-next, .focus-bar.is-previous { --focus-size: 1.6rem; opacity: .55; cursor: pointer; padding-bottom: .6rem; }
+        .focus-bar.is-empty { visibility: hidden; }
+        .focus-head { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+        .focus-block { font-size: calc(.95rem * var(--label-scale, 1)); font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, var(--accent)); }
+        .focus-starts { font-size: calc(.8rem * var(--label-scale, 1)); font-weight: 800; text-transform: uppercase; color: var(--muted); }
+        .focus-number { margin-left: auto; font-size: .75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+        .focus-beats { display: grid; gap: .3rem; margin-top: .6rem; }
+        /* --focus-fit: how much the chords of a bar shrink so the longest one fits its beat (see fitFocusText). */
+        .focus-beat { min-width: 0; padding: .35rem .3rem; border-radius: .5rem; font-weight: 800; font-size: calc(var(--focus-size, 2.8rem) * var(--chord-scale, 1) * var(--focus-fit, 1)); line-height: 1.1; text-align: center; white-space: nowrap; overflow: hidden; }
+        .focus-beat.is-repeat { color: var(--muted); font-weight: 400; }
+        .focus-beat.is-on { background: var(--accent); color: var(--accent-text); }
+        .focus-beat .and { font-size: .55em; vertical-align: middle; border-left: 1px dashed var(--muted); padding-left: .25rem; margin-left: .25rem; }
         .live-tempo { display: inline-flex; align-items: center; gap: .25rem; }
         .live-tempo .bpm { min-width: 4.2rem; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; font-size: .9rem; }
         .mode-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
@@ -192,6 +213,19 @@
         .mode-toggle button.is-active { background: var(--accent); color: var(--accent-text); }
         .section-lyrics { margin-top: .2rem; font-size: calc(.95rem * var(--label-scale, 1)); color: var(--muted); line-height: 1.35; white-space: pre-line; }
         /* Room between chord lines: set in the options ("line spacing"), per song */
+        /* Map as a bar chart: one cell per bar, bars per row as written, each block on new rows. */
+        .bar-chart-head { margin: 0 0 .5rem; font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .03em; }
+        .bar-chart { font-weight: 700; color: var(--type-color, var(--chord)); }
+        .bar-row { display: grid; grid-template-columns: repeat(var(--bars-per-row, 4), minmax(0, 1fr)); border-left: 2px solid var(--border); }
+        .bar-row + .bar-row { margin-top: calc(.3rem * var(--line-gap, 1)); }
+        .map-bar { min-width: 0; padding: .1rem .45rem; border-right: 2px solid var(--border); border-radius: .2rem; font-size: calc(1.05rem * var(--chord-scale, 1)); line-height: 1.4; }
+        .map-bar.is-playing { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+        .bar-chords { display: flex; flex-wrap: wrap; column-gap: .45em; user-select: none; -webkit-user-select: none; }
+        .bar-chords .bar-slash, .bar-repeat { color: var(--muted); font-weight: 400; }
+        .bar-chords .is-off { font-size: .78em; align-self: flex-end; }
+        .bar-chords .is-playing { margin: 0 -.2em; padding: 0 .2em; border-radius: .25rem; background: var(--accent); color: var(--accent-text); }
+        .bar-chords .is-passing { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .22em; }
+        .is-suggesting .bar-chords > span:not(.bar-slash) { cursor: pointer; }
         .section-chords { font-weight: 700; color: var(--type-color, var(--chord)); line-height: calc(1.3 * var(--line-gap, 1)); }
         .chord-line { display: flex; flex-wrap: wrap; column-gap: 1em; user-select: none; -webkit-user-select: none; }
         .chord-step { white-space: pre; }
@@ -280,7 +314,7 @@
         .yt-mini.is-dragging iframe { pointer-events: none; }
         .yt-mini.is-dragging .yt-mini-drag { cursor: grabbing; }
         /* Above the blocks bar when it is shown */
-        .has-jump-bar .yt-mini { bottom: calc(3.4rem + max(.75rem, env(safe-area-inset-bottom))); }
+        .has-jump-bar .yt-mini { bottom: calc(4.2rem + max(.75rem, env(safe-area-inset-bottom))); }
 
         /* Blocks bar: one button per block of the song; a tap goes to the last block with that name */
         .jump-bar {
@@ -291,12 +325,12 @@
         }
         .jump-bar::-webkit-scrollbar { display: none; }
         .jump-bar button {
-            flex-shrink: 0; min-height: 36px; padding: 0 .8rem; border-radius: 999px; cursor: pointer;
+            flex-shrink: 0; min-height: 48px; min-width: 4.5rem; padding: 0 1.1rem; border-radius: 999px; cursor: pointer;
             border: 1px solid var(--type-color, var(--border)); background: none; color: var(--type-color, var(--text));
-            font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;
+            font-size: .9rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;
         }
         .jump-bar button.is-current { background: var(--type-color, var(--accent)); color: var(--surface); }
-        .has-jump-bar .stage { padding-bottom: 4rem; }
+        .has-jump-bar .stage { padding-bottom: 4.8rem; }
         .toast {
             position: fixed; z-index: 70; left: 50%; bottom: 1rem; transform: translateX(-50%);
             max-width: calc(100% - 2rem); padding: .6rem 1rem; border-radius: .5rem;
@@ -354,8 +388,8 @@
         </header>
 
         @if ($data)
-            {{-- Section timer: follows the "start" times of the structure; tapping a block re-syncs it --}}
-            <div class="player" x-show="current && !liveMode">
+            {{-- Section timer: follows the "start" times of the structure (the recording); tapping a block re-syncs it --}}
+            <div class="player" x-show="current && !bpmMode">
                 <button type="button" class="btn btn-icon" @click="togglePlay()" :aria-label="playing ? @js(__('Pause')) : @js(__('Play'))" ><i class="fa-solid" :class="playing ? 'fa-pause' : 'fa-play'"></i></button>
                 <span class="player-time" x-text="formatTime(elapsed)"></span>
                 <div class="player-section">
@@ -367,11 +401,11 @@
                     </div>
                     <div class="player-progress" x-show="currentProgress !== null"><div :style="`width: ${(currentProgress ?? 0) * 100}%`"></div></div>
                 </div>
-                <button type="button" class="btn btn-icon" @click="restart()" aria-label="{{ __('Restart') }}" title="{{ __('Restart') }}"><i class="fa-solid fa-rotate-left"></i></button>
             </div>
 
-            {{-- Live mode: counts the bars by the BPM (each musician on his device); tapping a bar goes on from it --}}
-            <div class="player" x-show="current && liveMode" x-cloak>
+            {{-- Counting the bars by the BPM (each musician on his device), in every view of a song with bars: tapping a
+                 block or a bar goes on from it --}}
+            <div class="player" x-show="current && bpmMode" x-cloak>
                 <button type="button" class="btn btn-icon" @click="toggleLive()" :aria-label="live.running ? @js(__('Stop')) : @js(__('Start'))"><i class="fa-solid" :class="live.running ? 'fa-stop' : 'fa-play'"></i></button>
                 <span class="player-time" x-text="`${liveBar + 1}/${liveGrid?.bars.length ?? 0}`"></span>
                 <div class="player-section">
@@ -388,7 +422,6 @@
                     <button type="button" class="btn btn-icon" @click="setLiveBpm(liveBpm + 1)" aria-label="{{ __('Faster') }}">+</button>
                 </span>
                 <button type="button" class="btn btn-icon" :class="{ 'is-active': live.click }" @click="live.click = !live.click" :title="@js(__('Metronome'))" aria-label="{{ __('Metronome') }}"><i class="fa-solid fa-drum"></i></button>
-                <button type="button" class="btn btn-icon" @click="restartLive()" aria-label="{{ __('Restart') }}" title="{{ __('Restart') }}"><i class="fa-solid fa-rotate-left"></i></button>
             </div>
         @endif
 
@@ -545,9 +578,34 @@
                             </template>
                         </p>
 
-                        {{-- Live mode: the bars of the map (from the chord durations), counted by the BPM --}}
+                        {{-- Live mode: the bars of the map (from the chord durations), counted by the BPM. Only the current bar
+                             and the next one, big; while correcting chords, every bar (their chords can be corrected there). --}}
                         <template x-if="liveMode">
-                        <div class="live-grid" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}`">
+                        <div :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}`">
+                        <template x-if="!liveEdit">
+                            <div class="live-focus" x-init="fitFocus()" @resize.window.debounce.150ms="fitFocus()">
+                                <template x-for="item in focusBars" :key="`${current.id}-focus-${item.index}-${item.role}`">
+                                    <div class="focus-bar" :class="{ 'is-now': item.now, 'is-next': item.role === 'next', 'is-previous': item.role === 'previous', 'is-empty': item.empty }" :style="typeStyle(item.block)"
+                                        @click="!item.now && !item.empty && goToLiveBar(item.index)">
+                                        <div class="focus-head">
+                                            <span class="focus-block" x-text="item.restart ? '↺ ' + @js(__('Back to the start')) + ' · ' + item.block : item.block"></span>
+                                            <span class="focus-starts" x-show="item.starts" x-text="item.starts ? '→ ' + item.starts : ''"></span>
+                                            <span class="focus-number" x-text="`${item.now ? @js(__('Now')) : (item.role === 'next' ? @js(__('Next')) : @js(__('Before')))} · ${item.index + 1}/${liveGrid.bars.length}`"></span>
+                                        </div>
+                                        <div class="focus-beats" :style="`grid-template-columns: repeat(${item.bar.beats.length}, minmax(0, 1fr))`">
+                                            <template x-for="(beat, i) in item.bar.beats" :key="i">
+                                                <span class="focus-beat" :class="{ 'is-repeat': beat.repeat, 'is-on': item.now && i === liveBeat }">
+                                                    <span x-text="beat.repeat ? '/' : (beat.chord ? chordFor(beat.chord) : '–')"></span><template x-if="beat.and !== null"><span class="and" x-text="beat.and ? chordFor(beat.and) : '–'"></span></template>
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                                <p class="hint" x-show="!focusBars.some(item => item.role === 'next')">{{ __('Last bar of the song.') }}</p>
+                            </div>
+                        </template>
+                        <template x-if="liveEdit">
+                        <div class="live-grid">
                             <template x-for="(bar, b) in liveGrid.bars" :key="`${current.id}-live-${b}`">
                                 <div class="live-bar" :class="{ 'is-current': b === liveBar, 'has-block': bar.blocks.some(block => !block.marker) }"
                                     :style="bar.blocks.length ? typeStyle(bar.blocks[0].name) : ''" @click="goToLiveBar(b)" :data-live-bar="b">
@@ -555,13 +613,15 @@
                                     <div class="live-block"><template x-for="block in bar.blocks" :key="block.tick"><span x-text="(block.marker ? '↺ ' + @js(__('Back to the start')) : block.name) + ' '"></span></template></div>
                                     <div class="live-beats" :style="`grid-template-columns: repeat(${bar.beats.length}, minmax(0, 1fr))`">
                                         <template x-for="(beat, i) in bar.beats" :key="i">
-                                            <span class="live-beat" :class="{ 'is-repeat': beat.repeat, 'is-on': b === liveBar && i === liveBeat }">
-                                                <span x-text="beat.repeat ? '/' : (beat.chord ? chordFor(beat.chord) : '–')"></span><template x-if="beat.and !== null"><span class="and" x-text="beat.and ? chordFor(beat.and) : '–'"></span></template>
+                                            <span class="live-beat" :class="{ 'is-repeat': beat.repeat && !insertAt(beat.tick), 'is-on': b === liveBar && i === liveBeat }">
+                                                <span :class="halfClasses(beat, 0)" @click="tapHalf(beat, 0, $event)" x-text="halfText(beat, 0)"></span><template x-if="beat.and !== null || liveEdit"><span class="and" :class="halfClasses(beat, 1)" @click="tapHalf(beat, 1, $event)" x-text="halfText(beat, 1)"></span></template>
                                             </span>
                                         </template>
                                     </div>
                                 </div>
                             </template>
+                        </div>
+                        </template>
                         </div>
                         </template>
 
@@ -595,6 +655,9 @@
                         </div>
                         </template>
 
+                        <template x-if="!sheetMode && !liveMode && barChart">
+                        <p class="bar-chart-head" x-text="[selectedKey, current.bpm ? `${current.bpm} BPM` : null, `${barChart.perBar}/4`].filter(Boolean).join(' · ')"></p>
+                        </template>
                         <template x-if="!sheetMode && !liveMode">
                         <div class="sections" :class="{ 'two-columns': settings.twoColumns, 'block-swipe': blockScrollActive }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
                             <template x-for="(section, index) in sections" :key="`${current.id}-${index}`">
@@ -606,29 +669,50 @@
                                         </div>
                                         <div class="section-anchor" x-show="settings.showAnchors && section.anchor && !(settings.showLyrics && lyricsText(section))" x-text="section.anchor"></div>
                                     </div>
-                                    <div class="section-chords"
-                                        x-data="{
-                                            lines: [],
-                                            aligned: true,
-                                            // Columns sized by the widest chord of each cycle position; plain wrapping when it does not fit.
-                                            fit() {
-                                                this.aligned = true;
-                                                this.$nextTick(() => this.aligned = this.$el.scrollWidth <= this.$el.clientWidth + 1);
-                                            },
-                                        }"
-                                        x-effect="lines = chordLines(section, index); layout.fontScale; settings.twoColumns; fit()"
-                                        @resize.window.debounce.200ms="fit()"
-                                        :class="{ 'is-aligned': aligned }"
-                                        :style="`--chord-columns: ${Math.max(1, ...lines.map(line => line.length))}`">
-                                        <template x-for="(line, lineIndex) in lines" :key="lineIndex">
-                                            <div class="chord-line">
-                                                <template x-for="(step, stepIndex) in line" :key="stepIndex">
-                                                    <span class="chord-step"><template x-for="(chord, c) in step" :key="c"><span :class="{ 'is-passing': chord.passing, 'is-playing': playingChord >= 0 && chord.numbers.includes(playingChord), ...suggestClasses(chord.numbers) }" :data-chord="chord.numbers[0]"
-                                                        @click="suggestClick(chord.numbers, $event)" x-text="(c ? ' ' : '') + suggestedName(chord.numbers, chord.name)"></span></template></span>
-                                                </template>
-                                            </div>
-                                        </template>
-                                    </div>
+                                    <template x-if="barChart && barChart.sections[index]">
+                                        <div class="bar-chart" :style="`--bars-per-row: ${barChart.perRow}`">
+                                            <template x-for="(row, r) in barChart.sections[index].rows" :key="r">
+                                                <div class="bar-row">
+                                                    <template x-for="bar in row" :key="bar.index">
+                                                        <div class="map-bar" :class="{ 'is-playing': bar.index === playingBar }" :data-map-bar="bar.index">
+                                                            <template x-if="bar.repeat"><span class="bar-repeat">%</span></template>
+                                                            <template x-if="!bar.repeat">
+                                                                <span class="bar-chords"><template x-for="(token, t) in bar.tokens" :key="t"><span
+                                                                    :class="{ 'bar-slash': token.slash, 'is-off': token.off, 'is-passing': token.passing, 'is-playing': bar.index === playingBar && token.numbers.includes(playingChord), ...suggestClasses(token.numbers) }"
+                                                                    :data-chord="token.numbers[0]" @click="token.numbers.length && suggestClick(token.numbers, $event)"
+                                                                    x-text="token.slash ? '/' : (token.push ? '^' : '') + suggestedName(token.numbers, token.name)"></span></template></span>
+                                                            </template>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="!barChart">
+                                        <div class="section-chords"
+                                            x-data="{
+                                                lines: [],
+                                                aligned: true,
+                                                // Columns sized by the widest chord of each cycle position; plain wrapping when it does not fit.
+                                                fit() {
+                                                    this.aligned = true;
+                                                    this.$nextTick(() => this.aligned = this.$el.scrollWidth <= this.$el.clientWidth + 1);
+                                                },
+                                            }"
+                                            x-effect="lines = chordLines(section, index); layout.fontScale; settings.twoColumns; fit()"
+                                            @resize.window.debounce.200ms="fit()"
+                                            :class="{ 'is-aligned': aligned }"
+                                            :style="`--chord-columns: ${Math.max(1, ...lines.map(line => line.length))}`">
+                                            <template x-for="(line, lineIndex) in lines" :key="lineIndex">
+                                                <div class="chord-line">
+                                                    <template x-for="(step, stepIndex) in line" :key="stepIndex">
+                                                        <span class="chord-step"><template x-for="(chord, c) in step" :key="c"><span :class="{ 'is-passing': chord.passing, 'is-playing': playingChord >= 0 && chord.numbers.includes(playingChord), ...suggestClasses(chord.numbers) }" :data-chord="chord.numbers[0]"
+                                                            @click="suggestClick(chord.numbers, $event)" x-text="(c ? ' ' : '') + suggestedName(chord.numbers, chord.name)"></span></template></span>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
                                     <div class="section-lyrics" x-show="settings.showLyrics && lyricsText(section)" x-text="lyricsText(section)"></div>
                                     <div class="section-progress" x-show="index === currentSection && currentProgress !== null">
                                         <div :style="`width: ${(currentProgress ?? 0) * 100}%`"></div>
@@ -742,26 +826,26 @@
 
         {{-- Song sound: YouTube player kept small and visible, synced with the section timer --}}
         {{-- Suggesting a correction of the chord tapped: another chord, or removing it --}}
-        <div class="suggest-pop" x-show="suggestEdit" x-cloak :style="suggestEdit ? `left: ${suggestEdit.left}px; top: ${suggestEdit.top}px` : ''"
+        <div class="suggest-pop" x-show="suggestEdit" x-cloak :style="suggestEdit ? `left: ${suggestEdit?.left}px; top: ${suggestEdit?.top}px` : ''"
             @click.outside="suggestEdit = null" @keydown.escape.window="suggestEdit = null">
             <template x-if="suggestEdit">
                 <div>
-                    <div class="hint" style="margin-bottom: .35rem;" x-text="@js(__('Chord on the chord sheet: :chord')).replace(':chord', suggestEdit.original)"></div>
-                    <input type="text" x-ref="suggestInput" :value="suggestEdit.name" autocomplete="off" autocapitalize="off" spellcheck="false"
-                        @input="typeChord($event.target)" @keydown.enter.prevent="applySuggest(suggestEdit.name)">
-                    <label class="apply-all" x-show="suggestEdit.others.length">
-                        <input type="checkbox" x-model="suggestEdit.applyAll">
-                        <span x-text="@js(__('Also in the other “:name” blocks (:count)')).replace(':name', suggestEdit.blockName).replace(':count', suggestEdit.otherBlocks)"></span>
+                    <div class="hint" style="margin-bottom: .35rem;" x-text="suggestEdit?.insert ? suggestEdit?.place : @js(__('Chord on the chord sheet: :chord')).replace(':chord', suggestEdit?.original)"></div>
+                    <input type="text" x-ref="suggestInput" :value="suggestEdit?.name" autocomplete="off" autocapitalize="off" spellcheck="false"
+                        @input="typeChord($event.target)" @keydown.enter.prevent="applySuggest(suggestEdit?.name)">
+                    <label class="apply-all" x-show="suggestEdit?.others.length">
+                        <input type="checkbox" :checked="suggestEdit?.applyAll" @change="if (suggestEdit) suggestEdit.applyAll = $event.target.checked">
+                        <span x-text="@js(__('Also in the other “:name” blocks (:count)')).replace(':name', suggestEdit?.blockName).replace(':count', suggestEdit?.otherBlocks)"></span>
                     </label>
                     <div class="row">
-                        <button type="button" class="btn btn-accent" @click="applySuggest(suggestEdit.name)">{{ __('Change') }}</button>
-                        <button type="button" class="btn" @click="applySuggest(null)">{{ __('Remove') }}</button>
+                        <button type="button" class="btn btn-accent" @click="applySuggest(suggestEdit?.name)" x-text="suggestEdit?.insert ? @js(__('Insert')) : @js(__('Change'))"></button>
+                        <button type="button" class="btn" x-show="!suggestEdit?.insert" @click="applySuggest(null)">{{ __('Remove') }}</button>
                     </div>
                     <div class="row">
-                        <button type="button" class="btn" x-show="suggestEdit.changed" @click="undoSuggest()">{{ __('Keep as it was') }}</button>
+                        <button type="button" class="btn" x-show="suggestEdit?.changed" @click="undoSuggest()">{{ __('Keep as it was') }}</button>
                         <button type="button" class="btn" @click="suggestEdit = null">{{ __('Cancel') }}</button>
                     </div>
-                    <p class="hint" style="color: var(--danger); margin-top: .35rem;" x-show="suggestEdit.error" x-text="suggestEdit.error"></p>
+                    <p class="hint" style="color: var(--danger); margin-top: .35rem;" x-show="suggestEdit?.error" x-text="suggestEdit?.error"></p>
                 </div>
             </template>
         </div>
@@ -1190,6 +1274,113 @@
                         return cells;
                     }).filter(line => line.length);
                 },
+                // ---- The map as a bar chart (the usual band chart): each block on new rows of 4 bars, a chord that
+                // fills a bar written once ("| G |"), two halves "| G  D |", other splits by beats "| G / / D |", a bar
+                // like the one before "%", a chord coming half a beat early "^C" in the next bar. Built from the chords'
+                // beats; null when a block has no beats (the map then shows its chord lines). ----
+                get barChart() {
+                    const sections = this.sections;
+                    const key = [this.currentId, this.current?.structure, this.selectedKey, JSON.stringify(this.chordEdits)];
+                    return memo('barChart', key, () => this.buildBarChart(sections));
+                },
+                buildBarChart(sections) {
+                    const ticks = [];
+                    const starts = [];
+                    const chordTicks = [];
+                    let perBar = 0;
+                    for (const [index, section] of sections.entries()) {
+                        if (!section || typeof section !== 'object' || section.jump === 'start') continue;
+                        const chords = chordsOnly(Array.isArray(section.chords) ? section.chords.map(String) : []);
+                        const durations = Array.isArray(section.durations) ? section.durations.map(Number) : [];
+                        if (!chords.length) continue;
+                        if (durations.length !== chords.length || durations.some(value => !(value > 0))) return null;
+                        perBar ||= Number(section.beats_per_bar) || 4;
+                        const passing = this.sectionPassing(section);
+                        const offset = section.edited ? null : this.mapChordOffsets[index];
+                        starts.push({ index, tick: ticks.length });
+                        chords.forEach((name, k) => {
+                            const number = offset === null || offset === undefined ? null : offset + k;
+                            if (number !== null) chordTicks[number] = [ticks.length, ticks.length + Math.max(1, Math.round(durations[k] * 2))];
+                            for (let t = 0; t < Math.max(1, Math.round(durations[k] * 2)); t++) ticks.push({ name, number, passing: passing.includes(k) });
+                        });
+                    }
+                    if (!ticks.length) return null;
+                    const size = perBar * 2;
+
+                    // Chords of each bar, a chord held over the bar line written again at its start.
+                    const bars = [];
+                    for (let start = 0; start < ticks.length; start += size) {
+                        const segments = [];
+                        ticks.slice(start, start + size).forEach((tick, at) => {
+                            const last = segments[segments.length - 1];
+                            if (last && last.name === tick.name) {
+                                if (tick.number !== null && !last.numbers.includes(tick.number)) last.numbers.push(tick.number);
+                                return;
+                            }
+                            segments.push({ name: tick.name, at, numbers: tick.number === null ? [] : [tick.number], passing: tick.passing, push: false });
+                        });
+                        bars.push({ index: bars.length, start, segments });
+                    }
+                    // A chord starting on the last half beat of a bar and going on in the next one is written there, pushed.
+                    bars.forEach((bar, b) => {
+                        const last = bar.segments[bar.segments.length - 1];
+                        const next = bars[b + 1]?.segments[0];
+                        if (bar.segments.length > 1 && last.at === size - 1 && next && next.name === last.name) {
+                            bar.segments.pop();
+                            next.push = true;
+                        }
+                    });
+                    bars.forEach(bar => {
+                        const segments = bar.segments;
+                        let tokens;
+                        if (segments.length === 1) {
+                            tokens = [segments[0]];
+                        } else if (segments.length === 2 && segments[1].at === size / 2 && perBar % 2 === 0) {
+                            tokens = segments;
+                        } else {
+                            tokens = [];
+                            for (let beat = 0; beat < perBar; beat++) {
+                                const on = segments.find(segment => segment.at === beat * 2);
+                                const off = segments.find(segment => segment.at === beat * 2 + 1);
+                                tokens.push(on || { slash: true, numbers: [] });
+                                if (off) tokens.push({ ...off, off: true });
+                            }
+                        }
+                        bar.tokens = tokens;
+                    });
+
+                    // Rows: the bars of each block (a bar belongs to the block playing on its first beat).
+                    const owner = (tick) => starts.filter(item => item.tick <= tick).at(-1)?.index;
+                    const result = sections.map(() => null);
+                    let previous = null;
+                    bars.forEach(bar => {
+                        const index = owner(bar.start);
+                        if (index === undefined) return;
+                        result[index] ||= { bars: [] };
+                        const signature = bar.tokens.map(token => token.slash ? '/' : (token.push ? '^' : '') + token.name + (token.off ? '&' : '')).join(' ');
+                        // "%": the same bar again in the same block.
+                        bar.repeat = previous && previous.index === index && previous.signature === signature && !bar.tokens.some(token => token.push);
+                        previous = { index, signature };
+                        result[index].bars.push(bar);
+                    });
+                    const perRow = 4;
+                    result.forEach(item => {
+                        if (!item) return;
+                        item.rows = [];
+                        for (let i = 0; i < item.bars.length; i += perRow) item.rows.push(item.bars.slice(i, i + perRow));
+                    });
+                    return { perBar, perRow, size, sections: result, chordTicks };
+                },
+                playingBar: -1,
+                // Bar being played: from the chord being played and the time since it started.
+                barAt(n, time) {
+                    const chart = this.barChart;
+                    const span = chart?.chordTicks[n];
+                    const times = this.chordTimes;
+                    if (!span || !times || !(Number(this.current?.bpm) > 0)) return -1;
+                    const tick = Math.min(span[1] - 1, span[0] + Math.max(0, Math.floor((time - times[n]) / (30 / Number(this.current.bpm)))));
+                    return Math.floor(tick / chart.size);
+                },
                 // Number of the first chord of each map section in the whole map.
                 get mapChordOffsets() {
                     let offset = 0;
@@ -1225,6 +1416,70 @@
                 suggestedName(numbers, name) {
                     const change = numbers.length ? this.songSuggestions[numbers[0]] : null;
                     return change && change.to !== null ? this.chordFor(change.to) : name;
+                },
+                // ---- Inserting a chord where none starts (Live view, while correcting): key "i<n>:<offset>" ----
+                // The insertion suggested at `tick`: inside chord n, `offset` half beats after its start.
+                insertKey(tick) {
+                    const grid = this.liveGrid;
+                    const n = grid?.numbers[tick];
+                    if (n === undefined) return null;
+                    const offset = tick - grid.chordStart[n];
+                    return offset > 0 ? { key: `i${n}:${offset}`, n, offset } : null;
+                },
+                insertAt(tick) {
+                    const place = this.insertKey(tick);
+                    return place ? this.songSuggestions[place.key] ?? null : null;
+                },
+                // A half of a beat in the grid (0: the beat, 1: its "and"): the chord starting there, a chord suggested to
+                // be inserted there, or what sounds there.
+                halfText(beat, half) {
+                    const n = half ? beat.andN : beat.n;
+                    const name = half ? beat.and : beat.chord;
+                    if (n !== null) return this.suggestedName([n], this.chordFor(name));
+                    const insert = this.insertAt(beat.tick + half);
+                    if (insert) return this.chordFor(insert.to);
+                    if (half) return name ? this.chordFor(name) : '+';
+                    return beat.repeat ? '/' : (name ? this.chordFor(name) : '–');
+                },
+                halfClasses(beat, half) {
+                    const n = half ? beat.andN : beat.n;
+                    if (n !== null) return this.suggestClasses([n]);
+                    const insert = this.insertAt(beat.tick + half);
+                    return { 'is-suggested': !!insert, 'is-empty': half === 1 && !insert && beat.and === null };
+                },
+                tapHalf(beat, half, event) {
+                    if (!this.liveEdit) return;
+                    const n = half ? beat.andN : beat.n;
+                    if (n !== null) return this.suggestClick([n], event);
+                    this.insertClick(beat.tick + half, event);
+                },
+                insertClick(tick, event) {
+                    const place = this.insertKey(tick);
+                    if (!place || !this.canSuggest([place.n])) return;
+                    event.stopPropagation();
+                    const box = event.currentTarget.getBoundingClientRect();
+                    const size = this.liveGrid.perBar * 2;
+                    const existing = this.songSuggestions[place.key];
+                    // The same place in the blocks with the same name, when the same chord is there and lasts that long.
+                    const same = this.sameBlockChords([place.n]);
+                    const lasts = (m) => (this.liveGrid.chordStart[m + 1] ?? this.liveGrid.ticks.length) - this.liveGrid.chordStart[m] > place.offset;
+                    const others = same.numbers.filter(lasts);
+                    this.suggestEdit = {
+                        insert: place,
+                        numbers: [place.n],
+                        others,
+                        blockName: same.name,
+                        otherBlocks: others.length,
+                        applyAll: false,
+                        name: existing ? this.chordFor(existing.to) : '',
+                        original: this.chordFor(this.baseChord(place.n)),
+                        place: @js(__('New chord: bar :bar, beat :beat')).replace(':bar', Math.floor(tick / size) + 1).replace(':beat', Math.floor((tick % size) / 2) + 1) + (tick % 2 ? ` (${@js(__('and'))})` : ''),
+                        changed: !!existing,
+                        error: '',
+                        left: Math.max(8, Math.min(box.left, window.innerWidth - 290)),
+                        top: Math.min(box.bottom + 6, window.innerHeight - (others.length ? 205 : 170)),
+                    };
+                    this.$nextTick(() => this.$refs.suggestInput?.focus());
                 },
                 suggestClick(numbers, event) {
                     if (!this.canSuggest(numbers)) return;
@@ -1297,6 +1552,15 @@
                         to = ChordTransposer.transposeChord(to, this.selectedKey, this.current.original_key);
                     }
                     const changes = { ...this.songSuggestions };
+                    if (edit.insert) {
+                        if (to === null) return;
+                        this.suggestNumbers(edit).forEach(n => {
+                            changes[`i${n}:${edit.insert.offset}`] = { type: 'insert', n, offset: edit.insert.offset, from: this.baseChord(n), to };
+                        });
+                        this.setSongSuggestions(changes);
+                        this.suggestEdit = null;
+                        return;
+                    }
                     this.suggestNumbers(edit).forEach(n => {
                         const from = this.baseChord(n);
                         if (to === from) delete changes[n];
@@ -1307,7 +1571,8 @@
                 },
                 undoSuggest() {
                     const changes = { ...this.songSuggestions };
-                    this.suggestNumbers(this.suggestEdit).forEach(n => delete changes[n]);
+                    const edit = this.suggestEdit;
+                    this.suggestNumbers(edit).forEach(n => delete changes[edit.insert ? `i${n}:${edit.insert.offset}` : n]);
                     this.setSongSuggestions(changes);
                     this.suggestEdit = null;
                 },
@@ -1326,7 +1591,9 @@
                     if (!this.suggestCount || !this.current) return;
                     this.sendingSuggestion = true;
                     try {
-                        const changes = Object.entries(this.songSuggestions).map(([n, change]) => ({ n: Number(n), from: change.from, to: change.to }));
+                        const changes = Object.entries(this.songSuggestions).map(([key, change]) => (change.type === 'insert'
+                            ? { type: 'insert', n: change.n, offset: change.offset, from: change.from, to: change.to }
+                            : { n: Number(key), from: change.from, to: change.to }));
                         await this.request('POST', this.songUrl(this.current, '/suggestions'), { changes, author: this.suggestAuthor || null, note: this.suggestNote || null });
                         this.setSongSuggestions({});
                         this.suggestNote = '';
@@ -1406,6 +1673,14 @@
                         this.resetPlayback();
                         this.$nextTick(() => this.setupSound());
                     });
+                    this.$watch('liveEdit', () => { if (this.liveMode) this.scrollToLiveBar(true); });
+                    this.$watch('layout.fontScale', () => { if (this.liveMode && !this.liveEdit) this.fitFocus(); });
+                    // The area of the current and next bar follows the size of what is above it (title, buttons, fonts).
+                    if (window.ResizeObserver) new ResizeObserver(() => { if (this.liveMode && !this.liveEdit) this.fitFocus(); }).observe(document.body);
+                    this.$watch('bpmMode', on => {
+                        if (!on) this.stopLive();
+                        else if (this.playing) this.pause();
+                    });
                     this.$watch('settings.youtubeSound', () => {
                         if (this.playing) this.pause();
                         this.setupSound();
@@ -1431,7 +1706,7 @@
                 // ---- Live mode: the map's bars, built from the duration of each chord (in beats, saved by the study
                 // app), counted by the BPM on this device. A chord can change on a beat or halfway through it ("and"),
                 // so the count goes by half beats ("ticks"). "Back to the start" goes back to the first block once. ----
-                live: { running: false, tick: 0, startTick: 0, startedAt: 0, click: false, usedMarkers: [], frame: null, lastBeat: -1 },
+                live: { running: false, tick: 0, startTick: 0, startedAt: 0, click: false, usedMarkers: [], frame: null, lastBeat: -1, shownBlock: null },
                 liveBpm: 80,
                 taps: [],
                 get liveGrid() {
@@ -1444,6 +1719,9 @@
                     const blocks = [];
                     let perBar = 4;
                     let complete = structure.length > 0;
+                    // Number of the chord of each tick (chord n of the map, as corrections count them).
+                    const numbers = [];
+                    let number = 0;
                     structure.forEach((section, index) => {
                         if (!section || typeof section !== 'object') return;
                         if (section.jump === 'start') return blocks.push({ tick: ticks.length, marker: true, name: '', index });
@@ -1452,7 +1730,10 @@
                         if (!durations || durations.length !== chords.length) { complete = complete && chords.length === 0; return; }
                         if (section.beats_per_bar) perBar = section.beats_per_bar;
                         blocks.push({ tick: ticks.length, marker: false, name: this.sectionName(section), index });
-                        chords.forEach((chord, i) => { for (let k = 0; k < Math.round(durations[i] * 2); k++) ticks.push(chord); });
+                        chords.forEach((chord, i) => {
+                            const n = number++;
+                            for (let k = 0; k < Math.round(durations[i] * 2); k++) { ticks.push(chord); numbers.push(n); }
+                        });
                     });
                     if (complete && ticks.length) {
                         const size = perBar * 2;
@@ -1463,15 +1744,49 @@
                             for (let i = 0; i < part.length; i += 2) {
                                 const onBeat = part[i];
                                 const previous = start + i > 0 ? ticks[start + i - 1] : null;
-                                beats.push({ chord: onBeat, repeat: i > 0 && onBeat === previous, and: part[i + 1] !== undefined && part[i + 1] !== onBeat ? part[i + 1] : null });
+                                const at = start + i;
+                                beats.push({
+                                    chord: onBeat,
+                                    repeat: i > 0 && onBeat === previous,
+                                    and: part[i + 1] !== undefined && part[i + 1] !== onBeat ? part[i + 1] : null,
+                                    tick: at,
+                                    // The chord starting on the beat / on its "and" (null: none starts there).
+                                    n: at === 0 || numbers[at] !== numbers[at - 1] ? numbers[at] : null,
+                                    andN: part[i + 1] !== undefined && numbers[at + 1] !== numbers[at] ? numbers[at + 1] : null,
+                                });
                             }
                             bars.push({ start, beats, blocks: blocks.filter(block => block.tick >= start && block.tick < start + size) });
                         }
-                        value = { perBar, ticks, bars, blocks: blocks.filter(block => !block.marker), markers: blocks.filter(block => block.marker).map(block => block.tick) };
+                        const chordStart = [];
+                        numbers.forEach((n, t) => { if (chordStart[n] === undefined) chordStart[n] = t; });
+                        value = { perBar, ticks, numbers, chordStart, bars, blocks: blocks.filter(block => !block.marker), markers: blocks.filter(block => block.marker).map(block => block.tick) };
                     }
                     return value;
                 },
                 get hasLive() { return !!this.liveGrid; },
+                // Every bar is shown in the Live view while correcting chords (the corrections are made there).
+                get liveEdit() { return !!this.settings.suggest && !this.current?.instrumentVersion; },
+                // The bar before, the current one and the next one (the first bar again when a "back to the start" comes before it),
+                // each with the block it is in and the block that starts inside it.
+                get focusBars() {
+                    const grid = this.liveGrid;
+                    if (!grid) return [];
+                    const size = grid.perBar * 2;
+                    const current = this.liveBar;
+                    const end = (current + 1) * size;
+                    const restart = grid.markers.some(at => at > this.live.tick && at <= end && !this.live.usedMarkers.includes(at));
+                    const next = restart ? 0 : current + 1;
+                    const describe = (index, role, back = false) => {
+                        const start = index * size;
+                        const block = grid.blocks.filter(item => !item.marker && item.tick <= start).at(-1);
+                        const starts = grid.blocks.find(item => !item.marker && item.tick > start && item.tick < start + size);
+                        return { index, role, now: role === 'now', bar: grid.bars[index], block: block?.name ?? '', starts: starts?.name ?? '', restart: back, empty: false };
+                    };
+                    // The bar before (an empty place on the first bar, so the current one stays in the middle).
+                    const items = [current > 0 ? describe(current - 1, 'previous') : { ...describe(current, 'previous'), empty: true }, describe(current, 'now')];
+                    if (next < grid.bars.length) items.push(describe(next, 'next', restart));
+                    return items;
+                },
                 get liveBar() { return this.liveGrid ? Math.floor(this.live.tick / (this.liveGrid.perBar * 2)) : 0; },
                 get liveBeat() { return this.liveGrid ? Math.floor((this.live.tick % (this.liveGrid.perBar * 2)) / 2) : 0; },
                 get liveChordNow() { return this.liveGrid?.ticks[this.live.tick] ?? ''; },
@@ -1515,6 +1830,11 @@
                     this.live.startedAt = performance.now();
                     this.live.lastBeat = -1;
                     this.requestWakeLock();
+                    // The block where the count starts goes to the top right away.
+                    if (this.liveMode) {
+                        this.live.shownBlock = null;
+                        this.scrollToLiveBar();
+                    }
                     if (this.live.tick % 2 === 0) this.clickBeat(this.live.tick % (this.liveGrid.perBar * 2) === 0);
                     const loop = () => {
                         if (!this.live.running) return;
@@ -1532,7 +1852,8 @@
                             const before = this.liveBar;
                             this.live.tick = tick;
                             if (tick % 2 === 0) this.clickBeat(tick % (this.liveGrid.perBar * 2) === 0);
-                            if (this.liveBar !== before) this.scrollToLiveBar();
+                            if (this.liveMode && this.liveBar !== before) this.scrollToLiveBar();
+                            if (!this.liveMode) this.followLiveTick();
                         }
                         this.live.frame = requestAnimationFrame(loop);
                     };
@@ -1543,26 +1864,132 @@
                     this.live.running = false;
                     this.releaseWakeLock();
                 },
-                restartLive() {
-                    const running = this.live.running;
-                    this.stopLive();
-                    this.live.tick = 0;
-                    this.live.usedMarkers = [];
-                    this.scrollToLiveBar();
-                    if (running) this.startLive();
-                },
                 // Tapping a bar: the count goes on from it (right away when running).
                 goToLiveBar(bar) {
-                    this.live.tick = bar * this.liveGrid.perBar * 2;
+                    this.goToLiveTick(bar * this.liveGrid.perBar * 2);
+                },
+                goToLiveTick(tick) {
+                    this.live.tick = tick;
                     this.live.startTick = this.live.tick;
                     this.live.startedAt = performance.now();
+                    if (!this.liveMode) this.followLiveTick(true);
+                    else if (!this.liveEdit) this.fitFocus();
                 },
-                scrollToLiveBar() {
+                // ---- The BPM count shown in the map and the chord sheet: the block, bar and chord of the current beat ----
+                // Start tick of each chord of the map (chord n of the map, as numbered for the highlights).
+                get liveChordStarts() {
+                    const structure = Array.isArray(this.current?.structure) ? this.current.structure : [];
+                    return memo('liveChordStarts', [this.currentId, structure], () => {
+                        const starts = [];
+                        let tick = 0;
+                        structure.forEach(section => {
+                            if (!section || typeof section !== 'object' || section.jump === 'start') return;
+                            const chords = chordsOnly(Array.isArray(section.chords) ? section.chords.map(String) : []);
+                            const durations = Array.isArray(section.durations) ? section.durations.map(Number) : [];
+                            chords.forEach((chord, i) => { starts.push(tick); tick += Math.round((durations[i] || 0) * 2); });
+                        });
+                        return starts;
+                    });
+                },
+                // Index in the view shown (map: the structure; chord sheet: its sections) of block `index` of the structure.
+                viewIndexOf(index) {
+                    if (!this.sheetMode) return index;
+                    const sheet = this.current?.chord_sheet || [];
+                    const structure = Array.isArray(this.current?.structure) ? this.current.structure : [];
+                    if (sheet.length === structure.length) return index;
+                    const k = structure.slice(0, index).filter(block => block && block.jump !== 'start').length;
+                    const found = sheet.map((section, i) => i).filter(i => sheet[i]?.jump !== 'start')[k];
+                    return found ?? null;
+                },
+                // Block of the structure shown at `index` of the view (the other way).
+                structureIndexOf(index) {
+                    if (!this.sheetMode) return index;
+                    const sheet = this.current?.chord_sheet || [];
+                    const structure = Array.isArray(this.current?.structure) ? this.current.structure : [];
+                    if (sheet.length === structure.length) return index;
+                    const k = sheet.slice(0, index).filter(section => section?.jump !== 'start').length;
+                    return structure.map((block, i) => i).filter(i => structure[i] && structure[i].jump !== 'start')[k] ?? null;
+                },
+                // Lights the chord and bar of the current beat and shows its block (`jump`: moved there by hand).
+                followLiveTick(jump = false) {
+                    const tick = this.live.tick;
+                    const starts = this.liveChordStarts;
+                    let n = -1;
+                    while (n + 1 < starts.length && starts[n + 1] <= tick) n++;
+                    const bar = this.barChart ? Math.floor(tick / this.barChart.size) : -1;
+                    const changedBar = bar !== this.playingBar;
+                    this.playingChord = n;
+                    this.playingBar = bar;
+                    const block = (this.liveGrid?.blocks || []).filter(item => !item.marker && item.tick <= tick).at(-1);
+                    const index = block ? this.viewIndexOf(block.index) : null;
+                    if (index !== null && (index !== this.currentSection || jump)) return this.showSection(index);
+                    if (changedBar && bar >= 0 && this.live.running) this.keepInView(`.sections [data-map-bar="${bar}"]`);
+                    else if (this.sheetMode && this.live.running) this.keepInView(`.sections [data-chord="${n}"]`);
+                },
+                // Scrolls when the element went below or above the visible part of the page.
+                keepInView(selector) {
                     this.$nextTick(() => {
-                        const element = document.querySelector(`[data-live-bar="${this.liveBar}"]`);
+                        const element = document.querySelector(selector);
+                        if (!element) return;
+                        const box = element.getBoundingClientRect();
+                        const top = (document.querySelector('.chrome')?.offsetHeight ?? 0) + 8;
+                        if (box.bottom > window.innerHeight * .85 || box.top < top) {
+                            window.scrollBy({ top: box.top - Math.max(top, window.innerHeight * .3), behavior: 'smooth' });
+                        }
+                    });
+                },
+                // Each bar shown big gets the size at which its longest chord fits its beat on one line (never bigger than
+                // set in the layout, never under a third of it; a quarter for the bars around the current one).
+                fitFocusText() {
+                    this.$nextTick(() => document.querySelectorAll('.focus-bar').forEach(bar => {
+                        const beats = [...bar.querySelectorAll('.focus-beat')];
+                        bar.style.setProperty('--focus-fit', '1');
+                        let fit = 1;
+                        beats.forEach(beat => {
+                            if (beat.scrollWidth > beat.clientWidth + 1) fit = Math.min(fit, (beat.clientWidth - 6) / (beat.scrollWidth - 6));
+                        });
+                        const smallest = bar.classList.contains('is-now') ? 0.34 : 0.25;
+                        fit = Math.max(smallest, Math.floor(fit * 100) / 100);
+                        bar.style.setProperty('--focus-fit', String(fit));
+                        // Padding and rounding: a little smaller until nothing is cut off.
+                        const cut = () => beats.some(beat => beat.scrollWidth > beat.clientWidth + 1);
+                        while (cut() && fit > smallest) {
+                            fit = Math.max(smallest, Math.round((fit - 0.03) * 100) / 100);
+                            bar.style.setProperty('--focus-fit', String(fit));
+                        }
+                    }));
+                },
+                // The current and next bar: the page at its top, their area filling what is visible down to the blocks bar,
+                // with the two bars in its middle.
+                fitFocus() {
+                    this.fitFocusText();
+                    this.$nextTick(() => {
+                        const element = document.querySelector('.live-focus');
+                        if (!element) return;
+                        if (window.scrollY > 0) window.scrollTo({ top: 0 });
+                        const bar = document.querySelector('.jump-bar');
+                        // The blocks bar is fixed at the bottom (when shown): the area ends above it.
+                        const bottom = bar && bar.getClientRects().length ? bar.getBoundingClientRect().top : window.innerHeight;
+                        const height = Math.max(160, bottom - element.getBoundingClientRect().top - 12);
+                        // Only when it changes (setting it changes the page's size, which calls this again).
+                        if (Math.abs(height - parseFloat(element.style.minHeight || 0)) > 1) element.style.minHeight = `${height}px`;
+                    });
+                },
+                // A new block goes to the top of the screen (as in the map and the chord sheet); within a block, the page
+                // only scrolls when the current bar would be out of sight.
+                scrollToLiveBar(force = false) {
+                    if (!this.liveEdit) return this.fitFocus();
+                    if (force) this.live.shownBlock = null;
+                    const size = (this.liveGrid?.perBar ?? 4) * 2;
+                    const block = (this.liveGrid?.blocks || []).filter(item => !item.marker && item.tick <= this.live.tick).at(-1);
+                    const newBlock = !!block && block.tick !== this.live.shownBlock;
+                    this.live.shownBlock = block ? block.tick : null;
+                    this.$nextTick(() => {
+                        const bar = newBlock ? Math.floor(block.tick / size) : this.liveBar;
+                        const element = document.querySelector(`[data-live-bar="${bar}"]`);
                         if (!element) return;
                         element.style.scrollMarginTop = `${(document.querySelector('.chrome')?.offsetHeight ?? 0) + 8}px`;
-                        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        element.scrollIntoView({ behavior: 'smooth', block: newBlock ? 'start' : 'nearest' });
                     });
                 },
                 // Metronome click (when on); the first beat of a bar is higher.
@@ -1589,6 +2016,12 @@
                 get hasSheet() { return Array.isArray(this.current?.chord_sheet) && this.current.chord_sheet.length > 0; },
                 get sheetMode() { return this.hasSheet && this.settings.viewMode === 'sheet'; },
                 get liveMode() { return this.hasLive && this.settings.viewMode === 'live'; },
+                // The song is followed by its BPM (not by the recording): in the Live view always; in the map and the chord
+                // sheet when the song has bars and its sound (audio or video) is not on.
+                get bpmMode() {
+                    if (!this.hasLive) return false;
+                    return this.liveMode || !(this.settings.youtubeSound && (this.audioUrl || this.videoId));
+                },
                 get timedList() {
                     if (this.sheetMode) return this.current.chord_sheet;
                     return Array.isArray(this.current?.structure) ? this.current.structure : [];
@@ -1598,9 +2031,15 @@
                     return this.sheetMode ? (block?.label || this.sectionName(block)) : this.sectionName(this.sections[index]);
                 },
                 setViewMode(mode) {
-                    if (mode !== 'live') this.stopLive();
-                    if (mode === 'live' && this.playing) this.pause();
                     this.settings.viewMode = mode;
+                    // The count goes on in the other view; with the recording, the clock does.
+                    if (this.bpmMode) {
+                        if (this.playing) this.pause();
+                        this.followLiveTick(true);
+                        if (this.liveMode) this.scrollToLiveBar();
+                        return;
+                    }
+                    this.stopLive();
                     // Keep the clock and move the highlight to the matching block of the other view.
                     this.clockSection = this.hasTimeline ? this.sectionAt(this.elapsed) : null;
                     if (this.currentSection !== null) this.showSection(this.clockSection ?? 0);
@@ -1672,6 +2111,20 @@
                 },
                 followChord() {
                     const n = this.chordAt(this.elapsed);
+                    const bar = n < 0 ? -1 : this.barAt(n, this.elapsed);
+                    if (bar !== this.playingBar) {
+                        this.playingBar = bar;
+                        // Keeps the bar in view in the map (the section scroll handles new blocks).
+                        if (bar >= 0 && this.playing) this.$nextTick(() => {
+                            const element = document.querySelector(`.sections [data-map-bar="${bar}"]`);
+                            if (!element) return;
+                            const box = element.getBoundingClientRect();
+                            const top = (document.querySelector('.chrome')?.offsetHeight ?? 0) + 8;
+                            if (box.bottom > window.innerHeight * .85 || box.top < top) {
+                                window.scrollBy({ top: box.top - Math.max(top, window.innerHeight * .3), behavior: 'smooth' });
+                            }
+                        });
+                    }
                     if (n === this.playingChord) return;
                     this.playingChord = n;
                     // Keeps the chord in view when it goes below the screen (the section scroll handles new blocks).
@@ -1736,7 +2189,7 @@
                     return targets;
                 },
                 jumpTo(target) {
-                    // Live mode: the count goes on from the first bar of that block.
+                    // Live view: the count goes on from the first bar of that block.
                     if (this.liveMode) {
                         const block = this.liveGrid.blocks.find(item => item.index === target.index);
                         if (!block) return;
@@ -1890,8 +2343,10 @@
                             newSection = true;
                         }
                     }
-                    if (newSection) this.playingChord = this.chordAt(this.elapsed);
-                    else this.followChord();
+                    if (newSection) {
+                        this.playingChord = this.chordAt(this.elapsed);
+                        this.playingBar = this.playingChord < 0 ? -1 : this.barAt(this.playingChord, this.elapsed);
+                    } else this.followChord();
                 },
                 // Moves the timer to `time` without changing play/pause.
                 seek(time) {
@@ -1900,6 +2355,7 @@
                     if (this.playing) this.startedAt = performance.now() - time * 1000;
                     this.clockSection = this.hasTimeline ? this.sectionAt(time) : null;
                     this.playingChord = this.chordAt(time);
+                    this.playingBar = this.playingChord < 0 ? -1 : this.barAt(this.playingChord, time);
                 },
                 resetPlayback() {
                     this.pause();
@@ -1907,11 +2363,7 @@
                     this.currentSection = null;
                     this.clockSection = null;
                     this.playingChord = -1;
-                },
-                restart() {
-                    const wasPlaying = this.playing;
-                    this.resetPlayback();
-                    if (wasPlaying) this.play();
+                    this.playingBar = -1;
                 },
 
                 // Tapping a block marks it as the current section and re-syncs the timer to its start time.
@@ -1922,6 +2374,12 @@
                         const first = this.timedList.findIndex((section, i) => !this.isReturn(i));
                         if (first === -1) return;
                         index = first;
+                    }
+                    // Counting by the BPM: the count goes on from the start of that block.
+                    if (this.bpmMode) {
+                        const structureIndex = this.structureIndexOf(index);
+                        const block = (this.liveGrid?.blocks || []).find(item => !item.marker && item.index === structureIndex);
+                        if (block) return this.goToLiveTick(block.tick);
                     }
                     const start = this.sectionStart(index);
                     if (start !== null) this.seek(start);
@@ -2024,7 +2482,7 @@
                 onKeydown(event) {
                     if (event.key === 'Escape') this.optionsOpen = false;
                     if (this.panelOpen || this.removing || ['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName)) return;
-                    if (event.key === ' ' && this.current) { event.preventDefault(); this.liveMode ? this.toggleLive() : this.togglePlay(); }
+                    if (event.key === ' ' && this.current) { event.preventDefault(); this.bpmMode ? this.toggleLive() : this.togglePlay(); }
                     if (['ArrowRight', 'PageDown'].includes(event.key)) { event.preventDefault(); this.go(this.currentIndex + 1); }
                     if (['ArrowLeft', 'PageUp'].includes(event.key)) { event.preventDefault(); this.go(this.currentIndex - 1); }
                     if (['ArrowDown', 'ArrowUp'].includes(event.key) && this.current) { event.preventDefault(); this.moveBlock(event.key === 'ArrowDown' ? 1 : -1); }
