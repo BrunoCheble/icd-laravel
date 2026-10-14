@@ -46,9 +46,22 @@
     {{-- Tempo: the live mode of the setlist app counts the bars with it --}}
     <div>
         <x-input-label for="bpm" :value="__('BPM')" />
-        <x-text-input id="bpm" name="bpm" type="number" step="0.1" min="30" max="300" class="mt-1 block w-full" :value="old('bpm', $song?->bpm)" />
+        <x-text-input id="bpm" name="bpm" type="number" step="0.1" min="30" max="300" class="mt-1 block w-full" :value="old('bpm', $song?->bpm ?? \App\Services\CreateSongBarsService::DEFAULT_BPM)" />
         <p class="mt-1 text-sm text-gray-500">{{ __('Beats per minute. Filled in by the study app (icd-chords) when it saves the map; the live mode of the setlist follows it.') }}</p>
         <x-input-error class="mt-2" :messages="$errors->get('bpm')" />
+    </div>
+
+    {{-- Time signature: blocks without bars get them (one bar per chord) when the song is saved --}}
+    <div x-data="{ meter: @js(old('meter', $song ? \App\Services\CreateSongBarsService::meterOf($song->structure) : '4/4')) }">
+        <x-input-label for="meter" :value="__('Time signature')" />
+        <select id="meter" name="meter" x-model="meter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+            @foreach (array_keys(\App\Services\CreateSongBarsService::METERS) as $meter)
+                <option value="{{ $meter }}">{{ $meter }}</option>
+            @endforeach
+        </select>
+        <p class="mt-1 text-sm text-gray-500">{{ __('Blocks without bars get them when the song is saved: the chords of each block, one bar each, to be adjusted on the grid.') }} {{ __('Changing it moves only the bar lines: every chord stays on its beat.') }}</p>
+        <p class="mt-1 text-sm" style="color: #4338ca;" x-show="meter === '6/8'" x-cloak>{{ __('In 6/8 the bars count the eighth notes: the BPM is of the eighths (a song felt at 60 is 180).') }}</p>
+        <x-input-error class="mt-2" :messages="$errors->get('meter')" />
     </div>
 
     <div>

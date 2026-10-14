@@ -417,9 +417,7 @@
                     </div>
                 </div>
                 <span class="live-tempo">
-                    <button type="button" class="btn btn-icon" @click="setLiveBpm(liveBpm - 1)" aria-label="{{ __('Slower') }}">−</button>
-                    <button type="button" class="btn bpm" @click="tapTempo()" :title="@js(__('Tap the beat to set the tempo'))"><span x-text="`${Math.round(liveBpm)} BPM`"></span></button>
-                    <button type="button" class="btn btn-icon" @click="setLiveBpm(liveBpm + 1)" aria-label="{{ __('Faster') }}">+</button>
+                    <button type="button" class="btn bpm" @click="tapTempo()" :title="@js(__('Tap the beat to set the tempo'))"><span x-text="`${Math.round(liveBpm)} BPM`"></span> <i class="fa-solid fa-hand-pointer" style="font-size: .8em; opacity: .7;"></i></button>
                 </span>
                 <button type="button" class="btn btn-icon" :class="{ 'is-active': live.click }" @click="live.click = !live.click" :title="@js(__('Metronome'))" aria-label="{{ __('Metronome') }}"><i class="fa-solid fa-drum"></i></button>
             </div>
@@ -656,7 +654,7 @@
                         </template>
 
                         <template x-if="!sheetMode && !liveMode && barChart">
-                        <p class="bar-chart-head" x-text="[selectedKey, current.bpm ? `${current.bpm} BPM` : null, `${barChart.perBar}/4`].filter(Boolean).join(' · ')"></p>
+                        <p class="bar-chart-head" x-text="[selectedKey, current.bpm ? `${current.bpm} BPM` : null, meterLabel(barChart.perBar)].filter(Boolean).join(' · ')"></p>
                         </template>
                         <template x-if="!sheetMode && !liveMode">
                         <div class="sections" :class="{ 'two-columns': settings.twoColumns, 'block-swipe': blockScrollActive }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
@@ -1371,6 +1369,8 @@
                     });
                     return { perBar, perRow, size, sections: result, chordTicks };
                 },
+                // Time signature shown for the beats of a bar: 6 (eighth notes) is 6/8.
+                meterLabel(beats) { return { 6: '6/8', 9: '9/8', 12: '12/8' }[beats] ?? `${beats}/4`; },
                 playingBar: -1,
                 // Bar being played: from the chord being played and the time since it started.
                 barAt(n, time) {
@@ -1718,6 +1718,7 @@
                     const ticks = [];
                     const blocks = [];
                     let perBar = 4;
+                    let clickDouble = false;
                     let complete = structure.length > 0;
                     // Number of the chord of each tick (chord n of the map, as corrections count them).
                     const numbers = [];
@@ -1729,6 +1730,7 @@
                         const durations = Array.isArray(section.durations) ? section.durations : null;
                         if (!durations || durations.length !== chords.length) { complete = complete && chords.length === 0; return; }
                         if (section.beats_per_bar) perBar = section.beats_per_bar;
+                        if (section.click_double) clickDouble = true;
                         blocks.push({ tick: ticks.length, marker: false, name: this.sectionName(section), index });
                         chords.forEach((chord, i) => {
                             const n = number++;
@@ -1759,7 +1761,7 @@
                         }
                         const chordStart = [];
                         numbers.forEach((n, t) => { if (chordStart[n] === undefined) chordStart[n] = t; });
-                        value = { perBar, ticks, numbers, chordStart, bars, blocks: blocks.filter(block => !block.marker), markers: blocks.filter(block => block.marker).map(block => block.tick) };
+                        value = { perBar, clickDouble, ticks, numbers, chordStart, bars, blocks: blocks.filter(block => !block.marker), markers: blocks.filter(block => block.marker).map(block => block.tick) };
                     }
                     return value;
                 },
@@ -1835,7 +1837,7 @@
                         this.live.shownBlock = null;
                         this.scrollToLiveBar();
                     }
-                    if (this.live.tick % 2 === 0) this.clickBeat(this.live.tick % (this.liveGrid.perBar * 2) === 0);
+                    if (this.clicksOn(this.live.tick)) this.clickBeat(this.live.tick % (this.liveGrid.perBar * 2) === 0);
                     const loop = () => {
                         if (!this.live.running) return;
                         const beatMs = 60000 / this.liveBpm;
@@ -1851,7 +1853,7 @@
                         if (tick !== this.live.tick) {
                             const before = this.liveBar;
                             this.live.tick = tick;
-                            if (tick % 2 === 0) this.clickBeat(tick % (this.liveGrid.perBar * 2) === 0);
+                            if (this.clicksOn(tick)) this.clickBeat(tick % (this.liveGrid.perBar * 2) === 0);
                             if (this.liveMode && this.liveBar !== before) this.scrollToLiveBar();
                             if (!this.liveMode) this.followLiveTick();
                         }
@@ -1869,6 +1871,13 @@
                     this.goToLiveTick(bar * this.liveGrid.perBar * 2);
                 },
                 goToLiveTick(tick) {
+                    if (!this.bpmMode) {
+                        const time = this.timeOfLiveTick(tick);
+                        if (time !== null) this.seek(Math.max(0, time));
+                        this.live.tick = tick;
+                        if (this.liveMode) this.scrollToLiveBar(true);
+                        return;
+                    }
                     this.live.tick = tick;
                     this.live.startTick = this.live.tick;
                     this.live.startedAt = performance.now();
@@ -1992,6 +2001,9 @@
                         element.scrollIntoView({ behavior: 'smooth', block: newBlock ? 'start' : 'nearest' });
                     });
                 },
+                // A tick that clicks: each beat, and each "and" too when the song's click is doubled (the drummer's
+                // tempo; the bars keep the BPM).
+                clicksOn(tick) { return tick % 2 === 0 || !!this.liveGrid?.clickDouble; },
                 // Metronome click (when on); the first beat of a bar is higher.
                 clickBeat(accent) {
                     if (!this.live.click) return;
@@ -2016,11 +2028,11 @@
                 get hasSheet() { return Array.isArray(this.current?.chord_sheet) && this.current.chord_sheet.length > 0; },
                 get sheetMode() { return this.hasSheet && this.settings.viewMode === 'sheet'; },
                 get liveMode() { return this.hasLive && this.settings.viewMode === 'live'; },
-                // The song is followed by its BPM (not by the recording): in the Live view always; in the map and the chord
-                // sheet when the song has bars and its sound (audio or video) is not on.
+                // The song is followed by its BPM (not by the recording) when it has bars and its sound (audio or video) is
+                // not on, in every view; with the sound on, the recording plays and the bars follow it.
                 get bpmMode() {
                     if (!this.hasLive) return false;
-                    return this.liveMode || !(this.settings.youtubeSound && (this.audioUrl || this.videoId));
+                    return !(this.settings.youtubeSound && (this.audioUrl || this.videoId));
                 },
                 get timedList() {
                     if (this.sheetMode) return this.current.chord_sheet;
@@ -2040,6 +2052,7 @@
                         return;
                     }
                     this.stopLive();
+                    if (this.liveMode) this.followLiveFromTime(this.elapsed);
                     // Keep the clock and move the highlight to the matching block of the other view.
                     this.clockSection = this.hasTimeline ? this.sectionAt(this.elapsed) : null;
                     if (this.currentSection !== null) this.showSection(this.clockSection ?? 0);
@@ -2087,13 +2100,15 @@
                     if (this.chordTimesCache.key === key) return this.chordTimesCache.value;
                     let times = [];
                     const beat = 60 / Number(song?.bpm);
-                    let end = 0;
+                    let end = null;
                     for (const section of (Array.isArray(song?.structure) ? song.structure : [])) {
                         if (!section || typeof section !== 'object' || section.jump === 'start') continue;
                         const chords = chordsOnly(Array.isArray(section.chords) ? section.chords.map(String) : []);
                         const durations = Array.isArray(section.durations) ? section.durations.map(Number) : [];
                         if (!(beat > 0) || durations.length !== chords.length || durations.some(value => !(value > 0))) { times = null; break; }
-                        let time = parseStart(section.start) ?? end;
+                        // The first block's start is the delay in the recording; from there only the BPM counts
+                        // (other blocks' marked starts would leave gaps when the BPM was changed).
+                        let time = end ?? parseStart(section.start) ?? 0;
                         durations.forEach(value => { times.push(time); time += value * beat; });
                         end = time;
                     }
@@ -2347,6 +2362,34 @@
                         this.playingChord = this.chordAt(this.elapsed);
                         this.playingBar = this.playingChord < 0 ? -1 : this.barAt(this.playingChord, this.elapsed);
                     } else this.followChord();
+                    if (this.liveMode) this.followLiveFromTime(this.elapsed);
+                },
+                // ---- The Live view following the recording (song sound on): the bar of the time played ----
+                // Half beat of the map sounding at `time` (from the chord being played, its start and the BPM).
+                liveTickAt(time) {
+                    const n = this.chordAt(time);
+                    const times = this.chordTimes;
+                    const starts = this.liveChordStarts;
+                    if (n < 0 || !times || starts[n] === undefined) return 0;
+                    const next = starts[n + 1] ?? this.liveGrid.ticks.length;
+                    return Math.min(next - 1, starts[n] + Math.max(0, Math.floor((time - times[n]) / (30 / Number(this.current.bpm)))));
+                },
+                // Time in the recording of a half beat of the map (where its chord starts there, plus the beats since).
+                timeOfLiveTick(tick) {
+                    const times = this.chordTimes;
+                    const starts = this.liveChordStarts;
+                    if (!times) return null;
+                    let n = 0;
+                    while (n + 1 < starts.length && starts[n + 1] <= tick) n++;
+                    return times[n] + (tick - starts[n]) * (30 / Number(this.current.bpm));
+                },
+                followLiveFromTime(time) {
+                    if (!this.liveGrid) return;
+                    const tick = this.liveTickAt(time);
+                    if (tick === this.live.tick) return;
+                    const before = this.liveBar;
+                    this.live.tick = tick;
+                    if (this.liveBar !== before) this.scrollToLiveBar();
                 },
                 // Moves the timer to `time` without changing play/pause.
                 seek(time) {
@@ -2356,6 +2399,7 @@
                     this.clockSection = this.hasTimeline ? this.sectionAt(time) : null;
                     this.playingChord = this.chordAt(time);
                     this.playingBar = this.playingChord < 0 ? -1 : this.barAt(this.playingChord, time);
+                    if (this.liveMode && !this.bpmMode) this.followLiveFromTime(time);
                 },
                 resetPlayback() {
                     this.pause();

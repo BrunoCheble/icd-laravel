@@ -210,6 +210,92 @@ class ParseChordSheetServiceTest extends TestCase
         $this->assertSame(['CHORUS', 'CHORUS', 'BRIDGE'], $this->sectionNames($sheet));
     }
 
+    public function test_a_counter_note_anywhere_in_a_block_repeats_it_and_is_taken_out(): void
+    {
+        $sheet = <<<'TXT'
+        [Refrão]
+        {c: 3x}
+        C          G
+        Aleluia, aleluia ao Rei
+
+        [Ponte]
+        {c: 1x}
+        Am         C
+        Tu és digno de louvor
+        TXT;
+
+        $sections = (new ParseChordSheetService())->execute($sheet)['sections'];
+
+        $this->assertSame(['CHORUS', 'CHORUS', 'CHORUS', 'BRIDGE'], array_column($sections, 'section'));
+        $this->assertStringNotContainsString('{c:', json_encode(array_column($sections, 'lines')));
+    }
+
+    public function test_stanzas_after_a_marked_intro_are_split_by_blank_lines(): void
+    {
+        $sheet = <<<'TXT'
+        [Intro] G G/B G G/B Em
+
+        G              G/B
+        Se passam os anos
+        G                   G/B
+        Eu não posso deixar de amá-lo
+
+        Am             G/B             G
+        Oh Espírito, abre os meus olhos outra vez
+        Am             G/B             Em
+        Quero ver a beleza de Deus no Filho
+
+        G                  G/B
+        O segredo de Deus e o seu saber
+        G               Em
+        Persegui sua glória, achei o Filho
+
+        G                  G/B
+        O segredo de Deus e o seu saber
+        G               Em
+        Persegui sua glória, achei o Filho
+
+        Am             G/B             G
+        Oh Espírito, abre os meus olhos outra vez
+        Am             G/B             Em
+        Quero ver a beleza de Deus no Filho
+
+        C7M            G/B
+        Cristo, beleza de Deus
+        C7M            G/B
+        Cristo, fonte de prazer
+        TXT;
+
+        // The stanza written twice in a row after the first chorus is a verse sung twice; the one with other chords
+        // after the second chorus is the bridge.
+        $this->assertSame(['INTRO', 'VERSE_1', 'CHORUS', 'VERSE_2', 'VERSE_2', 'CHORUS', 'BRIDGE'], $this->sectionNames($sheet));
+    }
+
+    public function test_a_third_verse_with_the_verse_chords_is_not_a_bridge(): void
+    {
+        $sheet = <<<'TXT'
+        G          D
+        Primeira estrofe do hino
+
+        C          G
+        Aleluia, aleluia ao Rei
+
+        G          D
+        Segunda estrofe do hino
+
+        C          G
+        Aleluia, aleluia ao Rei
+
+        G          D
+        Terceira estrofe do hino
+
+        C          G
+        Aleluia, aleluia ao Rei
+        TXT;
+
+        $this->assertSame(['VERSE_1', 'CHORUS', 'VERSE_2', 'CHORUS', 'VERSE_3', 'CHORUS'], $this->sectionNames($sheet));
+    }
+
     private function sectionNames(string $sheet): array
     {
         return array_column((new ParseChordSheetService())->execute($sheet)['sections'], 'section');

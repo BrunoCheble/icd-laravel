@@ -48,6 +48,8 @@ class StudySongMapRequest extends FormRequest
             'blocks.*.durations'     => ['nullable', 'array', 'list'],
             'blocks.*.durations.*'   => ['numeric', 'gt:0', 'multiple_of:' . UpdateSongLayoutService::DURATION_STEP],
             'blocks.*.beats_per_bar' => ['nullable', 'integer', 'between:1,12'],
+            // The metronome also clicks on each "and" (the drummer's doubled tempo); the bars keep the BPM.
+            'blocks.*.click_double'  => ['nullable', 'boolean'],
         ];
     }
 

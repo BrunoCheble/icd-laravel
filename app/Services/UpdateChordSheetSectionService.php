@@ -15,8 +15,9 @@ class UpdateChordSheetSectionService
 
     /**
      * Saves the lines of one section of the chord sheet as the layout page shows it (split like the map's blocks):
-     * the lyrics and where the chords fall can change, and a chord can be swapped for another one; none can be added
-     * or removed (each chord has its beats in the map: that is done on the grid of bars). When the sheet has one
+     * the lyrics and where the chords fall can change, and chords can be swapped, added or removed. In the map's bars
+     * an added chord takes the second half of the chord before it, and a removed chord's beats go to the chord before
+     * it, so the block keeps its length (see `rebuildChords`). When the sheet has one
      * section per block of the map, that block's lyrics and chords change too, so the sheet keeps the map's chords
      * and the study app and the map keep the same lyrics. With `$same`, the copies of the section (the other sections with the same
      * name and the same lines, e.g. every CHORUS written alike) change the same way; a different one (a longer last
@@ -41,8 +42,8 @@ class UpdateChordSheetSectionService
         }
         $newChords = self::chords($lines);
         $chordsChanged = $newChords !== self::chords($section['lines'] ?? []);
-        if (count($newChords) !== count(self::chords($section['lines'] ?? []))) {
-            throw ValidationException::withMessages(['lines' => __('Here a chord can be swapped for another one, but not added or removed: keep the same number of chords (add or remove bars on the grid).')]);
+        if ($chordsChanged && $newChords === []) {
+            throw ValidationException::withMessages(['lines' => __('A part of the map needs at least one chord.')]);
         }
 
         $oldLyrics = self::lyrics($section['lines'] ?? []);
@@ -69,7 +70,9 @@ class UpdateChordSheetSectionService
                 }
                 $block['lyrics'] = $newLyrics === [] ? null : implode("\n", $newLyrics);
                 if ($chordsChanged) {
-                    $block['chords'] = self::swapChords($block['chords'] ?? [], $newChords);
+                    $block = count($newChords) === count(UpdateSongLayoutService::chordSequence([$block]))
+                        ? array_merge($block, ['chords' => self::swapChords($block['chords'] ?? [], $newChords)])
+                        : self::rebuildChords($block, $newChords);
                 }
                 $structure[$blockIndex] = $block;
             }
@@ -98,6 +101,135 @@ class UpdateChordSheetSectionService
         }
 
         return $chords;
+    }
+
+    /**
+     * A block with other chords (some added or removed): each new chord is matched to an old one (same or swapped
+     * chord) in order, keeping its beats; an added chord takes the second half of the chord before it (or the first
+     * half of the next one when that one is too short), and a removed chord's beats go to the chord before it (the
+     * next one at the start), so the block keeps its length. Line breaks and passing chords stay on the chords they
+     * were on.
+     */
+    private static function rebuildChords(array $block, array $newChords): array
+    {
+        $old = [];
+        $breakBefore = [];
+        foreach ($block['chords'] ?? [] as $chord) {
+            if ($chord === UpdateSongLayoutService::LINE_BREAK) {
+                $breakBefore[count($old)] = $old !== [];
+            } else {
+                $old[] = $chord;
+            }
+        }
+        $durations = is_array($block['durations'] ?? null) && count($block['durations']) === count($old)
+            ? array_map('floatval', $block['durations']) : null;
+
+        // Each entry: the chord, its beats, and the old chord it comes from (null: added).
+        $result = [];
+        $leftover = 0.0;
+        foreach (self::align($old, $newChords) as [$i, $j]) {
+            if ($j === null) {
+                if ($result !== []) {
+                    $result[count($result) - 1]['beats'] += $durations[$i] ?? 0;
+                } else {
+                    $leftover += $durations[$i] ?? 0;
+                }
+                continue;
+            }
+            $result[] = ['chord' => $newChords[$j], 'beats' => $i === null ? 0.0 : ($durations[$i] ?? 0) + $leftover, 'from' => $i];
+            if ($i !== null) {
+                $leftover = 0.0;
+            }
+        }
+        if ($leftover > 0 && $result !== []) {
+            $result[0]['beats'] += $leftover;
+        }
+
+        if ($durations !== null) {
+            $step = UpdateSongLayoutService::DURATION_STEP;
+            foreach ($result as $k => $entry) {
+                if ($entry['from'] !== null || $entry['beats'] > 0) {
+                    continue;
+                }
+                // Half of a neighbour (in half beats): the chord before, or the next one with room.
+                $giver = null;
+                foreach ([$k - 1, ...array_keys(array_slice($result, $k + 1, null, true))] as $candidate) {
+                    if (isset($result[$candidate]) && $result[$candidate]['beats'] >= 2 * $step) {
+                        $giver = $candidate;
+                        break;
+                    }
+                }
+                if ($giver === null) {
+                    throw ValidationException::withMessages(['lines' => __('There is no room for the added chord: lengthen the chords around it on the grid first.')]);
+                }
+                $half = floor($result[$giver]['beats'] / 2 / $step) * $step;
+                $result[$giver]['beats'] -= $half;
+                $result[$k]['beats'] = $half;
+            }
+        }
+
+        $chords = [];
+        $passing = [];
+        $oldPassing = is_array($block['passing'] ?? null) ? $block['passing'] : [];
+        foreach ($result as $k => $entry) {
+            if ($entry['from'] !== null && ($breakBefore[$entry['from']] ?? false)) {
+                $chords[] = UpdateSongLayoutService::LINE_BREAK;
+            }
+            $chords[] = $entry['chord'];
+            if ($entry['from'] !== null && in_array($entry['from'], $oldPassing, true)) {
+                $passing[] = $k;
+            }
+        }
+        $block['chords'] = UpdateSongLayoutService::cleanBreaks($chords);
+        if ($passing !== []) {
+            $block['passing'] = $passing;
+        } else {
+            unset($block['passing']);
+        }
+        if ($durations !== null) {
+            $block['durations'] = array_map(fn ($entry) => floor($entry['beats']) == $entry['beats'] ? (int) $entry['beats'] : $entry['beats'], $result);
+        }
+
+        return $block;
+    }
+
+    /**
+     * How the old chords became the new ones (fewest changes): pairs [old index, new index], with null for a chord
+     * removed (new index) or added (old index). A swapped chord keeps its pair.
+     */
+    private static function align(array $old, array $new): array
+    {
+        $n = count($old);
+        $m = count($new);
+        $cost = array_fill(0, $n + 1, array_fill(0, $m + 1, 0));
+        for ($i = $n; $i >= 0; $i--) {
+            for ($j = $m; $j >= 0; $j--) {
+                if ($i === $n || $j === $m) {
+                    $cost[$i][$j] = ($n - $i) + ($m - $j);
+                    continue;
+                }
+                $cost[$i][$j] = min(
+                    $cost[$i + 1][$j + 1] + ($old[$i] === $new[$j] ? 0 : 1),
+                    $cost[$i + 1][$j] + 1,
+                    $cost[$i][$j + 1] + 1,
+                );
+            }
+        }
+
+        $pairs = [];
+        $i = 0;
+        $j = 0;
+        while ($i < $n || $j < $m) {
+            if ($i < $n && $j < $m && $cost[$i][$j] === $cost[$i + 1][$j + 1] + ($old[$i] === $new[$j] ? 0 : 1)) {
+                $pairs[] = [$i++, $j++];
+            } elseif ($j < $m && ($i === $n || $cost[$i][$j] === $cost[$i][$j + 1] + 1)) {
+                $pairs[] = [null, $j++];
+            } else {
+                $pairs[] = [$i++, null];
+            }
+        }
+
+        return $pairs;
     }
 
     /**

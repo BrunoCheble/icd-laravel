@@ -17,6 +17,9 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
         <style>
+            /* Alpine parts stay hidden until Alpine has started, so nothing hidden by x-show flashes on load. */
+            [x-cloak] { display: none !important; }
+
             /* Phones: a more compact frame (navigation, page title and page spacing), so content starts higher. */
             @media (max-width: 639px) {
                 .app-nav-row { height: 3rem; }

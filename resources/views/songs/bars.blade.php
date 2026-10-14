@@ -74,6 +74,13 @@
         .beat.is-on .chord, .beat.is-on .count { color: #fff; }
         .bars-page.is-editing .beat { cursor: text; }
         .block-actions { display: inline-flex; gap: .25rem; margin-left: auto; }
+        .line-rename-btn { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
+        .line-rename-btn:hover { color: #4f46e5; }
+        .line-rename { width: 11rem; padding: .15rem .4rem; border: 1px solid #4f46e5; border-radius: .35rem; font-size: .8rem; font-weight: 800; letter-spacing: .04em; }
+        .repeat-ctl { display: inline-flex; align-items: center; gap: .4rem; font-size: .75rem; color: #6b7280; }
+        .repeat-badge { padding: .05rem .45rem; border-radius: 999px; background: var(--type-color, #4f46e5); color: #fff; font-weight: 800; font-size: .75rem; }
+        .repeat-badge.is-copy { background: #e5e7eb; color: #4b5563; }
+        .repeat-input { width: 3.4rem; margin-left: .25rem; padding: .1rem .3rem; border: 1px solid #d1d5db; border-radius: .35rem; font-weight: 700; text-align: center; }
         .block-grip { color: #9ca3af; cursor: grab; padding: .15rem .2rem; touch-action: none; }
         .line-head { cursor: grab; }
         .line-head button { cursor: pointer; }
@@ -142,7 +149,7 @@
                 @include('songs.partials.tabs', ['song' => $song, 'current' => 'layout'])
                 @include('layouts.alert')
 
-                <div class="bars-page" :class="{ 'is-editing': mode === 'edit', 'is-dragging': drag && drag.moved, 'is-moving-block': blockDrag?.moved }" x-data="songBars(@js([
+                <div class="bars-page" x-cloak :class="{ 'is-editing': mode === 'edit', 'is-dragging': drag && drag.moved, 'is-moving-block': blockDrag?.moved }" x-data="songBars(@js([
                     'structure' => $blocks,
                     'sheet' => $sheet,
                     'key' => $song->musical_key,
@@ -181,10 +188,28 @@
                         <button type="button" class="ws-btn" x-show="canPlay && !clickOnly" :class="{ 'is-active': metronome }" @click="metronome = !metronome"
                             title="{{ __('Metronome') }}" aria-label="{{ __('Metronome') }}"><i class="fa-solid fa-stopwatch"></i></button>
                         <span class="ws-spacer"></span>
-                        <label class="ws-btn" style="padding-right: .3rem;" title="{{ __('Beats per minute') }}" x-show="!versionId">
-                            <span class="ws-label">BPM</span>
+                        {{-- Tapping "BPM" in the rhythm of the song sets it; the number can be typed too --}}
+                        <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId">
+                            <button type="button" @click="tapTempo()" title="{{ __('Tap the beat to set the tempo') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;">BPM <i class="fa-solid fa-hand-pointer"></i></button>
                             <input type="number" class="bpm-input" min="30" max="300" step="0.1" :value="bpm" @change="setBpm($event.target.value)" aria-label="BPM" style="border: 0; min-height: 0;">
-                        </label>
+                        </span>
+                        {{-- The music on, or only the BPM click (the bars play on their own clock) --}}
+                        <button type="button" class="ws-btn" x-show="hasMusic && bpm > 0" :class="{ 'is-active': !musicOff }" @click="toggleMusic()"
+                            :title="musicOff ? @js(__('Playing only with the BPM: click to play with the music')) : @js(__('Playing with the music: click to play only with the BPM'))"><i class="fa-solid" :class="musicOff ? 'fa-volume-xmark' : 'fa-music'"></i> {{ __('Song sound') }}</button>
+                        {{-- Click on every beat, or doubled (also on each "and") for the drummer: only the sound changes --}}
+                        <button type="button" class="ws-btn" x-show="!versionId && (clickOnly || metronome)" :class="{ 'is-active': clickDouble }" @click="clickDouble = !clickDouble; markDirty(); clickUntil = null"
+                            :title="clickDouble ? @js(__('Doubled click: it also sounds on each "and" (the bars keep the BPM). Click for one click per beat')) : @js(__('One click per beat. Click to double it (the drummer\'s tempo); the bars keep the BPM'))"><i class="fa-solid fa-stopwatch"></i> 2×</button>
+                        {{-- Where bar 1 starts in the recording (seconds): typed, or marked on the beat while it plays --}}
+                        <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId && !clickOnly">
+                            <button type="button" @click="markStartNow()" :disabled="!canPlay" title="{{ __('Click on the first beat of bar 1 while the song plays') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;">{{ __('Start') }} <i class="fa-solid fa-flag"></i></button>
+                            <input type="number" class="bpm-input" min="0" step="0.1" :value="songStart" @change="setSongStart($event.target.value)" aria-label="{{ __('Start of bar 1 (seconds)') }}" title="{{ __('Start of bar 1 (seconds)') }}" style="border: 0; min-height: 0;">
+                        </span>
+                        {{-- Time signature: only the bar lines move, every chord stays on its beat --}}
+                        <select class="ws-btn" x-show="!versionId" :value="perBar" @change="setMeter(Number($event.target.value))" title="{{ __('Time signature (the chords keep their beats)') }}" aria-label="{{ __('Time signature') }}" style="padding-right: 1.8rem;">
+                            @foreach (\App\Services\CreateSongBarsService::METERS as $label => $beats)
+                                <option value="{{ $beats }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
                         <button type="button" class="ws-btn" x-show="!versionId" :class="{ 'is-active': keyOpen }" @click="keyOpen = !keyOpen" title="{{ __('Key') }}">
                             <i class="fa-solid fa-music"></i> <strong x-text="keyLabel(key)"></strong>
                         </button>
@@ -223,28 +248,53 @@
                                 <div class="lines-view">
                                     <div class="line-tools">
                                         <span class="ws-seg" role="group">
+                                            <button type="button" :class="{ 'is-active': lineTool === 'play' }" @click="lineTool = 'play'"><i class="fa-solid fa-play"></i> {{ __('Play') }}</button>
                                             <button type="button" :class="{ 'is-active': lineTool === 'break' }" @click="lineTool = 'break'">{{ __('Break line') }}</button>
                                             <button type="button" :class="{ 'is-active': lineTool === 'passing' }" @click="lineTool = 'passing'">{{ __('Passing chord') }}</button>
                                         </span>
-                                        <span class="ws-note" style="white-space: normal;" x-text="lineTool === 'break' ? @js(__('Click a chord to start a new line on it; click the first chord of a line to join it to the line above.')) : @js(__('Click a chord to mark it as a passing chord (underlined); click it again to unmark it. Passing chords do not count when looking for repetitions.'))"></span>
+                                        <span class="ws-note" style="white-space: normal;" x-text="lineTool === 'play' ? @js(__('Click a chord to play the song from it.')) : lineTool === 'break' ? @js(__('Click a chord to start a new line on it; click the first chord of a line to join it to the line above.')) : @js(__('Click a chord to mark it as a passing chord (underlined); click it again to unmark it. Passing chords do not count when looking for repetitions.'))"></span>
                                     </div>
                                     <template x-for="item in lineBlocks" :key="`${revision}-${item.block.id}`">
-                                        <div class="line-block" :class="{ 'is-current': linePlaying?.id === item.block.id, 'is-dragging': blockDrag?.moved && blockDrag.id === item.block.id, 'drop-before': blockDrag?.moved && blockDrag.target === item.block.id && blockDrag.before, 'drop-after': blockDrag?.moved && blockDrag.target === item.block.id && !blockDrag.before }"
+                                        <div class="line-block" x-show="!isHiddenRepeat(item.block)" :class="{ 'is-current': playingLine?.id === item.block.id, 'is-dragging': blockDrag?.moved && blockDrag.id === item.block.id, 'drop-before': blockDrag?.moved && blockDrag.target === item.block.id && blockDrag.before, 'drop-after': blockDrag?.moved && blockDrag.target === item.block.id && !blockDrag.before }"
                                             :style="typeStyle(item.name)" :data-line-block="item.block.id">
                                             <div class="line-head" @pointerdown="!versionId && startBlockDrag($event, item.block)">
                                                 <span class="block-grip" x-show="!versionId" title="{{ __('Drag to move the block') }}"><i class="fa-solid fa-grip-vertical"></i></span>
-                                                <button type="button" class="line-name block-chip" @click="canPlay && playFromTick(item.block.startTick)" :title="canPlay ? @js(__('Play from here')) : ''"><i class="fa-solid fa-play play" x-show="canPlay"></i> <span x-text="item.name"></span></button>
+                                                <template x-if="lineRename !== item.block.id">
+                                                    <span style="display: inline-flex; align-items: center; gap: .15rem;">
+                                                        <button type="button" class="line-name block-chip" @click="canPlay && playFromTick(item.block.startTick)" :title="canPlay ? @js(__('Play from here')) : ''"><i class="fa-solid fa-play play" x-show="canPlay"></i> <span x-text="item.name"></span></button>
+                                                        <button type="button" class="line-rename-btn" x-show="!versionId" @click="lineRename = item.block.id" @pointerdown.stop title="{{ __('Rename the block') }}" aria-label="{{ __('Rename the block') }}"><i class="fa-solid fa-pen"></i></button>
+                                                    </span>
+                                                </template>
+                                                {{-- The name typed right there: Enter keeps it (for every repetition of a grouped card), Esc leaves it --}}
+                                                <template x-if="lineRename === item.block.id">
+                                                    <input type="text" class="line-rename" list="block-names" :value="item.name" autocomplete="off" spellcheck="false" style="text-transform: uppercase"
+                                                        x-init="$nextTick(() => { $el.focus(); $el.select(); })" @pointerdown.stop
+                                                        @keydown.enter.prevent="renameLineBlock(item.block, $event.target.value)" @keydown.escape.stop.prevent="lineRename = null"
+                                                        @blur="renameLineBlock(item.block, $event.target.value)">
+                                                </template>
+                                                {{-- Equal blocks one after the other: one card "×N" (the number of times can be changed) --}}
+                                                <template x-if="isRepeatHead(item.block)">
+                                                    <span class="repeat-ctl">
+                                                        <span class="repeat-badge" x-show="groupOf(item.block).length > 1" x-text="`×${groupOf(item.block).length}`"></span>
+                                                        <label x-show="!versionId" :title="@js(__('How many times this block is played, one after the other'))">{{ __('Repetitions') }}
+                                                            <input type="number" class="repeat-input" min="1" max="50" :value="groupOf(item.block).length" @change="setRepeats(item.block, $event.target.value)" @pointerdown.stop>
+                                                        </label>
+                                                        <button type="button" class="ws-btn" x-show="groupOf(item.block).length > 1" @click="toggleGroup(item.block)"
+                                                            x-text="expandedGroups[item.block.id] ? @js(__('Group them')) : @js(__('Show each one'))"></button>
+                                                    </span>
+                                                </template>
+                                                <span class="repeat-badge is-copy" x-show="!isRepeatHead(item.block)" x-text="`${groupOf(item.block).indexOf(item.block.id) + 1}/${groupOf(item.block).length}`"></span>
                                                 <span class="line-state" x-text="item.manual ? @js(__('Lines set by hand')) : @js(__('Automatic lines'))"></span>
-                                                <button type="button" class="ws-btn" x-show="item.manual" @click="automaticLines(item.block)">{{ __('Back to automatic') }}</button>
+                                                <button type="button" class="ws-btn" x-show="item.manual" @click="forGroup(item.block, block => automaticLines(block, false))">{{ __('Back to automatic') }}</button>
                                                 <span class="block-actions" x-show="!versionId">
-                                                    <button type="button" class="ws-btn" @click="duplicateBlock(item.block)" title="{{ __('Duplicate') }}" aria-label="{{ __('Duplicate') }}"><i class="fa-solid fa-clone"></i></button>
-                                                    <button type="button" class="ws-btn" @click="removeBlock(item.block)" :disabled="lineBlocks.length < 2" title="{{ __('Remove') }}" aria-label="{{ __('Remove') }}"><i class="fa-solid fa-trash"></i></button>
+                                                    <button type="button" class="ws-btn" @click="isCollapsed(item.block) ? setRepeats(item.block, groupOf(item.block).length + 1) : duplicateBlock(item.block)" title="{{ __('Duplicate') }}" aria-label="{{ __('Duplicate') }}"><i class="fa-solid fa-clone"></i></button>
+                                                    <button type="button" class="ws-btn" @click="isCollapsed(item.block) ? removeGroup(item.block) : removeBlock(item.block)" :disabled="lineBlocks.length < 2" title="{{ __('Remove') }}" aria-label="{{ __('Remove') }}"><i class="fa-solid fa-trash"></i></button>
                                                 </span>
                                             </div>
                                             <template x-for="(line, l) in item.lines" :key="l">
                                                 <div class="line-row">
                                                     <template x-for="(step, i) in line" :key="i">
-                                                        <span class="line-step"><template x-for="chord in step" :key="chord.position"><button type="button" class="line-chord" :class="{ 'is-passing': chord.passing, 'is-playing': linePlaying?.id === item.block.id && linePlaying?.position === chord.position }" :data-line-chord="`${item.block.id}-${chord.position}`" @click="clickLineChord(item.block, chord.position)" x-text="transposeName(chord.name)"></button></template></span>
+                                                        <span class="line-step"><template x-for="chord in step" :key="chord.position"><button type="button" class="line-chord" :class="{ 'is-passing': chord.passing, 'is-playing': playingLine?.id === item.block.id && playingLine?.position === chord.position }" :data-line-chord="`${item.block.id}-${chord.position}`" @click="lineTool === 'play' ? playLineChord(item.block, chord.position) : forGroup(item.block, block => clickLineChord(block, chord.position, false))" x-text="transposeName(chord.name)"></button></template></span>
                                                     </template>
                                                 </div>
                                             </template>
@@ -321,7 +371,7 @@
                                                         x-text="@js(__('Save in every :name (:count)')).replace(':name', sheetEdit.name).replace(':count', sheetEdit.copies + 1)"></button>
                                                     <button type="button" class="ws-btn" @click="sheetEdit = null">{{ __('Cancel') }}</button>
                                                 </div>
-                                                <p class="help">{{ __('Chords stay in brackets, e.g. Esp[G]írito Santo: change the lyrics, move a chord or swap it for another one (the map changes too).') }}</p>
+                                                <p class="help">{{ __('Chords stay in brackets, e.g. Esp[G]írito Santo: change the lyrics, move, swap, add or remove chords (the map changes too: an added chord takes half of the one before it, a removed one gives its beats to the one before).') }}</p>
                                                 <p class="error" x-show="sheetEdit.error" x-text="sheetEdit.error"></p>
                                             </div>
                                         </template>
@@ -330,13 +380,12 @@
                                                 <template x-if="line.comment !== undefined"><div class="sheet-comment" x-text="line.comment"></div></template>
                                                 <template x-if="line.comment === undefined">
                                                     <div>
-                                                        <div class="sheet-line" :data-sheet-line="`${s}-${l}`"><template x-for="(unit, u) in (chordMove && chordMove.s === s && chordMove.l === l ? chordMove.units : line.units)" :key="`${u}:${unit.chord}:${unit.text}:${unit.added || unit.changed ? 'a' : ''}`"><span class="sheet-seg"><span class="c" :class="{ 'is-playing': unit.n !== undefined && unit.n === currentSheetChord, 'is-moving': chordMove && chordMove.s === s && chordMove.l === l && unit.ordinal === chordMove.k, 'can-move': mode === 'edit' && !versionId && !section.marker && unit.chord && (!dirty || sheetLinked), 'is-added': unit.added || unit.changed }" :data-chord="unit.n"
+                                                        <div class="sheet-line" :data-sheet-line="`${s}-${l}`"><template x-for="(unit, u) in (chordMove && chordMove.s === s && chordMove.l === l ? chordMove.units : line.units)" :key="`${u}:${unit.chord}:${unit.text}:${unit.added || unit.changed ? 'a' : ''}`"><span class="sheet-seg"><span class="c" :class="{ 'is-playing': unit.n !== undefined && unit.n === playingSheetChord, 'is-moving': chordMove && chordMove.s === s && chordMove.l === l && unit.ordinal === chordMove.k, 'can-move': mode === 'edit' && !versionId && !section.marker && unit.chord && (!dirty || sheetLinked), 'is-added': unit.added || unit.changed }" :data-chord="unit.n"
                                                             @pointerdown="unit.chord && startSheetDrag($event, s, l, unit.ordinal)"><span x-text="unit.chord ? transposeName(unit.chord) : ''"></span></span><span class="t" :data-from="unit.from" x-text="unit.text"></span></span></template></div>
                                                         <template x-if="chordMove && !chordMove.dragging && chordMove.s === s && chordMove.l === l">
                                                             <div class="chord-move" @click.stop>
-                                                                <button type="button" class="ws-btn ws-btn-primary" @click="saveChordMove(false)" :disabled="chordMove.saving"><i class="fa-solid" :class="chordMove.saving ? 'fa-spinner fa-spin' : 'fa-check'"></i> <span x-text="chordMove.copies ? @js(__('Save only this one')) : @js(__('Save'))"></span></button>
-                                                                <button type="button" class="ws-btn" x-show="chordMove.copies" @click="saveChordMove(true)" :disabled="chordMove.saving"
-                                                                    x-text="@js(__('Save in every :name (:count)')).replace(':name', chordMove.name).replace(':count', chordMove.copies + 1)"></button>
+                                                                {{-- Saved in the copies of the section too (same name and lines) --}}
+                                                                <button type="button" class="ws-btn ws-btn-primary" @click="saveChordMove(true)" :disabled="chordMove.saving"><i class="fa-solid" :class="chordMove.saving ? 'fa-spinner fa-spin' : 'fa-check'"></i> {{ __('Save') }}</button>
                                                                 <button type="button" class="ws-btn" @click="chordMove = null">{{ __('Cancel') }}</button>
                                                                 <span class="error" x-show="chordMove.error" x-text="chordMove.error"></span>
                                                             </div>
@@ -396,6 +445,18 @@
                         <div class="row" x-show="canPlay">
                             <button type="button" class="ws-btn" @click="playFromTick(barMenu.bar * perBar * 2); barMenu = null"><i class="fa-solid fa-play"></i> {{ __('Play from here') }}</button>
                         </div>
+                        {{-- Bars added (the chord sounding there goes on one bar longer) or removed --}}
+                        <template x-if="!versionId">
+                            <div>
+                                <hr>
+                                <p class="title">{{ __('Bar') }}</p>
+                                <div class="row" style="margin-top: 0;">
+                                    <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, false); barMenu = null" title="{{ __('Insert a bar before: the chord at the start of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('Before') }}</button>
+                                    <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, true); barMenu = null" title="{{ __('Insert a bar after: the chord at the end of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('After') }}</button>
+                                    <button type="button" class="ws-btn" @click="removeBar(barMenu.bar); barMenu = null" :disabled="bars.length < 2" title="{{ __('Remove this bar') }}"><i class="fa-solid fa-trash"></i> {{ __('Remove') }}</button>
+                                </div>
+                            </div>
+                        </template>
                         <hr>
                         <p class="title" x-text="barMenu ? menuBarsLabel() : ''"></p>
                         <div class="row">
@@ -507,6 +568,7 @@
             const blocks = [];
             const splits = [];
             let perBar = 4;
+            let clickDouble = false;
             (Array.isArray(structure) ? structure : []).forEach(section => {
                 if (!section || typeof section !== 'object') return;
                 const { chords: raw, durations, order, ...data } = section;
@@ -519,15 +581,17 @@
                 let position = 0;
                 list.forEach(chord => { if (chord !== '|') position++; else if (position > 0 && !breaks.includes(position)) breaks.push(position); });
                 if (section.beats_per_bar) perBar = section.beats_per_bar;
+                if (section.click_double) clickDouble = true;
+                delete data.click_double;
                 blocks.push({ id: nextId++, startTick: ticks.length, data: { ...data, lineChords: chords, breaks } });
                 chords.forEach((chord, i) => {
                     if (i > 0 && chord === chords[i - 1]) splits.push(ticks.length);
                     for (let k = 0; k < Math.round((durations?.[i] ?? perBar) * 2); k++) ticks.push(chord);
                 });
             });
-            return { ticks, blocks, perBar, splits };
+            return { ticks, blocks, perBar, splits, clickDouble };
             };
-            const { ticks, blocks, perBar, splits } = parseStructure(config.structure);
+            const { ticks, blocks, perBar, splits, clickDouble } = parseStructure(config.structure);
 
             // ChordPro lines -> { comment } or { units: [{ chord, text }] }.
             const parseLine = (line) => {
@@ -549,10 +613,17 @@
             };
             // How a list of chords became another (same rule as the server, UpdateChordSheetChordsService): for each
             // old chord, what takes its place (none: removed), and the chords added after it (-1: before the first).
-            const chordChanges = (old, now) => {
+            // With the half beat where each chord starts (`oldAt`, `nowAt`), of the ways with the fewest changes the
+            // one keeping chords nearest their place is taken: a G added right before another G is the added one.
+            const chordChanges = (old, now, oldAt = null, nowAt = null) => {
                 const n = old.length, m = now.length;
-                const lcs = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
-                for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) lcs[i][j] = old[i] === now[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+                const CHANGE = 1e7;
+                const distance = (i, j) => (oldAt && nowAt ? Math.min(CHANGE - 1, Math.abs(oldAt[i] - nowAt[j])) : 0);
+                const cost = Array.from({ length: n + 1 }, (_, i) => Array.from({ length: m + 1 }, (_, j) => (i === n || j === m ? ((n - i) + (m - j)) * CHANGE : 0)));
+                for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) {
+                    const skip = Math.min(cost[i + 1][j], cost[i][j + 1]) + CHANGE;
+                    cost[i][j] = old[i] === now[j] ? Math.min(cost[i + 1][j + 1] + distance(i, j), skip) : skip;
+                }
                 const replace = {}, after = {};
                 let removed = [], added = [], previous = -1;
                 const flush = () => {
@@ -563,8 +634,8 @@
                 };
                 let i = 0, j = 0;
                 while (i < n || j < m) {
-                    if (i < n && j < m && old[i] === now[j]) { flush(); replace[i] = [old[i]]; previous = i; i++; j++; }
-                    else if (j >= m || (i < n && lcs[i + 1][j] >= lcs[i][j + 1])) removed.push(i++);
+                    if (i < n && j < m && old[i] === now[j] && cost[i][j] === cost[i + 1][j + 1] + distance(i, j)) { flush(); replace[i] = [old[i]]; previous = i; i++; j++; }
+                    else if (j >= m || (i < n && cost[i][j] === cost[i + 1][j] + CHANGE)) removed.push(i++);
                     else added.push(now[j++]);
                 }
                 flush();
@@ -593,6 +664,8 @@
                 ticks,
                 blocks,
                 perBar,
+                // The click also sounds on each "and" (the drummer's doubled tempo); the bars keep the BPM.
+                clickDouble,
                 key: config.key || null,
                 savedKey: config.key || null,
                 bpm: Number(config.bpm) || 80,
@@ -626,6 +699,8 @@
                 optionsOpen: false,
                 barMenu: null,
                 clock: 0,
+                playingSheetChord: -1,
+                playingLine: null,
                 currentTick: -1,
                 // Bars marked (click, then Shift + click): { anchor, from, to }; from / to null when none.
                 selection: { anchor: null, from: null, to: null },
@@ -642,19 +717,37 @@
                 metronome: false,
                 audioSpeed: 1,
                 // Lines view: what a click on a chord does ('break' or 'passing').
-                lineTool: 'break',
+                lineTool: 'play',
                 commonNames: ['INTRO', 'PRIMEIRA PARTE', 'SEGUNDA PARTE', 'PRÉ-REFRÃO', 'REFRÃO', 'PONTE', 'INTERLÚDIO', 'SOLO', 'RIFF', 'FINAL',
                     'VERSE', 'PRE CHORUS', 'CHORUS', 'BRIDGE', 'INTERLUDE', 'TAG', 'OUTRO'],
 
                 // An element of the page marked with x-ref, found from the page itself (not from the element a handler
                 // was called from, which may have been drawn again meanwhile).
                 ref(name) { return (rootElement || this.$el).querySelector(`[x-ref="${name}"]`); },
+                // A reload brings back the view and the scroll position it had.
+                placeKey: `bars-place:${location.pathname}`,
+                keepPlace() {
+                    try { sessionStorage.setItem(this.placeKey, JSON.stringify({ at: Date.now(), y: window.scrollY, mode: this.mode, pane: this.pane })); } catch (error) {}
+                },
+                restorePlace() {
+                    let place = null;
+                    try {
+                        place = JSON.parse(sessionStorage.getItem(this.placeKey) || 'null');
+                        sessionStorage.removeItem(this.placeKey);
+                    } catch (error) {}
+                    if (!place || Date.now() - place.at > 60000) return;
+                    if (['play', 'edit', 'lines'].includes(place.mode)) this.mode = place.mode;
+                    if (place.pane) this.pane = place.pane;
+                    this.$nextTick(() => requestAnimationFrame(() => window.scrollTo(0, place.y)));
+                },
                 init() {
+                    this.restorePlace();
                     rootElement = this.$el;
                     if (audio) {
                         // The MP3 drives the same "playing" as the YouTube player (see youtube-mini.js).
-                        audio.addEventListener('play', () => { this.playing = true; });
-                        audio.addEventListener('pause', () => { this.playing = false; });
+                        // With the music off the bars run on their own clock: the MP3's events do not count.
+                        audio.addEventListener('play', () => { if (!this.clickOnly) this.playing = true; });
+                        audio.addEventListener('pause', () => { if (!this.clickOnly) this.playing = false; });
                     } else {
                         this.$nextTick(() => this.initVideo('yt-bars'));
                     }
@@ -665,6 +758,12 @@
                     window.addEventListener('pointercancel', () => { this.onDragEnd(); this.onSheetDragEnd(); this.blockDrag = null; });
                     window.addEventListener('beforeunload', event => {
                         if (this.dirty && !this.saving) event.preventDefault();
+                    });
+                    // What is being played in the sheet and in the lines, worked out once per change (not once per
+                    // chord shown), so following the music stays light.
+                    Alpine.effect(() => {
+                        this.playingSheetChord = this.currentSheetChord;
+                        this.playingLine = this.mode === 'lines' ? this.linePlaying : null;
                     });
                     const follow = () => {
                         this.clock = this.now();
@@ -748,23 +847,43 @@
                     this.$nextTick(() => document.querySelector(`[data-bar="${bar}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
                 },
 
-                // ---- Time: each block starts at its "start" (marked in the system); within it, the BPM ----
+                // ---- Time: bar 1 starts at the song's start (the delay in the recording); from there, only the BPM ----
+                // (the blocks' own start times are not followed: with another BPM they would leave gaps between blocks).
                 get halfBeat() { return 30 / this.bpm; },
                 blockStart(block) {
-                    const own = toSeconds(block.data.start);
-                    if (own !== null) return own;
-                    const before = this.timedBlocks().filter(item => item.startTick < block.startTick && toSeconds(item.data.start) !== null).at(-1);
-                    return before ? toSeconds(before.data.start) + (block.startTick - before.startTick) * this.halfBeat : block.startTick * this.halfBeat;
+                    const first = this.timedBlocks()[0];
+                    const origin = first ? (toSeconds(first.data.start) ?? 0) - first.startTick * this.halfBeat : 0;
+                    return origin + block.startTick * this.halfBeat;
+                },
+                // Delay before bar 1 in the recording: moving it moves every block by the same time.
+                get songStart() {
+                    const first = this.timedBlocks()[0];
+                    return first ? Math.round(this.blockStart(first) * 10) / 10 : 0;
+                },
+                setSongStart(value) {
+                    const seconds = Math.max(0, Math.round(Number(value) * 10) / 10);
+                    const timed = this.timedBlocks();
+                    if (!timed.length || !Number.isFinite(seconds)) return;
+                    const shift = seconds - this.blockStart(timed[0]);
+                    if (Math.abs(shift) < 0.05) return;
+                    this.remember();
+                    const starts = timed.map(block => this.blockStart(block) + shift);
+                    timed.forEach((block, i) => { block.data = { ...block.data, start: formatStart(Math.max(0, starts[i])) }; });
+                    this.revision++;
+                },
+                markStartNow() {
+                    if (!this.canPlay || this.clickOnly) return;
+                    this.setSongStart(this.now());
                 },
                 timeOfTick(tick) {
                     const block = this.blockOfTick(tick);
-                    return block ? this.blockStart(block) + (tick - block.startTick) * this.halfBeat : tick * this.halfBeat;
+                    return block ? this.playStart(block) + (tick - block.startTick) * this.halfBeat : tick * this.halfBeat;
                 },
                 tickAt(time) {
                     const list = this.timedBlocks();
                     let tick = -1;
                     list.forEach((block, i) => {
-                        const start = this.blockStart(block);
+                        const start = this.playStart(block);
                         if (time < start) return;
                         const end = list[i + 1]?.startTick ?? this.ticks.length;
                         tick = Math.min(end - 1, block.startTick + Math.floor((time - start) / this.halfBeat));
@@ -790,8 +909,32 @@
                     this.scrollToBar(this.currentBar);
                 },
                 get canPlay() { return !!audio || !!this.videoId || this.clickOnly; },
-                // Without an MP3 or a video the song plays on its own clock, at the BPM, with the metronome.
-                get clickOnly() { return !audio && !this.videoId && this.bpm > 0; },
+                get hasMusic() { return !!audio || !!this.videoId; },
+                // Without an MP3 or a video (or with the music turned off) the song plays on its own clock, at the
+                // BPM, with the metronome.
+                get clickOnly() { return (this.musicOff || !this.hasMusic) && this.bpm > 0; },
+                // Remembered on this device for each song.
+                musicOff: (() => { try { return localStorage.getItem(`bars-music-off:${location.pathname}`) === '1'; } catch (error) { return false; } })(),
+                // Plays with the music, or only with the BPM click, from the same bar.
+                toggleMusic() {
+                    const tick = Math.max(0, this.currentTick);
+                    const wasPlaying = this.isPlaying();
+                    if (wasPlaying) {
+                        if (this.clickOnly) this.stopClock();
+                        else if (audio) audio.pause();
+                        else this.pauseVideo();
+                    }
+                    this.playing = false;
+                    this.musicOff = !this.musicOff;
+                    try { localStorage.setItem(`bars-music-off:${location.pathname}`, this.musicOff ? '1' : '0'); } catch (error) {}
+                    // Only the BPM: the video goes away (it comes back with the music).
+                    if (this.musicOff && this.videoId && !audio) this.closeVideo();
+                    this.clickUntil = null;
+                    if (wasPlaying) return this.playFromTick(tick);
+                    this.moveTo(tick);
+                },
+                // Start of a block in the playback: its marked time with the music; on the BPM alone, its beats.
+                playStart(block) { return this.clickOnly ? block.startTick * this.halfBeat : this.blockStart(block); },
                 clickStartedAt: 0,
                 clickOffset: 0,
                 startClock(time) {
@@ -965,11 +1108,10 @@
                     if (!move.draft) return;
                     this.chordMove = null;
                     this.remember();
-                    this.sheetMoves = { ...this.sheetMoves, [`${move.s}:${move.l}`]: move.text };
-                    if (!move.copyList.length) return;
-                    this.askCopies({ copies: move.copyList, name: move.name }, (i) => {
-                        this.sheetMoves = { ...this.sheetMoves, [`${i}:${move.l}`]: move.text };
-                    }, () => document.querySelector(`[data-sheet-line="${move.s}-${move.l}"]`));
+                    // The same line of every copy of the section (same name and lines) moves along, without asking.
+                    const moves = { ...this.sheetMoves };
+                    [move.s, ...move.copyList].forEach(i => { moves[`${i}:${move.l}`] = move.text; });
+                    this.sheetMoves = moves;
                 },
                 // The beat where chord `n` of the sheet starts, selected on the grid.
                 selectSheetChord(n) {
@@ -1080,15 +1222,98 @@
                     this.blockDrag = null;
                     if (!drag?.moved || drag.target === null || drag.target === drag.id) return;
                     const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
-                    const from = list.findIndex(block => block.id === drag.id);
-                    let to = list.findIndex(block => block.id === drag.target) + (drag.before ? 0 : 1);
-                    if (from < to) to--;
+                    const dragged = list.find(block => block.id === drag.id);
+                    const target = list.find(block => block.id === drag.target);
+                    // A grouped card moves its whole group; dropped after a grouped card, it goes after that group.
+                    const ids = dragged && this.isCollapsed(dragged) ? this.groupOf(dragged) : [drag.id];
+                    if (ids.includes(drag.target)) return;
+                    const targetIds = target && this.isCollapsed(target) ? this.groupOf(target) : [drag.target];
+                    const from = list.findIndex(block => block.id === ids[0]);
+                    let to = drag.before ? list.findIndex(block => block.id === targetIds[0]) : list.findIndex(block => block.id === targetIds[targetIds.length - 1]) + 1;
+                    if (from < to) to -= ids.length;
                     if (from < 0 || to === from) return;
                     this.reshapeBlocks(items => {
-                        const [moved] = items.splice(from, 1);
-                        items.splice(to, 0, moved);
+                        const moved = items.splice(from, ids.length);
+                        items.splice(to, 0, ...moved);
                         return items;
                     });
+                },
+                // ---- Renaming a block in the Lines view (every repetition of a grouped card) ----
+                lineRename: null,
+                renameLineBlock(block, typed) {
+                    if (this.lineRename !== block.id) return;
+                    this.lineRename = null;
+                    const name = String(typed ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
+                    if (!name || name === this.blockName(block)) return;
+                    this.forGroup(block, target => { target.data = { ...target.data, section: name }; });
+                    this.revision++;
+                },
+                // ---- Equal blocks played one after the other (Lines view): shown as one card "×N" ----
+                expandedGroups: {},
+                repeatCache: { key: null, value: null },
+                // For each block, the first of its run of equal blocks (same name, chords, durations), and each run's blocks.
+                get repeats() {
+                    const key = `${this.revision}:${this.blocks.map(block => `${block.id}@${block.startTick}`).join(',')}`;
+                    if (this.repeatCache.key === key) return this.repeatCache.value;
+                    const head = {};
+                    const members = {};
+                    let current = null;
+                    let currentSignature = null;
+                    this.blockItems().forEach(item => {
+                        const signature = this.isMarker(item.block) ? null : `${this.blockName(item.block)}|${item.ticks.join(' ')}|${item.splits.join(',')}`;
+                        if (signature !== null && signature === currentSignature) {
+                            members[current].push(item.block.id);
+                            head[item.block.id] = current;
+                        } else {
+                            current = item.block.id;
+                            currentSignature = signature;
+                            members[current] = [current];
+                            head[current] = current;
+                        }
+                    });
+                    this.repeatCache = { key, value: { head, members } };
+                    return this.repeatCache.value;
+                },
+                groupOf(block) { return this.repeats.members[this.repeats.head[block.id]] || [block.id]; },
+                isRepeatHead(block) { return (this.repeats.head[block.id] ?? block.id) === block.id; },
+                isCollapsed(block) { return this.isRepeatHead(block) && this.groupOf(block).length > 1 && !this.expandedGroups[block.id]; },
+                isHiddenRepeat(block) { const head = this.repeats.head[block.id]; return head !== undefined && head !== block.id && !this.expandedGroups[head]; },
+                toggleGroup(block) { this.expandedGroups = { ...this.expandedGroups, [block.id]: !this.expandedGroups[block.id] }; },
+                // A change on a grouped card goes to every block of the group (one step to undo).
+                forGroup(block, change) {
+                    this.remember();
+                    const ids = this.isCollapsed(block) ? this.groupOf(block) : [block.id];
+                    ids.forEach(id => { const target = this.blocks.find(item => item.id === id); if (target) change(target); });
+                },
+                // The block played `times` times one after the other: copies added after its run, or the last ones taken out.
+                setRepeats(block, times) {
+                    const ids = this.groupOf(block);
+                    const wanted = Math.max(1, Math.min(50, Math.round(Number(times) || 1)));
+                    if (wanted === ids.length) return;
+                    const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
+                    const last = list.findIndex(item => item.id === ids[ids.length - 1]);
+                    if (wanted > ids.length) {
+                        const newIds = Array.from({ length: wanted - ids.length }, () => nextId++);
+                        this.reshapeBlocks(items => {
+                            const copies = newIds.map(id => (items[last].block
+                                ? { ...items[last], block: { ...items[last].block, id, data: JSON.parse(JSON.stringify(items[last].block.data)) } }
+                                : JSON.parse(JSON.stringify(items[last]))));
+                            items.splice(last + 1, 0, ...copies);
+                            return items;
+                        });
+                    } else {
+                        const remove = ids.length - wanted;
+                        this.reshapeBlocks(items => { items.splice(last - remove + 1, remove); return items; });
+                    }
+                    this.notice = @js(__(':name is played :n times.')).replace(':name', this.blockName(block)).replace(':n', wanted);
+                },
+                removeGroup(block) {
+                    const ids = this.groupOf(block);
+                    if (this.timedBlocks().length <= ids.length) return;
+                    const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
+                    const first = list.findIndex(item => item.id === ids[0]);
+                    this.reshapeBlocks(items => { items.splice(first, ids.length); return items; });
+                    this.notice = @js(__('Block removed (Undo brings it back).'));
                 },
                 duplicateBlock(block) {
                     const at = this.blockIndex(block);
@@ -1210,7 +1435,7 @@
                     const swapped = chordsOf(edit.text) !== chordsOf((this.sheet[edit.index]?.lines || []).join('\n'));
                     try {
                         await this.putSheetSection(edit.index, edit.text.split('\n'), same);
-                        if (swapped) return window.location.reload();
+                        if (swapped) { this.keepPlace(); return window.location.reload(); }
                         this.sheetEdit = null;
                     } catch (error) {
                         edit.error = error.message;
@@ -1250,7 +1475,20 @@
                     const now = this.timedBlocks().flatMap(block => this.blockChords(block));
                     let value = { view: sheetView, changed: false };
                     if (this.sheetLinked && JSON.stringify(saved) !== JSON.stringify(now)) {
-                        const { replace, after } = chordChanges(saved, now);
+                        // Where each chord starts, as saved and now (unknown after chords were moved on the sheet).
+                        let savedAt = null;
+                        if (!this.sheetBase) {
+                            savedAt = [];
+                            let tick = 0;
+                            this.baseStructure.forEach(block => {
+                                if (!block || isMarkerData(block)) return;
+                                const chords = chordsOnly(Array.isArray(block.chords) ? block.chords.map(String) : []);
+                                chords.forEach((chord, i) => { savedAt.push(tick); tick += Math.round((block.durations?.[i] ?? this.perBar) * 2); });
+                            });
+                        }
+                        const nowAt = this.chordStarts();
+                        const { replace, after } = savedAt && savedAt.length === saved.length && nowAt.length === now.length
+                            ? chordChanges(saved, now, savedAt, nowAt) : chordChanges(saved, now);
                         const added = (chords, text) => chords.map((chord, k) => ({ chord, text: k === chords.length - 1 ? text : '', added: true }));
                         const view = sheetView.map(section => ({ ...section, lines: section.lines.map(line => {
                             if (!line.units) return line;
@@ -1279,6 +1517,8 @@
                         view.chordCount = n;
                         value = { view, changed: true };
                     }
+                    // Split like the blocks of the grid as they are now (a block created, renamed, joined…).
+                    if (this.sheetLinked) value = { view: this.sheetByBlocks(value.view), changed: value.changed };
                     // Chords moved by hand along the lyrics (kept while the line has the same chords).
                     if (Object.keys(this.sheetMoves).length) {
                         const chordsOf = (units) => units.filter(unit => unit.chord !== null).map(unit => unit.chord).join(' ');
@@ -1296,6 +1536,51 @@
                     }
                     this.previewCache = { key, value };
                     return value;
+                },
+                // The chord sheet (parsed) split into the blocks of the grid as they are now, the same rule as the server
+                // (SyncChordSheetWithStructureService): each line goes to the block of its first chord, a note with the
+                // chord after it, lyrics without chords with the chord before them; "back to the start" marks between.
+                // Unchanged when the sheet does not have the grid's number of chords.
+                sheetByBlocks(view) {
+                    const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
+                    const counts = list.map(block => (this.isMarker(block) ? 0 : this.blockChords(block).length));
+                    const inView = view.reduce((n, section) => n + section.lines.reduce((m, line) => m + (line.units ? line.units.filter(unit => unit.chord !== null).length : 0), 0), 0);
+                    if (!counts.some(Boolean) || counts.reduce((a, b) => a + b, 0) !== inView) return view;
+                    const ends = [];
+                    counts.reduce((total, count) => { ends.push(total + count); return total + count; }, 0);
+                    const blockOf = (n) => {
+                        const index = ends.findIndex((end, k) => counts[k] > 0 && n < end);
+                        return index < 0 ? ends.length - 1 : index;
+                    };
+                    const groups = [];
+                    let n = 0;
+                    let last = 0;
+                    view.forEach(section => {
+                        if (section.marker) return;
+                        section.lines.forEach(line => {
+                            let ref = n;
+                            if (line.units) {
+                                const count = line.units.filter(unit => unit.chord !== null).length;
+                                ref = count ? n : last;
+                                if (count) last = n + count - 1;
+                                n += count;
+                            }
+                            const block = blockOf(ref);
+                            const group = groups[groups.length - 1];
+                            if (group && group.block === block) group.lines.push(line);
+                            else groups.push({ block, lines: [line] });
+                        });
+                    });
+                    const result = [];
+                    list.forEach((block, index) => {
+                        const name = String(block.data.section ?? '').trim();
+                        const key = name.toUpperCase().replace(/\s+/g, '_');
+                        if (this.isMarker(block)) return result.push({ section: key, label: name.replaceAll('_', ' '), lines: [], marker: true });
+                        const group = groups.find(item => item.block === index);
+                        if (group) result.push({ section: key, label: name.replaceAll('_', ' '), lines: group.lines, marker: false });
+                    });
+                    result.chordCount = view.chordCount;
+                    return result;
                 },
                 // Shows the base or a version on the grid (changes not saved must be saved or undone first).
                 selectVersion(id) {
@@ -1509,7 +1794,7 @@
                 // ---- Editing ----
                 setMode(mode) { this.mode = mode; this.inline = null; this.editor = null; this.barMenu = null; },
                 remember() {
-                    this.history.push(JSON.stringify({ ticks: this.ticks, blocks: this.blocks, splits: this.splits, sheetMoves: this.sheetMoves, sheetBase: this.sheetBase }));
+                    this.history.push(JSON.stringify({ ticks: this.ticks, blocks: this.blocks, splits: this.splits, sheetMoves: this.sheetMoves, sheetBase: this.sheetBase, perBar: this.perBar }));
                     if (this.history.length > 80) this.history.shift();
                     this.markDirty();
                 },
@@ -1521,9 +1806,20 @@
                     this.splits = state.splits || [];
                     this.sheetMoves = state.sheetMoves || {};
                     this.sheetBase = state.sheetBase || null;
+                    if (state.perBar) this.perBar = state.perBar;
                     this.sheetBaseRevision++;
                     this.revision++;
                     this.markDirty();
+                },
+                // A new time signature only redraws the bar lines: the chords keep their beats (3/4 "C / / | D / /"
+                // becomes 4/4 "C / / D | / /").
+                setMeter(beats) {
+                    if (!beats || beats === this.perBar) return;
+                    this.remember();
+                    this.perBar = beats;
+                    this.barMenu = null;
+                    this.loop = null;
+                    this.revision++;
                 },
                 markDirty() {
                     this.dirty = true;
@@ -1986,7 +2282,7 @@
                         if (context.state === 'suspended') context.resume();
                     } catch (e) { return; }
                     const now = this.clock;
-                    const rate = audio ? (audio.playbackRate || 1) : (this.video?.speed || 1);
+                    const rate = this.clickOnly ? 1 : audio ? (audio.playbackRate || 1) : (this.video?.speed || 1);
                     // Started, or jumped (seek, repeat): scheduling starts again from here.
                     if (this.clickUntil === null || now < this.clickUntil - 0.25 || now > this.clickUntil + 0.25) this.clickUntil = now - 0.005;
                     let until = now + 0.15;
@@ -1994,7 +2290,8 @@
                     for (let tick = Math.max(0, this.tickAt(this.clickUntil)); tick < this.ticks.length; tick++) {
                         const time = this.timeOfTick(tick);
                         if (time > until) break;
-                        if (tick % 2 || time <= this.clickUntil) continue;
+                        // Each beat, and each "and" too when the click is doubled.
+                        if ((tick % 2 && !this.clickDouble) || time <= this.clickUntil) continue;
                         this.click(tick % (this.perBar * 2) === 0, context, context.currentTime + Math.max(0, (time - now) / rate));
                     }
                     this.clickUntil = Math.max(this.clickUntil, until);
@@ -2030,6 +2327,24 @@
                     });
                     return chords;
                 },
+                // The tick where each chord of blockChords(block) starts.
+                blockChordTicks(block) {
+                    const timed = this.timedBlocks();
+                    const next = timed[timed.indexOf(block) + 1];
+                    const ticks = [];
+                    let last = null;
+                    for (let tick = block.startTick; tick < (next ? next.startTick : this.ticks.length); tick++) {
+                        const chord = this.ticks[tick];
+                        if (chord && (chord !== last || this.splits.includes(tick))) { ticks.push(tick); last = chord; }
+                    }
+                    return ticks;
+                },
+                // Lines view, "Play" tool: the song from that chord, as a click on its beat in the bars.
+                playLineChord(block, position) {
+                    const tick = this.blockChordTicks(block)[position];
+                    if (tick === undefined) return;
+                    if (this.canPlay) this.playFromTick(tick); else this.currentTick = tick;
+                },
                 // Line breaks and passing chords of a block, valid while it has the chords they were set for.
                 lineState(block) {
                     const chords = this.blockChords(block);
@@ -2053,11 +2368,7 @@
                     if (this.currentTick < 0) return null;
                     const block = this.blockOfTick(this.currentTick);
                     if (!block) return null;
-                    let position = -1, last = null;
-                    for (let tick = block.startTick; tick <= this.currentTick; tick++) {
-                        const chord = this.ticks[tick];
-                        if (chord && chord !== last) { position++; last = chord; }
-                    }
+                    const position = this.blockChordTicks(block).filter(tick => tick <= this.currentTick).length - 1;
                     return position < 0 ? null : { id: block.id, position };
                 },
                 // Keeps the chord being played in view in the lines view.
@@ -2079,9 +2390,9 @@
                     if (!state.valid) block.data = { ...block.data, lineChords: state.chords, breaks: [], passing: [] };
                     return state;
                 },
-                clickLineChord(block, position) {
+                clickLineChord(block, position, remember = true) {
                     const item = this.lineBlocks.find(entry => entry.block === block);
-                    this.remember();
+                    if (remember) this.remember();
                     this.linesFor(block);
                     if (this.lineTool === 'passing') {
                         const passing = block.data.passing || [];
@@ -2095,8 +2406,8 @@
                     }
                     this.revision++;
                 },
-                automaticLines(block) {
-                    this.remember();
+                automaticLines(block, remember = true) {
+                    if (remember) this.remember();
                     this.linesFor(block);
                     block.data = { ...block.data, breaks: [] };
                     this.revision++;
@@ -2151,6 +2462,42 @@
                     this.blocks = this.blocks.filter(block => block !== gone);
                     this.revision++;
                 },
+                // ---- Bars added or removed: the chords stay the same (only how long they last changes), so the chord
+                // sheet keeps them ----
+                // A bar before or after bar `bar`: the chord sounding at its start (or at its end) lasts one bar longer.
+                // A new bar before a block's first bar belongs to that block; after a block's last bar, to that block.
+                insertBar(bar, after) {
+                    const size = this.perBar * 2;
+                    const at = Math.min((after ? bar + 1 : bar) * size, this.ticks.length);
+                    const chord = after ? this.ticks[at - 1] : this.ticks[at];
+                    if (chord === undefined) return;
+                    this.remember();
+                    this.ticks = [...this.ticks.slice(0, at), ...new Array(size).fill(chord), ...this.ticks.slice(at)];
+                    const moves = (tick) => (after ? tick >= at : tick > at);
+                    this.splits = this.splits.map(tick => (moves(tick) ? tick + size : tick));
+                    this.blocks = this.blocks.map(block => (moves(block.startTick) ? { ...block, startTick: block.startTick + size } : block));
+                    this.originalTicks = [];
+                    this.revision++;
+                    this.notice = @js(__('Bar :n added.')).replace(':n', (after ? bar + 2 : bar + 1));
+                },
+                // Bar `bar` taken out: the chords inside it go (the sheet loses them when saved); a block left without bars goes.
+                removeBar(bar) {
+                    const size = this.perBar * 2;
+                    const from = bar * size;
+                    const to = Math.min(from + size, this.ticks.length);
+                    if (this.ticks.length - (to - from) < 1) return;
+                    this.remember();
+                    this.ticks = [...this.ticks.slice(0, from), ...this.ticks.slice(to)];
+                    this.splits = this.splits.filter(tick => tick < from || tick >= to).map(tick => (tick >= to ? tick - (to - from) : tick));
+                    const moved = this.blocks.map(block => ({ ...block, startTick: block.startTick >= to ? block.startTick - (to - from) : Math.min(block.startTick, from) }));
+                    // Two blocks starting at the same place: the one that lost all its bars goes (a "back to the start" mark stays).
+                    this.blocks = moved.filter((block, i) => this.isMarker(block)
+                        || !moved.some((other, k) => k > i && !this.isMarker(other) && other.startTick === block.startTick)
+                        && block.startTick < this.ticks.length);
+                    this.originalTicks = [];
+                    this.revision++;
+                    this.notice = @js(__('Bar :n removed.')).replace(':n', bar + 1);
+                },
                 joinPrevious() {
                     const bar = this.barMenu.bar;
                     this.barMenu = null;
@@ -2181,6 +2528,15 @@
                     this.key = key;
                     this.markDirty();
                 },
+                // Tapping the beat: the average of the last taps (from the third one; a pause of 2 s starts over).
+                taps: [],
+                tapTempo() {
+                    const now = performance.now();
+                    this.taps = [...this.taps.filter(at => now - at < 2000), now].slice(-6);
+                    if (this.taps.length < 3) return;
+                    const gaps = this.taps.slice(1).map((at, i) => at - this.taps[i]);
+                    this.setBpm(60000 / (gaps.reduce((a, b) => a + b, 0) / gaps.length));
+                },
                 setBpm(value) {
                     const bpm = Math.round(Number(value) * 10) / 10;
                     if (!(bpm >= 30 && bpm <= 300) || bpm === this.bpm) return;
@@ -2209,7 +2565,7 @@
                         if (state.valid && state.passing.length) data.passing = state.passing;
                         else delete data.passing;
                         const out = state.valid ? this.withBreaks(chords, state.breaks) : chords;
-                        return { ...data, chords: out.map(chord => (chord === '|' ? chord : transpose(chord))), durations, beats_per_bar: this.perBar, start: formatStart(this.blockStart(block)) };
+                        return { ...data, chords: out.map(chord => (chord === '|' ? chord : transpose(chord))), durations, beats_per_bar: this.perBar, ...(this.clickDouble ? { click_double: true } : {}), start: formatStart(this.blockStart(block)) };
                     });
                 },
                 async save() {
@@ -2259,7 +2615,7 @@
                 // The chord sheet sent with the map when chords were moved on it: as shown (the grid's chord changes and
                 // the moves), in the key on screen like the map; null otherwise (the server follows the map's changes).
                 sheetToSave() {
-                    if ((!Object.keys(this.sheetMoves).length && !this.sheetBase) || !this.sheetLinked) return null;
+                    if (!this.sheetLinked || (!Object.keys(this.sheetMoves).length && !this.sheetBase && !this.previewSheet.changed)) return null;
                     const transpose = (chord) => (this.key && this.savedKey && this.key !== this.savedKey ? ChordTransposer.transposeChord(chord, this.savedKey, this.key) : chord);
                     return this.previewSheet.view.filter(section => !section.marker).map(section => ({
                         section: section.section ?? null,

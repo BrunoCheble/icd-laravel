@@ -103,8 +103,10 @@ class ParseChordSheetService
         for ($i = 0; $i < count($lines); $i++) {
             $line = rtrim($lines[$i]);
 
+            // A blank line ends a stanza that has no "[Section]" marker of its own (in a sheet without markers, or
+            // after a marked intro in a sheet that marks only that); inside a marked section it does not.
             if (trim($line) === '') {
-                if (! $hasMarkers && $current !== null && $sections[$current]['lines'] !== []) {
+                if ($current !== null && $sections[$current]['lines'] !== [] && (! $hasMarkers || $sections[$current]['label'] === null)) {
                     $current = $riff = $resume = null;
                 }
                 continue;
@@ -157,19 +159,24 @@ class ParseChordSheetService
     }
 
     /**
-     * Each block written to be played more than once ("[Refrão] (2x)", or a "(2x)" line at its end) becomes that
-     * many blocks, one after the other, so the sheet follows the song as played and each time can be picked alone.
+     * Each block written to be played more than once ("[Refrão] (2x)", or a "{c: 2x}" / "(2x)" line in it) becomes
+     * that many blocks, one after the other, so the sheet follows the song as played and each time can be picked
+     * alone. The counter lines are taken out ("{c: 1x}" too, which repeats nothing).
      */
     private function expandRepeats(array $sections): array
     {
         $expanded = [];
 
         foreach ($sections as $section) {
-            $last = end($section['lines']);
-            if (is_string($last) && preg_match('/^\{c:\s*(.+?)\s*\}$/u', $last, $note) && self::isCounter($note[1])) {
-                array_pop($section['lines']);
-                $section['repeat'] ??= self::repeatCount($note[1]);
+            $kept = [];
+            foreach ($section['lines'] as $line) {
+                if (is_string($line) && preg_match('/^\{c:\s*(.+?)\s*\}$/u', trim($line), $note) && self::isCounter($note[1])) {
+                    $section['repeat'] ??= self::repeatCount($note[1]);
+                    continue;
+                }
+                $kept[] = $line;
             }
+            $section['lines'] = $kept;
             if ($section['lines'] === []) {
                 continue;
             }
@@ -302,24 +309,47 @@ class ParseChordSheetService
     }
 
     /**
-     * Kinds of the blocks without a marker: the most repeated lyrics are the chorus, another repeated block first
-     * seen after the chorus is the bridge, the others are verses (only when the sheet has no chorus or bridge yet).
+     * Kinds of the blocks without a marker: the lyrics that come back most are the chorus, the bridge is found by
+     * where it comes and its chords (see below), the others are verses (only when the sheet has no chorus or bridge
+     * yet). A stanza written twice in a row counts as coming once (it is a "2x").
      */
     private function guessTypes(array &$groups): void
     {
         $open = collect($groups)->filter(fn (array $group) => $group['type'] === null);
         $types = collect($groups)->pluck('type')->filter();
 
-        $repeated = $open->filter(fn (array $group) => count($group['members']) > 1)
-            ->sortByDesc(fn (array $group) => count($group['members']));
+        // How many times a block comes back: the same stanza written twice in a row (a "2x") counts once.
+        $returns = fn (array $group) => count(array_filter($group['members'], fn (int $member, int $k) => $k === 0 || $group['members'][$k - 1] !== $member - 1, ARRAY_FILTER_USE_BOTH));
+        $repeated = $open->filter(fn (array $group) => $returns($group) > 1)
+            ->sortByDesc(fn (array $group) => $returns($group));
         $chorus = $types->contains('CHORUS') ? null : $repeated->keys()->first();
         if ($chorus !== null) {
             $groups[$chorus]['type'] = 'CHORUS';
         }
 
-        $firstChorus = collect($groups)->filter(fn (array $group) => $group['type'] === 'CHORUS')->min(fn (array $group) => $group['members'][0]);
+        // The bridge: a block other than the verses, first heard after the second chorus (or coming back after the
+        // first one), with chords other than the first verse's (a third verse of a hymn has the verse's chords).
+        $chorusStarts = collect($groups)->filter(fn (array $group) => $group['type'] === 'CHORUS')
+            ->flatMap(fn (array $group) => array_filter($group['members'], fn (int $member, int $k) => $k === 0 || $group['members'][$k - 1] !== $member - 1, ARRAY_FILTER_USE_BOTH))
+            ->sort()->values();
+        $firstChorus = $chorusStarts->first();
+        $secondChorus = $chorusStarts->get(1);
         if ($firstChorus !== null && ! $types->contains('BRIDGE')) {
-            $bridge = $repeated->keys()->first(fn (int $id) => $id !== $chorus && $groups[$id]['members'][0] > $firstChorus);
+            $verse = collect($groups)->first(fn (array $group) => $group['type'] === null && $group['lyrics'] !== '' && $group['members'][0] < $firstChorus);
+            $names = fn (array $group) => array_values(array_unique(array_filter(explode(' ', $group['chords']))));
+            $differs = function (array $group) use ($verse, $names) {
+                if (! $verse) {
+                    return true;
+                }
+                $a = $names($group);
+                $b = $names($verse);
+                $union = count(array_unique(array_merge($a, $b)));
+
+                return $union === 0 || count(array_intersect($a, $b)) / $union < 0.5;
+            };
+            $bridge = collect($groups)->keys()->first(fn (int $id) => $id !== $chorus && $groups[$id]['type'] === null && $groups[$id]['lyrics'] !== ''
+                && (($secondChorus !== null && $groups[$id]['members'][0] > $secondChorus) || ($returns($groups[$id]) > 1 && $groups[$id]['members'][0] > $firstChorus))
+                && $differs($groups[$id]));
             if ($bridge !== null) {
                 $groups[$bridge]['type'] = 'BRIDGE';
             }

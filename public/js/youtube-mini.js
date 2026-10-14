@@ -71,7 +71,8 @@ function withYoutubeMini(component, url, options = {}) {
             setInterval(() => this.readVideo(), 250);
         },
         readVideo() {
-            if (!player || !this.playerReady) return;
+            // A page playing on its own clock (only the BPM, the music off) keeps its own play state.
+            if (!player || !this.playerReady || this.clickOnly) return;
             this.videoTime = player.getCurrentTime() || 0;
             this.playing = player.getPlayerState() === 1;
         },

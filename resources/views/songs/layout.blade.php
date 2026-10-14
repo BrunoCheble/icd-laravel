@@ -126,10 +126,40 @@
                         onsubmit="return confirm(@js(__('Create bars for this map? Each chord gets one bar, to be adjusted on the grid. Unsaved changes here are lost.')))">
                         @csrf
                     </form>
+                    {{-- A song without bars yet: creating them (one bar per chord, in the time signature chosen) comes first --}}
+                    <div class="mt-4 p-4 rounded-lg border border-indigo-200 bg-indigo-50" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem 1rem;"
+                        x-cloak x-data="{ meter: @js(\App\Services\CreateSongBarsService::meterOf($song->structure)), bpm: @js($song->bpm), taps: [],
+                            // Tapping the beat: the average of the last taps (from the third one; a pause of 2 s starts over).
+                            tap() {
+                                const now = performance.now();
+                                this.taps = [...this.taps.filter(at => now - at < 2000), now].slice(-6);
+                                if (this.taps.length < 3) return;
+                                const gaps = this.taps.slice(1).map((at, i) => at - this.taps[i]);
+                                this.bpm = Math.round(600000 / (gaps.reduce((a, b) => a + b, 0) / gaps.length)) / 10;
+                            } }">
+                        <div style="flex: 1 1 20rem;">
+                            <p class="font-semibold text-indigo-900"><i class="fa-solid fa-table-cells"></i> {{ __('This song has no bars yet.') }}</p>
+                            <p class="text-sm text-indigo-800">{{ __('Create them to edit the map as a grid of bars: the chords of each block, one bar each, to be adjusted on the grid.') }}</p>
+                        </div>
+                        <label class="text-sm text-indigo-900" style="display: flex; flex-direction: column; gap: .25rem; white-space: nowrap;">{{ __('Time signature') }}
+                            <select name="meter" form="create-bars-form" x-model="meter" class="block border-gray-300 rounded-md text-sm">
+                                @foreach (array_keys(\App\Services\CreateSongBarsService::METERS) as $meter)
+                                    <option value="{{ $meter }}">{{ $meter }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <div class="text-sm text-indigo-900" style="display: flex; flex-direction: column; gap: .25rem; white-space: nowrap;">
+                            {{-- Tapping "BPM" in the rhythm of the song sets it --}}
+                            <button type="button" class="text-left font-semibold text-indigo-700" style="padding: 0;" @click="tap()" title="{{ __('Tap the beat to set the tempo') }}">BPM <i class="fa-solid fa-hand-pointer"></i></button>
+                            <input type="number" name="bpm" form="create-bars-form" step="0.1" min="30" max="300" x-model="bpm" aria-label="BPM" class="block border-gray-300 rounded-md text-sm" style="width: 7rem;">
+                        </div>
+                        <button type="submit" form="create-bars-form" class="rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700" style="display: inline-flex; align-items: center; gap: .5rem; padding: .55rem 1rem;"><i class="fa-solid fa-table-cells"></i> {{ __('Create bars') }}</button>
+                        <p class="text-sm" style="color: #4338ca; flex-basis: 100%;" x-show="meter === '6/8'" x-cloak>{{ __('In 6/8 the bars count the eighth notes: the BPM is of the eighths (a song felt at 60 is 180).') }}</p>
+                    </div>
 
                     <form method="POST" action="{{ route('songs.layout.update', $song) }}" class="mt-2 sm:mt-6 space-y-4"
-                        x-data="songLayout(@js(['structure' => $blocks, 'sheet' => $sheet, 'key' => $song->musical_key, 'keyPairs' => $keyOptions, 'structureUrl' => route('songs.chord-sheet.structure'), 'youtubeUrl' => $song->youtube_url]))"
-                        @submit="submitting = true">
+                        x-cloak x-data="songLayout(@js(['structure' => $blocks, 'sheet' => $sheet, 'key' => $song->musical_key, 'keyPairs' => $keyOptions, 'structureUrl' => route('songs.chord-sheet.structure'), 'youtubeUrl' => $song->youtube_url]))"
+                        @submit="submitting = true; keepPlace()">
                         @csrf
                         @method('PUT')
                         <input type="hidden" name="structure" :value="output">
@@ -214,11 +244,6 @@
                             <div class="ws-panel-section">
                                 <div class="ws-panel-label"><i class="fa-solid fa-tag"></i> {{ __('Block names') }}</div>
                                 <button type="button" class="ws-btn" @click="suggestAll(); optionsOpen = false" :disabled="!hasSuggestions"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('Suggest names') }}</button>
-                            </div>
-                            <div class="ws-panel-section">
-                                <div class="ws-panel-label"><i class="fa-solid fa-table-cells"></i> {{ __('Bars') }}</div>
-                                <button type="submit" form="create-bars-form" class="ws-btn"><i class="fa-solid fa-table-cells"></i> {{ __('Create bars') }}</button>
-                                <p class="ws-panel-help mt-2">{{ __('Edit this map as a grid of bars (the chord of each beat). Each chord starts with one bar; maps saved by the study app already come with bars.') }}</p>
                             </div>
                             @include('songs.partials.video-options')
                             <div class="ws-panel-section">
@@ -743,7 +768,28 @@
                 // Narrow screens: the chord sheet or the map.
                 pane: 'sheet',
 
+                // Saving reloads the page: the view and the scroll position come back as they were.
+                placeKey: `layout-place:${location.pathname}`,
+                keepPlace() {
+                    try {
+                        sessionStorage.setItem(this.placeKey, JSON.stringify({ at: Date.now(), y: window.scrollY, view: this.view, mode: this.mode, pane: this.pane }));
+                    } catch (error) {}
+                },
+                restorePlace() {
+                    let place = null;
+                    try {
+                        place = JSON.parse(sessionStorage.getItem(this.placeKey) || 'null');
+                        sessionStorage.removeItem(this.placeKey);
+                    } catch (error) {}
+                    if (!place || Date.now() - place.at > 60000) return;
+                    if (place.view === 'sheet' ? this.hasSheet : place.view) this.view = place.view;
+                    if (MODES.includes(place.mode)) this.mode = place.mode;
+                    if (place.pane) this.pane = place.pane;
+                    this.$nextTick(() => requestAnimationFrame(() => window.scrollTo(0, place.y)));
+                },
+
                 init() {
+                    this.restorePlace();
                     window.addEventListener('beforeunload', event => {
                         if (this.history.length && !this.submitting) event.preventDefault();
                     });

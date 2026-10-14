@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\MusicalKey;
 use App\Http\Requests\SongLayoutRequest;
+use App\Http\Requests\SongBarsRequest;
 use App\Http\Requests\SongSheetSectionRequest;
 use App\Http\Requests\StudySongMapRequest;
 use App\Services\CreateSongBarsService;
@@ -24,8 +25,13 @@ class SongLayoutController extends Controller
      * Line breaks and blocks of the chord map (structure), edited by clicking on the chords, over the chord
      * sheet when the song has one.
      */
-    public function edit(Song $song, SyncChordSheetWithStructureService $syncSheet): View
+    public function edit(Song $song, SyncChordSheetWithStructureService $syncSheet, CreateSongBarsService $bars): View
     {
+        // Every map is edited as bars: a song that has none yet gets them now (one bar per chord, 4/4 by default).
+        if (! $song->hasBars()) {
+            $song = $bars->execute($song);
+        }
+
         $blocks = json_decode(json_encode(is_array($song->structure) ? $song->structure : []), true) ?? [];
 
         $sheet = $song->chord_sheet['sections'] ?? [];
@@ -92,9 +98,12 @@ class SongLayoutController extends Controller
     /**
      * Gives the map one bar per chord, to be edited as a grid of bars.
      */
-    public function createBars(Song $song, CreateSongBarsService $service): RedirectResponse
+    public function createBars(SongBarsRequest $request, Song $song, CreateSongBarsService $service): RedirectResponse
     {
-        $service->execute($song);
+        if ($request->filled('bpm')) {
+            $song->update(['bpm' => round((float) $request->validated('bpm'), 1)]);
+        }
+        $service->execute($song, CreateSongBarsService::METERS[$request->validated('meter') ?? '4/4']);
 
         return Redirect::route('songs.layout.edit', $song)
             ->with('success', __('Bars created: one bar per chord. Adjust them on the grid.'));
