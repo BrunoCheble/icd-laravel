@@ -21,7 +21,7 @@
 
     <div class="py-12">
         <div class="max-w-full mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg" x-data="{ actions: null, confirmDelete: false, filtersOpen: false }" @keydown.escape.window="actions = null; filtersOpen = false">
+            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg" x-data="songsIndex(@js(['all' => $allIds, 'page' => $songs->pluck('id')->all()]))" @keydown.escape.window="actions = null; filtersOpen = false">
                 @include('layouts.alert')
 
                     @php
@@ -36,10 +36,10 @@
                         $sortArrow = fn (string $column) => new \Illuminate\Support\HtmlString(' <i class="fa-solid ' . ($sort === $column ? ($direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort" style="opacity: .35;') . '"></i>');
                     @endphp
                     @php
-                        $statusFilters = ['reviewed' => __('Reviewed'), 'times' => __('Times'), 'youtube' => 'YouTube'];
+                        $statusFilters = ['reviewed' => __('Reviewed'), 'times' => __('Times'), 'youtube' => 'YouTube', 'mp3' => 'MP3'];
                         $sortOptions = [
                             'title' => __('Title'), 'artist' => __('Artist'), 'key' => __('Key'), 'reviewed' => __('Reviewed'),
-                            'times' => __('Times'), 'youtube' => 'YouTube', 'lessons' => __('Video Lessons'), 'updated' => __('Updated At'),
+                            'times' => __('Times'), 'youtube' => 'YouTube', 'mp3' => 'MP3', 'lessons' => __('Video Lessons'), 'updated' => __('Updated At'),
                         ];
                         // Active filters shown next to the button, e.g. "Reviewed: Yes".
                         $activeFilters = collect($statusFilters)
@@ -163,18 +163,41 @@
                         </div>
                     </div>
 
+                    {{-- Several songs selected (on any page): deleted together --}}
+                    <div class="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm" style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem;" x-show="selected.length" x-cloak>
+                        <strong x-text="@js(__(':count selected')).replace(':count', selected.length)"></strong>
+                        <button type="button" class="font-semibold text-indigo-700 hover:underline" x-show="selected.length < all.length" @click="selectAll()" x-text="@js(__('Select all :count songs')).replace(':count', all.length)"></button>
+                        <button type="button" class="font-semibold text-gray-600 hover:underline" @click="clear()">{{ __('Clear selection') }}</button>
+                        <span style="flex: 1;"></span>
+                        <template x-if="!bulkConfirm">
+                            <button type="button" class="rounded-md bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700" @click="bulkConfirm = true"><i class="fa-solid fa-trash"></i> {{ __('Delete selected') }}</button>
+                        </template>
+                        <template x-if="bulkConfirm">
+                            <form method="POST" action="{{ route('songs.bulk-destroy') }}" style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;" @submit="forget()">
+                                @csrf
+                                @method('DELETE')
+                                <template x-for="id in selected" :key="id"><input type="hidden" name="ids[]" :value="id"></template>
+                                <span class="text-red-800" x-text="@js(__('Delete :count songs? Their versions, suggestions, history and places in setlists go too. This cannot be undone.')).replace(':count', selected.length)"></span>
+                                <button type="submit" class="rounded-md bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700">{{ __('Yes, delete') }}</button>
+                                <button type="button" class="font-semibold text-gray-600 hover:underline" @click="bulkConfirm = false">{{ __('Cancel') }}</button>
+                            </form>
+                        </template>
+                    </div>
+
                     <div class="flow-root">
                         <div class="mt-4 overflow-x-auto">
                             <div class="inline-block min-w-full py-2 align-middle">
                                 <table class="w-full divide-y divide-gray-300">
                                     <thead>
                                         <tr>
+                                            <th scope="col" class="py-3 pl-4 pr-1 text-left"><input type="checkbox" class="rounded border-gray-300" :checked="pageSelected()" @change="togglePage($event.target.checked)" aria-label="{{ __('Select the songs of this page') }}"></th>
                                             <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('title') }}" class="hover:text-gray-900" @if ($sort === 'title') style="color: #111827;" @endif>{{ __('Title') }}{{ $sortArrow('title') }}</a></th>
                                             <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('artist') }}" class="hover:text-gray-900" @if ($sort === 'artist') style="color: #111827;" @endif>{{ __('Artist') }}{{ $sortArrow('artist') }}</a></th>
                                             <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('key') }}" class="hover:text-gray-900" @if ($sort === 'key') style="color: #111827;" @endif>{{ __('Key') }}{{ $sortArrow('key') }}</a></th>
                                             <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('reviewed') }}" class="hover:text-gray-900" @if ($sort === 'reviewed') style="color: #111827;" @endif>{{ __('Reviewed') }}{{ $sortArrow('reviewed') }}</a></th>
                                             <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('times') }}" class="hover:text-gray-900" @if ($sort === 'times') style="color: #111827;" @endif>{{ __('Times') }}{{ $sortArrow('times') }}</a></th>
                                             <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('youtube') }}" class="hover:text-gray-900" @if ($sort === 'youtube') style="color: #111827;" @endif>YouTube{{ $sortArrow('youtube') }}</a></th>
+                                            <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('mp3') }}" class="hover:text-gray-900" @if ($sort === 'mp3') style="color: #111827;" @endif>MP3{{ $sortArrow('mp3') }}</a></th>
                                             <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('lessons') }}" class="hover:text-gray-900" @if ($sort === 'lessons') style="color: #111827;" @endif>{{ __('Video Lessons') }}{{ $sortArrow('lessons') }}</a></th>
                                             <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('updated') }}" class="hover:text-gray-900" @if ($sort === 'updated') style="color: #111827;" @endif>{{ __('Updated At') }}{{ $sortArrow('updated') }}</a></th>
                                             <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"></th>
@@ -182,13 +205,14 @@
                                     </thead>
                                     <tbody class="divide-y divide-gray-200 bg-white">
                                         @foreach ($songs as $song)
-                                            <tr class="even:bg-gray-50">
+                                            <tr class="even:bg-gray-50" :style="selected.includes({{ $song->id }}) ? 'background: #fef2f2;' : ''">
+                                                <td class="py-4 pl-4 pr-1"><input type="checkbox" class="rounded border-gray-300" :checked="selected.includes({{ $song->id }})" @change="toggle({{ $song->id }})" aria-label="{{ __('Select') }} {{ $song->title }}"></td>
                                                 <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-semibold text-gray-900">{{ $song->title }}</td>
                                                 <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $song->artist }}</td>
                                                 <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $song->musical_key }}</td>
                                                 <td class="whitespace-nowrap px-3 py-4 text-sm">
                                                     @if ($song->isReviewed())
-                                                        <span class="font-semibold" style="color: #15803d;" title="{{ __('Every block has a start time') }}"><i class="fa-solid fa-check"></i> {{ __('Yes') }}</span>
+                                                        <span class="font-semibold" style="color: #15803d;" title="{{ __('Saved as reviewed on :date', ['date' => $song->reviewed_at->format('d/m/Y')]) }}"><i class="fa-solid fa-check"></i> {{ __('Yes') }}</span>
                                                     @else
                                                         <span style="color: #9ca3af;">—</span>
                                                     @endif
@@ -204,6 +228,13 @@
                                                 <td class="whitespace-nowrap px-3 py-4 text-sm">
                                                     @if ($song->youtube_url)
                                                         <a href="{{ $song->youtube_url }}" target="_blank" rel="noopener" class="font-semibold" style="color: #15803d;"><i class="fa-brands fa-youtube"></i> {{ __('Open') }}</a>
+                                                    @else
+                                                        <span style="color: #9ca3af;">—</span>
+                                                    @endif
+                                                </td>
+                                                <td class="whitespace-nowrap px-3 py-4 text-sm">
+                                                    @if ($song->audio_path)
+                                                        <span class="font-semibold" style="color: #15803d;" title="{{ $song->audio_path }}"><i class="fa-solid fa-music"></i> {{ __('Yes') }}</span>
                                                     @else
                                                         <span style="color: #9ca3af;">—</span>
                                                     @endif
@@ -236,4 +267,37 @@
             </div>
         </div>
     </div>
+    <script>
+        // Songs list: the actions menu, and songs selected for deleting together (kept while moving between pages).
+        function songsIndex({ all, page }) {
+            const KEY = 'songs-selected';
+            let saved = [];
+            try { saved = JSON.parse(sessionStorage.getItem(KEY) || '[]'); } catch (error) {}
+            return {
+                actions: null,
+                confirmDelete: false,
+                filtersOpen: false,
+                bulkConfirm: false,
+                all,
+                page,
+                selected: saved.filter(id => all.includes(id)),
+                remember() {
+                    this.bulkConfirm = false;
+                    try { sessionStorage.setItem(KEY, JSON.stringify(this.selected)); } catch (error) {}
+                },
+                toggle(id) {
+                    this.selected = this.selected.includes(id) ? this.selected.filter(item => item !== id) : [...this.selected, id];
+                    this.remember();
+                },
+                pageSelected() { return this.page.length > 0 && this.page.every(id => this.selected.includes(id)); },
+                togglePage(on) {
+                    this.selected = on ? [...new Set([...this.selected, ...this.page])] : this.selected.filter(id => !this.page.includes(id));
+                    this.remember();
+                },
+                selectAll() { this.selected = [...this.all]; this.remember(); },
+                clear() { this.selected = []; this.remember(); },
+                forget() { try { sessionStorage.removeItem(KEY); } catch (error) {} },
+            };
+        }
+    </script>
 </x-app-layout>

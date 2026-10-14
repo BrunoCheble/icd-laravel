@@ -86,6 +86,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/songs/bookmarklet', [SongChordSheetController::class, 'bookmarklet'])->name('songs.bookmarklet');
     Route::post('/songs/chord-sheet/structure', [SongChordSheetController::class, 'structure'])->name('songs.chord-sheet.structure');
     Route::post('/songs/chord-sheet/parse', [SongChordSheetController::class, 'parse'])->name('songs.chord-sheet.parse');
+    Route::post('/songs/{song}/chord-sheet/import', [SongChordSheetController::class, 'import'])->whereNumber('song')->name('songs.chord-sheet.import');
+    Route::delete('/songs', [SongController::class, 'bulkDestroy'])->name('songs.bulk-destroy');
     Route::resource('songs', SongController::class);
     Route::get('/songs/{song}/layout', [SongLayoutController::class, 'edit'])->name('songs.layout.edit');
     Route::put('/songs/{song}/layout', [SongLayoutController::class, 'update'])->name('songs.layout.update');
@@ -103,6 +105,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/songs/{song}/history/{revision}/restore', [SongHistoryController::class, 'restore'])->name('songs.history.restore');
 
     Route::get('/setlists/songs/search', [SetlistController::class, 'searchSongs'])->name('setlists.songs.search');
+    Route::get('/setlists/import', [\App\Http\Controllers\SetlistImportController::class, 'create'])->name('setlists.import');
+    Route::post('/setlists/import', [\App\Http\Controllers\SetlistImportController::class, 'store'])->name('setlists.import.store');
     Route::resource('setlists', SetlistController::class);
     Route::get('/setlists/{setlist}/practice/{song?}', [SongPracticeController::class, 'setlist'])->name('setlists.practice');
 });

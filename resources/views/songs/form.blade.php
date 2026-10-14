@@ -385,6 +385,24 @@
             const plainTitle = (title) => String(title || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
             const existing = (data.source && sources[plainUrl(data.source)]) || titles[plainTitle(data.title)];
             if (!existing) return;
+            // A song already here without a chord sheet (pre-registered): filled right away, then its layout opens.
+            if (existing.pending && existing.import && data.sheet) {
+                notice.textContent = @js(__('Saving the chord sheet, the chord map and the bars of ":title"…')).replace(':title', existing.title);
+                notice.style.borderColor = '#4f46e5';
+                fetch(existing.import, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                    body: JSON.stringify({ sheet: data.sheet, key: data.key || null, youtube: data.youtube || null }),
+                }).then(async response => {
+                    const json = await response.json().catch(() => ({}));
+                    if (!response.ok) throw new Error(json.errors ? Object.values(json.errors).flat()[0] : (json.message || @js(__('Something went wrong'))));
+                    location.href = json.redirect;
+                }).catch(error => {
+                    notice.textContent = error.message;
+                    notice.style.borderColor = '#dc2626';
+                });
+                return;
+            }
             const box = document.createElement('div');
             box.style.cssText = 'margin-top: .6rem; padding: .6rem .7rem; border-radius: .4rem; background: #eef2ff; color: #3730a3;';
             box.append(@js(__('This song is already here:')) + ' "' + existing.title + '". ');

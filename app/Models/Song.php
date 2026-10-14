@@ -132,14 +132,11 @@ class Song extends Model
     }
 
     /**
-     * Reviewed: every block of the chord map has a start time (section times are only marked once the song was
-     * checked against the video).
+     * Reviewed: saved as reviewed on the grid of bars once its review was finished (reviewed_at).
      */
     public function isReviewed(): bool
     {
-        [$timed, $total] = $this->timedSections();
-
-        return $total > 0 && $timed === $total;
+        return $this->reviewed_at !== null;
     }
 
     /**

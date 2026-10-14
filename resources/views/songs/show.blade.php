@@ -70,11 +70,11 @@
                 {{-- Status: what is done and what is missing --}}
                 <h3 class="overview-title">{{ __('Status') }}</h3>
                 <div class="status-grid">
-                    {{-- Reviewed once every block has a start time --}}
-                    <a href="{{ route('songs.layout.edit', ['song' => $song, 'mode' => 'time']) }}" @class(['status-card', 'is-done' => $status['reviewed']])>
+                    {{-- Reviewed once saved as reviewed on the grid of bars --}}
+                    <a href="{{ route('songs.layout.edit', $song) }}" @class(['status-card', 'is-done' => $status['reviewed']])>
                         <span class="status-label">{{ __('Reviewed') }}</span>
                         <span class="status-value">{{ $status['reviewed'] ? __('Yes') : __('No') }}</span>
-                        <span class="status-action">{{ $status['reviewed'] ? __('Every block has a start time') : __('Mark the times of every block') }}</span>
+                        <span class="status-action">{{ $status['reviewed'] ? __('Saved as reviewed on :date', ['date' => $status['reviewedAt']]) : __('When the bars are right, use "Save as reviewed" on the layout page') }}</span>
                     </a>
                     <a href="{{ route('songs.layout.edit', ['song' => $song, 'mode' => 'time']) }}" class="status-card {{ $timesState }}">
                         <span class="status-label">{{ __('Times') }}</span>

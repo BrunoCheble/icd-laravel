@@ -22,6 +22,7 @@ class GetSongOverviewService
         return [
             'status' => [
                 'reviewed'      => $song->isReviewed(),
+                'reviewedAt'    => $song->reviewed_at?->format('d/m/Y'),
                 'timed'         => $timed,
                 'blocks'        => $total,
                 'youtube'       => (bool) $song->youtube_url,

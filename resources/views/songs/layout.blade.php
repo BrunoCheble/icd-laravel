@@ -111,7 +111,7 @@
                     <h1 class="text-base font-semibold leading-6 text-gray-900">
                         {{ $song->title }}
                         @if ($song->isReviewed())
-                            <span class="ml-2 text-sm font-semibold" style="color: #15803d;" title="{{ __('Every block has a start time') }}"><i class="fa-solid fa-check"></i> {{ __('Reviewed') }}</span>
+                            <span class="ml-2 text-sm font-semibold" style="color: #15803d;" title="{{ __('Saved as reviewed on :date', ['date' => $song->reviewed_at?->format('d/m/Y')]) }}"><i class="fa-solid fa-check"></i> {{ __('Reviewed') }}</span>
                         @endif
                     </h1>
                     <p class="mt-2 text-sm text-gray-700">{{ __('Choose where the chord map breaks lines and blocks, and fix its chords. The lines are shown as in the public page.') }}</p>
@@ -119,7 +119,17 @@
 
 
                 @if ($blocks === [] && $sheet === [])
-                    <p class="mt-6 text-sm text-gray-500">{{ __('No structure available for this song.') }}</p>
+                    {{-- Pre-registered song (e.g. from a schedule): its chord sheet comes with "Send to ICD" --}}
+                    <div class="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
+                        <p class="font-semibold">{{ __('This song has no chord sheet yet.') }}</p>
+                        @if ($song->source_url)
+                            <p class="mt-1">{{ __('Open its chord sheet and click "Send to ICD" there: the chord sheet, the chord map and the bars are saved here, and this page opens again.') }}</p>
+                            <a href="{{ $song->source_url }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 font-semibold text-white hover:bg-indigo-500"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ __('Open the chord sheet') }}</a>
+                        @else
+                            <p class="mt-1">{{ __('Open its chord sheet (e.g. on Cifra Club) and click "Send to ICD" there: it is saved in this song.') }}</p>
+                        @endif
+                        <a href="{{ route('songs.bookmarklet') }}" class="mt-3 ml-3 inline-block underline">{{ __('Get the "Send to ICD" button') }}</a>
+                    </div>
                 @else
                     {{-- Bars: gives every chord a duration (one bar each) so the map is edited as a grid of bars --}}
                     <form id="create-bars-form" method="POST" action="{{ route('songs.bars.create', $song) }}" hidden

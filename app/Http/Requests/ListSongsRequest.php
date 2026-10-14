@@ -19,6 +19,7 @@ class ListSongsRequest extends FormRequest
             'reviewed'  => ['nullable', 'in:yes,no'],
             'times'     => ['nullable', 'in:yes,no'],
             'youtube'   => ['nullable', 'in:yes,no'],
+            'mp3'       => ['nullable', 'in:yes,no'],
             'search'    => ['nullable', 'string', 'max:100'],
             'sort'      => ['nullable', Rule::in(array_keys(ListSongsService::SORTS))],
             'direction' => ['nullable', 'in:asc,desc'],

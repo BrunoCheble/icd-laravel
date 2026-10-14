@@ -8,6 +8,7 @@ use App\Http\Requests\SongBarsRequest;
 use App\Http\Requests\SongSheetSectionRequest;
 use App\Http\Requests\StudySongMapRequest;
 use App\Services\CreateSongBarsService;
+use App\Services\MarkSongReviewedService;
 use App\Services\SaveStudySongMapService;
 use App\Services\SyncChordSheetWithStructureService;
 use App\Services\UpdateChordSheetSectionService;
@@ -55,7 +56,7 @@ class SongLayoutController extends Controller
      * Saves the grid of bars (JSON from the layout page): same rules as the study app, the chord sheet following
      * the chord changes.
      */
-    public function updateBars(StudySongMapRequest $request, Song $song, SaveStudySongMapService $service, SyncChordSheetWithStructureService $syncSheet): JsonResponse
+    public function updateBars(StudySongMapRequest $request, Song $song, SaveStudySongMapService $service, SyncChordSheetWithStructureService $syncSheet, MarkSongReviewedService $review): JsonResponse
     {
         $bpm = $request->validated('bpm');
         $sheetUpdated = $service->execute(
@@ -68,10 +69,15 @@ class SongLayoutController extends Controller
             $request->validated('chord_sheet'),
         );
         $song->refresh();
+        // "Save as reviewed" (or its review undone).
+        if ($request->validated('reviewed') !== null) {
+            $review->execute($song, $request->boolean('reviewed'));
+        }
         $sheet = $song->chord_sheet['sections'] ?? [];
 
         return response()->json([
             'updated_at'    => $song->updated_at?->toIso8601String(),
+            'reviewed_at'   => $song->reviewed_at?->toIso8601String(),
             'sheet_updated' => $sheetUpdated,
             'sheet'         => $sheet ? $syncSheet->execute($sheet, $song->structure) : [],
         ]);

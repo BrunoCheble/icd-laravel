@@ -15,7 +15,8 @@
                             <h1 class="text-base font-semibold leading-6 text-gray-900">{{ __('Setlists') }}</h1>
                             <p class="mt-2 text-sm text-gray-700">{{ __('A list of all the setlists.') }}</p>
                         </div>
-                        <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
+                        <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none" style="display: flex; gap: .5rem;">
+                            <a href="{{ route('setlists.import') }}" class="block rounded-md border border-indigo-600 px-3 py-2 text-center text-sm font-semibold text-indigo-700 hover:bg-indigo-50"><i class="fa-solid fa-paste"></i> {{ __('Import schedule') }}</a>
                             <a type="button" href="{{ route('setlists.create') }}"
                                 class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{{ __('Add new') }}</a>
                         </div>

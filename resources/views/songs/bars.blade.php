@@ -27,6 +27,13 @@
         .bar.is-current { border-color: #f59e0b; box-shadow: 0 0 0 2px #f59e0b inset; background: #fffbeb; }
         .bar.has-block { border-top: 3px solid var(--type-color, #4f46e5); }
         .bar .number { position: absolute; top: .15rem; right: .35rem; font-size: .62rem; color: #9ca3af; }
+        .review-done { color: #15803d; border-color: #86efac; background: #f0fdf4; }
+        .review-save { color: #15803d; border-color: #86efac; }
+        .bar-tools { position: absolute; top: .05rem; right: 1.35rem; display: flex; gap: .1rem; }
+        .bar-tools button { border: 0; background: none; padding: .1rem .2rem; font-size: .68rem; color: #c7cbd3; cursor: pointer; line-height: 1; }
+        .bar-tools button:hover { color: #4f46e5; }
+        .bar-tools button:last-child:hover { color: #dc2626; }
+        .bar-tools button:disabled { opacity: .3; cursor: default; }
         .bar-blocks { display: flex; flex-wrap: wrap; gap: .25rem; min-height: 1.1rem; margin-right: 1.3rem; }
         .block-chip { display: inline-flex; align-items: center; gap: .2rem; max-width: 100%; padding: 0 .3rem; border-radius: .3rem; font-size: .68rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--type-color, #4f46e5); background: #f9fafb; border: 0; cursor: pointer; }
         .block-chip .play { color: #6b7280; }
@@ -163,6 +170,7 @@
                     'versionStoreUrl' => route('songs.versions.store', $song),
                     'instruments' => $instruments,
                     'title' => $song->title,
+                    'reviewedAt' => $song->reviewed_at?->toIso8601String(),
                 ]))" @keydown.window="onKey($event)">
 
                     {{-- Toolbar: player, play / edit, undo, tempo, key, save, options --}}
@@ -213,6 +221,13 @@
                         <button type="button" class="ws-btn" x-show="!versionId" :class="{ 'is-active': keyOpen }" @click="keyOpen = !keyOpen" title="{{ __('Key') }}">
                             <i class="fa-solid fa-music"></i> <strong x-text="keyLabel(key)"></strong>
                         </button>
+                        {{-- Review: once the bars are right, saved as reviewed (a decision of whoever reviews); undone from the badge --}}
+                        <button type="button" class="ws-btn review-done" x-show="!versionId && reviewedAt" @click="unmarkReviewed()" :disabled="saving"
+                            :title="@js(__('Saved as reviewed on :date. Click to undo the review.')).replace(':date', formatDay(reviewedAt))">
+                            <i class="fa-solid fa-circle-check"></i> <span x-text="`${@js(__('Reviewed'))} ${formatDay(reviewedAt)}`"></span>
+                        </button>
+                        <button type="button" class="ws-btn review-save" x-show="!versionId && !reviewedAt" @click="save({ reviewed: true })" :disabled="saving"
+                            title="{{ __('Save and mark the song as reviewed (its bars are right)') }}"><i class="fa-solid fa-check-double"></i> <span class="ws-label">{{ __('Save as reviewed') }}</span></button>
                         <button type="button" class="ws-btn ws-btn-primary" @click="save()" :disabled="saving" title="{{ __('Save') }}">
                             <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i><span class="ws-label">{{ __('Save') }}</span>
                         </button>
@@ -227,6 +242,7 @@
                     <div class="passage-bar" x-show="hasSelection || clipboard || notice" x-cloak>
                         <span x-show="hasSelection" x-text="`${@js(__('Marked'))}: ${barsLabel(selection.from, selection.to)}`"></span>
                         <button type="button" class="ws-btn" x-show="hasSelection" @click="copyBars()"><i class="fa-solid fa-copy"></i> {{ __('Copy') }}</button>
+                        <button type="button" class="ws-btn" x-show="hasSelection && !versionId" @click="removeBar()" :disabled="selection.to - selection.from + 1 >= bars.length"><i class="fa-solid fa-trash"></i> {{ __('Remove') }}</button>
                         <button type="button" class="ws-btn" x-show="hasSelection" @click="restoreBars()" title="{{ __('Back as they were when the page was opened (or last saved)') }}"><i class="fa-solid fa-clock-rotate-left"></i> {{ __('Restore') }}</button>
                         <button type="button" class="ws-btn" x-show="clipboard" @click="paste(cursorBar(), false)" :title="@js(__('Only the chord names: the changes here stay where they are'))"><i class="fa-solid fa-paste"></i> {{ __('Paste here') }}</button>
                         <button type="button" class="ws-btn" x-show="clipboard" @click="paste(cursorBar(), true)" :title="@js(__('Where each chord changes comes along too'))">{{ __('Paste with the rhythm') }}</button>
@@ -303,12 +319,17 @@
                                 </div>
                             </template>
                             <div class="bars-grid" x-show="mode !== 'lines'">
-                                <template x-for="(bar, b) in bars" :key="`${revision}-${b}`">
+                                <template x-for="(bar, b) in bars" :key="bar.key">
                                     <div class="bar" :class="{ 'is-current': b === currentBar, 'has-block': bar.blocks.some(block => !isMarker(block)), 'is-selected': isSelected(b), 'is-looped': loop && b >= loop.from && b <= loop.to }"
                                         :style="bar.blocks.length ? typeStyle(blockName(bar.blocks[0])) : ''" :data-bar="b"
                                         @click="clickBar(b, $event)" @contextmenu.prevent="openBarMenu(b, $event.currentTarget)"
                                         @pointerdown="startPress(b, $event)" @pointerup="endPress()" @pointerleave="endPress()" @pointercancel="endPress()">
                                         <span class="number" x-text="b + 1"></span>
+                                        {{-- Edit mode: duplicate the bar right after itself, or remove it (or the marked bars) --}}
+                                        <span class="bar-tools" x-show="mode === 'edit' && !versionId" @click.stop @pointerdown.stop>
+                                            <button type="button" @click="duplicateBar(b)" title="{{ __('Duplicate this bar') }}" aria-label="{{ __('Duplicate this bar') }}"><i class="fa-solid fa-clone"></i></button>
+                                            <button type="button" @click="removeBar(b)" :disabled="ticks.length <= perBar * 2" :title="isSelected(b) && selection.to > selection.from ? @js(__('Remove the marked bars')) : @js(__('Remove this bar'))" aria-label="{{ __('Remove this bar') }}"><i class="fa-solid fa-trash"></i></button>
+                                        </span>
                                         <div class="bar-blocks">
                                             <template x-for="block in bar.blocks" :key="block.id">
                                                 <button type="button" class="block-chip" :class="{ 'is-marker': isMarker(block) }" :style="typeStyle(blockName(block))"
@@ -453,7 +474,7 @@
                                 <div class="row" style="margin-top: 0;">
                                     <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, false); barMenu = null" title="{{ __('Insert a bar before: the chord at the start of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('Before') }}</button>
                                     <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, true); barMenu = null" title="{{ __('Insert a bar after: the chord at the end of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('After') }}</button>
-                                    <button type="button" class="ws-btn" @click="removeBar(barMenu.bar); barMenu = null" :disabled="bars.length < 2" title="{{ __('Remove this bar') }}"><i class="fa-solid fa-trash"></i> {{ __('Remove') }}</button>
+                                    <button type="button" class="ws-btn" @click="removeBar(barMenu.bar); barMenu = null" :disabled="bars.length < 2" :title="@js(__('Remove')) + ': ' + menuBarsLabel()"><i class="fa-solid fa-trash"></i> <span x-text="barMenu && isSelected(barMenu.bar) && selection.to > selection.from ? `${@js(__('Remove'))} (${selection.to - selection.from + 1})` : @js(__('Remove'))"></span></button>
                                 </div>
                             </div>
                         </template>
@@ -791,6 +812,8 @@
                 get bars() {
                     const size = this.perBar * 2;
                     const bars = [];
+                    // Drawn again only when what a bar shows changes, not when it moves (equal bars told apart by their count).
+                    const seen = {};
                     for (let start = 0; start < this.ticks.length; start += size) {
                         const part = this.ticks.slice(start, start + size);
                         const beats = [];
@@ -803,7 +826,12 @@
                                 and: part[i + 1] !== undefined && (part[i + 1] !== onBeat || this.splits.includes(start + i + 1)) ? this.transposeName(part[i + 1]) : null,
                             });
                         }
-                        bars.push({ beats, blocks: this.blocks.filter(block => block.startTick >= start && block.startTick < start + size) });
+                        const blocks = this.blocks.filter(block => block.startTick >= start && block.startTick < start + size);
+                        // Drawn again only when what it shows changes (not on every change elsewhere in the song).
+                        const content = [this.key, part.join(','), this.splits.filter(tick => tick >= start && tick < start + size).map(tick => tick - start).join(','),
+                            blocks.map(block => `${block.id}:${block.startTick - start}:${block.data.section}:${block.data.jump ?? ''}`).join(',')].join('|');
+                        seen[content] = (seen[content] ?? 0) + 1;
+                        bars.push({ beats, blocks, key: `${content}#${seen[content]}` });
                     }
                     return bars;
                 },
@@ -1237,6 +1265,12 @@
                         items.splice(to, 0, ...moved);
                         return items;
                     });
+                },
+                // ---- Review: "Save as reviewed" once the bars are right ----
+                reviewedAt: config.reviewedAt || null,
+                formatDay(iso) { const date = iso ? new Date(iso) : null; return date && !isNaN(date) ? date.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''; },
+                unmarkReviewed() {
+                    if (confirm(@js(__('Undo the review of this song? It will no longer show as reviewed.')))) this.save({ reviewed: false });
                 },
                 // ---- Renaming a block in the Lines view (every repetition of a grouped card) ----
                 lineRename: null,
@@ -1998,13 +2032,38 @@
                     const block = this.blockOfTick(tick);
                     if (!block || this.versionId) return null;
                     const copies = this.copiesOf(block);
-                    return copies.length ? { block, copies: copies.map(copy => copy.startTick), name: this.blockName(block) } : null;
+                    const list = this.timedBlocks();
+                    const end = list[list.indexOf(block) + 1]?.startTick ?? this.ticks.length;
+                    return copies.length ? { block, end, copies: copies.map(copy => copy.startTick), ids: copies.map(copy => copy.id), name: this.blockName(block) } : null;
                 },
                 // Asks next to the beat at `tick`; `change(start)` does the change in the copy starting at `start`.
                 offerCopies(found, tick, change) {
                     if (!found) return;
                     const size = this.perBar * 2;
                     this.askCopies(found, change, () => document.querySelector(`[data-bar="${Math.floor(tick / size)}"] .beat[data-beat="${(tick % size) >> 1}"]`));
+                },
+                // Ticks [from, to) of a block changed (pasted, restored): the same chords, at the same place, in its
+                // equal blocks when asked. Only when they are all inside the block.
+                offerRegion(found, from, to) {
+                    if (!found || from < found.block.startTick || to > found.end) return;
+                    const ticks = this.ticks.slice(from, to);
+                    const splits = this.splits.filter(tick => tick >= from && tick < to).map(tick => tick - from);
+                    const offset = from - found.block.startTick;
+                    this.offerCopies(found, from, start => {
+                        const at = start + offset;
+                        ticks.forEach((chord, i) => { this.ticks[at + i] = chord; });
+                        this.splits = [...this.splits.filter(tick => tick < at || tick >= at + ticks.length), ...splits.map(tick => tick + at)];
+                    });
+                },
+                // A bar added or taken out of a block: the same in its equal blocks when asked (found by id, as each
+                // change moves the blocks after it).
+                offerBarCopies(found, tick, change) {
+                    if (!found) return;
+                    const offset = tick - found.block.startTick;
+                    this.offerCopies({ ...found, copies: found.ids }, tick, id => {
+                        const copy = this.blocks.find(block => block.id === id);
+                        if (copy) change(copy.startTick + offset);
+                    });
                 },
                 // The question next to `anchor()`; "In all of them" calls `change` for each copy.
                 askCopies(found, change, anchor) {
@@ -2234,9 +2293,11 @@
                             return names[change] ?? chord;
                         });
                     }
+                    const found = this.copiesBefore(from);
                     this.remember();
                     pasted.forEach((chord, i) => { this.ticks[from + i] = chord; });
                     this.revision++;
+                    this.offerRegion(found, from, to);
                     const where = `${@js(__('from bar'))} ${bar + 1}`;
                     this.notice = (rhythm ? @js(__('Pasted with the rhythm: :what, :where.')) : @js(__('Pasted: :what, :where.')))
                         .replace(':what', this.clipboard.label).replace(':where', where)
@@ -2247,11 +2308,13 @@
                     const { from, to } = this.barsFor(bar);
                     const size = this.perBar * 2;
                     if (this.originalTicks.length !== this.ticks.length) return;
+                    const found = this.copiesBefore(from * size);
                     this.remember();
                     const end = Math.min((to + 1) * size, this.ticks.length);
                     for (let tick = from * size; tick < end; tick++) this.ticks[tick] = this.originalTicks[tick];
                     this.splits = [...this.splits.filter(tick => tick < from * size || tick >= end), ...this.originalSplits.filter(tick => tick >= from * size && tick < end)];
                     this.revision++;
+                    this.offerRegion(found, from * size, end);
                     this.notice = @js(__('Restored: :what, as when the page was opened (or last saved).')).replace(':what', this.barsLabel(from, to));
                 },
                 toggleLoop(bar) {
@@ -2469,24 +2532,70 @@
                 insertBar(bar, after) {
                     const size = this.perBar * 2;
                     const at = Math.min((after ? bar + 1 : bar) * size, this.ticks.length);
+                    if ((after ? this.ticks[at - 1] : this.ticks[at]) === undefined) return;
+                    const found = this.copiesBefore(after ? at - 1 : at);
+                    this.remember();
+                    this.insertTicks(at, after);
+                    this.revision++;
+                    this.notice = @js(__('Bar :n added.')).replace(':n', (after ? bar + 2 : bar + 1));
+                    this.offerBarCopies(found, at, tick => this.insertTicks(tick, after));
+                },
+                // The bar copied right after itself (its chords and where they change), in its block; the equal blocks
+                // are offered the same.
+                duplicateBar(bar) {
+                    const size = this.perBar * 2;
+                    const from = bar * size;
+                    const to = Math.min(from + size, this.ticks.length);
+                    if (from >= to) return;
+                    const found = this.copiesBefore(from);
+                    this.remember();
+                    this.copyTicks(from, to);
+                    this.revision++;
+                    this.notice = @js(__('Bar :n duplicated.')).replace(':n', bar + 1);
+                    if (found && to <= found.end) this.offerBarCopies(found, from, tick => this.copyTicks(tick, tick + (to - from)));
+                },
+                // Ticks [from, to) repeated right after themselves (belonging to the same block).
+                copyTicks(from, to) {
+                    const slice = this.ticks.slice(from, to);
+                    const size = to - from;
+                    const inside = this.splits.filter(tick => tick >= from && tick < to).map(tick => tick - from);
+                    // A copy starting with the chord the bar ends on just makes that chord longer (as "insert after").
+                    this.ticks = [...this.ticks.slice(0, to), ...slice, ...this.ticks.slice(to)];
+                    this.splits = [...this.splits.map(tick => (tick >= to ? tick + size : tick)), ...inside.map(tick => tick + to)]
+                        .filter((tick, i, list) => list.indexOf(tick) === i && this.ticks[tick] === this.ticks[tick - 1]);
+                    this.blocks = this.blocks.map(block => (block.startTick >= to ? { ...block, startTick: block.startTick + size } : block));
+                    this.originalTicks = [];
+                },
+                // A bar of the chord sounding there, at `at` (in the block before it when `after`, else in the one there).
+                insertTicks(at, after) {
+                    const size = this.perBar * 2;
                     const chord = after ? this.ticks[at - 1] : this.ticks[at];
                     if (chord === undefined) return;
-                    this.remember();
                     this.ticks = [...this.ticks.slice(0, at), ...new Array(size).fill(chord), ...this.ticks.slice(at)];
                     const moves = (tick) => (after ? tick >= at : tick > at);
                     this.splits = this.splits.map(tick => (moves(tick) ? tick + size : tick));
                     this.blocks = this.blocks.map(block => (moves(block.startTick) ? { ...block, startTick: block.startTick + size } : block));
                     this.originalTicks = [];
-                    this.revision++;
-                    this.notice = @js(__('Bar :n added.')).replace(':n', (after ? bar + 2 : bar + 1));
                 },
                 // Bar `bar` taken out: the chords inside it go (the sheet loses them when saved); a block left without bars goes.
+                // The bar, or the marked bars when it is one of them (or none is given).
                 removeBar(bar) {
+                    const { from: first, to: last } = this.barsFor(bar);
                     const size = this.perBar * 2;
-                    const from = bar * size;
-                    const to = Math.min(from + size, this.ticks.length);
+                    const from = first * size;
+                    const to = Math.min((last + 1) * size, this.ticks.length);
                     if (this.ticks.length - (to - from) < 1) return;
+                    const found = this.copiesBefore(from);
                     this.remember();
+                    this.removeTicks(from, to);
+                    this.selection = { anchor: first, from: null, to: null };
+                    this.revision++;
+                    this.notice = first === last ? @js(__('Bar :n removed.')).replace(':n', first + 1)
+                        : @js(__('Bars :from–:to removed (:count).')).replace(':from', first + 1).replace(':to', last + 1).replace(':count', last - first + 1);
+                    if (found && to <= found.end) this.offerBarCopies(found, from, tick => this.removeTicks(tick, tick + (to - from)));
+                },
+                removeTicks(from, to) {
+                    if (from < 0 || to > this.ticks.length || this.ticks.length - (to - from) < 1) return;
                     this.ticks = [...this.ticks.slice(0, from), ...this.ticks.slice(to)];
                     this.splits = this.splits.filter(tick => tick < from || tick >= to).map(tick => (tick >= to ? tick - (to - from) : tick));
                     const moved = this.blocks.map(block => ({ ...block, startTick: block.startTick >= to ? block.startTick - (to - from) : Math.min(block.startTick, from) }));
@@ -2495,8 +2604,6 @@
                         || !moved.some((other, k) => k > i && !this.isMarker(other) && other.startTick === block.startTick)
                         && block.startTick < this.ticks.length);
                     this.originalTicks = [];
-                    this.revision++;
-                    this.notice = @js(__('Bar :n removed.')).replace(':n', bar + 1);
                 },
                 joinPrevious() {
                     const bar = this.barMenu.bar;
@@ -2568,7 +2675,8 @@
                         return { ...data, chords: out.map(chord => (chord === '|' ? chord : transpose(chord))), durations, beats_per_bar: this.perBar, ...(this.clickDouble ? { click_double: true } : {}), start: formatStart(this.blockStart(block)) };
                     });
                 },
-                async save() {
+                // `options.reviewed`: saved as reviewed (true) or its review undone (false).
+                async save(options = {}) {
                     if (this.saving) return;
                     if (this.versionId) return this.saveVersion();
                     this.saving = true;
@@ -2577,7 +2685,8 @@
                         const response = await fetch(config.saveUrl, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-                            body: JSON.stringify({ blocks: this.toBlocks(), updated_at: this.updatedAt, bpm: this.bpm, musical_key: this.key, chord_sheet: this.sheetToSave() }),
+                            body: JSON.stringify({ blocks: this.toBlocks(), updated_at: this.updatedAt, bpm: this.bpm, musical_key: this.key, chord_sheet: this.sheetToSave(),
+                                ...(options.reviewed !== undefined ? { reviewed: options.reviewed } : {}) }),
                         });
                         const result = await response.json().catch(() => ({}));
                         if (!response.ok) throw new Error(Object.values(result.errors || {})[0]?.[0] || result.message || @js(__('Something went wrong')));
@@ -2585,6 +2694,7 @@
                         this.sheetBase = null;
                         this.sheetBaseRevision++;
                         this.updatedAt = result.updated_at;
+                        this.reviewedAt = result.reviewed_at ?? null;
                         // Stored in the new key from now on.
                         if (this.key !== this.savedKey) {
                             this.ticks = this.ticks.map(chord => this.transposeName(chord));
@@ -2603,7 +2713,9 @@
                         this.baseStructure = this.toBlocks();
                         this.dirty = false;
                         this.saveError = false;
-                        this.saveState = result.sheet_updated ? @js(__('Saved ✓ (chord sheet updated too)')) : @js(__('Saved ✓'));
+                        this.saveState = options.reviewed === true ? @js(__('Saved as reviewed ✓'))
+                            : options.reviewed === false ? @js(__('Review undone.'))
+                            : result.sheet_updated ? @js(__('Saved ✓ (chord sheet updated too)')) : @js(__('Saved ✓'));
                     } catch (error) {
                         this.saveError = true;
                         this.saveState = error.message;

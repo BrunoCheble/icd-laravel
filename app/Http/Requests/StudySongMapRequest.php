@@ -23,6 +23,8 @@ class StudySongMapRequest extends FormRequest
         return [
             'updated_at'         => ['required', 'date'],
             'bpm'                => ['nullable', 'numeric', 'between:30,300'],
+            // Saved as reviewed (true), or its review undone (false); left as it is when absent.
+            'reviewed'           => ['nullable', 'boolean'],
             'musical_key'        => ['nullable', 'string', 'max:20'],
             // Only the map: the chord sheet with lyrics is left as it is (automatic saves of the study app).
             'keep_sheet'             => ['nullable', 'boolean'],

@@ -36,13 +36,8 @@ class FindSongBySourceService
         return Song::query()
             ->whereNotNull('source_url')
             ->when($exceptId, fn ($query) => $query->whereKeyNot($exceptId))
-            ->get(['id', 'title', 'source_url'])
-            ->mapWithKeys(fn (Song $song) => [self::normalize($song->source_url) => [
-                'id'    => $song->id,
-                'title' => $song->title,
-                'url'   => route('songs.show', $song),
-                'edit'  => route('songs.edit', $song),
-            ]])
+            ->get(['id', 'title', 'source_url', 'chord_sheet'])
+            ->mapWithKeys(fn (Song $song) => [self::normalize($song->source_url) => self::entry($song)])
             ->except([''])
             ->all();
     }
@@ -55,16 +50,29 @@ class FindSongBySourceService
     {
         return Song::query()
             ->when($exceptId, fn ($query) => $query->whereKeyNot($exceptId))
-            ->get(['id', 'title', 'artist'])
-            ->mapWithKeys(fn (Song $song) => [self::plainTitle($song->title) => [
-                'id'     => $song->id,
-                'title'  => $song->title,
-                'artist' => $song->artist,
-                'url'    => route('songs.show', $song),
-                'edit'   => route('songs.edit', $song),
-            ]])
+            ->get(['id', 'title', 'artist', 'chord_sheet'])
+            ->mapWithKeys(fn (Song $song) => [self::plainTitle($song->title) => self::entry($song)])
             ->except([''])
             ->all();
+    }
+
+    /**
+     * A song as the song form needs it: its pages, and, while it has no chord sheet (pre-registered), where an
+     * imported one is saved right away.
+     */
+    private static function entry(Song $song): array
+    {
+        $pending = empty($song->chord_sheet['sections'] ?? null);
+
+        return [
+            'id'      => $song->id,
+            'title'   => $song->title,
+            'artist'  => $song->artist,
+            'url'     => route('songs.show', $song),
+            'edit'    => route('songs.edit', $song),
+            'pending' => $pending,
+            'import'  => $pending ? route('songs.chord-sheet.import', $song) : null,
+        ];
     }
 
     /**

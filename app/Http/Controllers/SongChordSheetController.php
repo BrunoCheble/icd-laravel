@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ChordSheetToStructureRequest;
+use App\Http\Requests\ImportSongChordSheetRequest;
 use App\Http\Requests\ParseChordSheetRequest;
+use App\Models\Song;
+use App\Services\ImportSongChordSheetService;
 use App\Services\BuildStructureFromChordSheetService;
 use App\Services\AlignSectionStartsService;
 use App\Services\ParseChordSheetService;
@@ -42,6 +45,17 @@ class SongChordSheetController extends Controller
                 'chords'   => $lines->sum(fn (string $line) => preg_match_all('/\[[^\]]+\]/u', $line)),
             ],
         ]);
+    }
+
+    /**
+     * "Send to ICD" for a song without a chord sheet yet: saved right away with its chord map and bars; the page goes
+     * to the song's layout.
+     */
+    public function import(ImportSongChordSheetRequest $request, Song $song, ImportSongChordSheetService $service): JsonResponse
+    {
+        $service->execute($song, $request->validated('sheet'), $request->key(), $request->validated('youtube'));
+
+        return response()->json(['redirect' => route('songs.layout.edit', $song)]);
     }
 
     /**

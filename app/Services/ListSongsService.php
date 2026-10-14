@@ -18,27 +18,41 @@ class ListSongsService
     private const BLOCK_COUNT = "(SELECT COUNT(*) FROM JSON_TABLE(songs.structure, '$[*]' COLUMNS (jump VARCHAR(20) PATH '$.jump')) AS blocks"
         . " WHERE blocks.jump IS NULL OR blocks.jump <> 'start')";
 
-    // Reviewed: every block of the chord map has a start time (see Song::isReviewed).
-    private const REVIEWED = '(' . self::BLOCK_COUNT . ' > 0 AND ' . self::TIMED_COUNT . ' = ' . self::BLOCK_COUNT . ')';
+    // Reviewed: saved as reviewed once its review was finished (see Song::isReviewed).
+    private const REVIEWED = '(reviewed_at IS NOT NULL)';
 
     // Sort options (request value => SQL expressions, all in the chosen direction; fixed values, never user input).
     public const SORTS = [
         'title'    => ['title'],
         'artist'   => ['artist'],
         'key'      => ['musical_key'],
-        'reviewed' => [self::REVIEWED],
+        'reviewed' => [self::REVIEWED, 'reviewed_at'],
         // Share of blocks with a start time, then how many.
         'times'    => [self::TIMED_COUNT . ' / NULLIF(' . self::BLOCK_COUNT . ', 0)', self::TIMED_COUNT],
         'youtube'  => ["(youtube_url IS NOT NULL AND youtube_url <> '')"],
+        'mp3'      => ["(audio_path IS NOT NULL AND audio_path <> '')"],
         'lessons'  => ['COALESCE(JSON_LENGTH(video_lesson), 0)'],
         'updated'  => ['updated_at'],
     ];
 
     /**
-     * Songs filtered by text (title or artist) and status: reviewed, times and youtube ("yes" | "no"),
+     * Songs filtered by text (title or artist) and status: reviewed, times, youtube and mp3 ("yes" | "no"),
      * sorted by one of SORTS (title by default), with title as tie-breaker.
      */
     public function execute(array $filters = []): LengthAwarePaginator
+    {
+        return $this->query($filters)->paginate();
+    }
+
+    /**
+     * Ids of every song matching the filters (all pages), in the same order.
+     */
+    public function ids(array $filters = []): array
+    {
+        return $this->query($filters)->pluck('id')->all();
+    }
+
+    private function query(array $filters)
     {
         $sort = array_key_exists($filters['sort'] ?? '', self::SORTS) ? $filters['sort'] : 'title';
         $direction = ($filters['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
@@ -69,8 +83,14 @@ class ListSongsService
             fn ($q) => $q->whereNotNull('youtube_url')->where('youtube_url', '!=', ''),
             fn ($q) => $q->where(fn ($q) => $q->whereNull('youtube_url')->orWhere('youtube_url', '')),
         );
+        $this->filter(
+            $query,
+            $filters['mp3'] ?? null,
+            fn ($q) => $q->whereNotNull('audio_path')->where('audio_path', '!=', ''),
+            fn ($q) => $q->where(fn ($q) => $q->whereNull('audio_path')->orWhere('audio_path', '')),
+        );
 
-        return $query->paginate();
+        return $query;
     }
 
     private function filter($query, ?string $value, callable $yes, callable $no): void

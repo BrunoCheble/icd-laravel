@@ -12,6 +12,8 @@ use App\Services\GetSongOverviewService;
 use App\Services\ListSongsService;
 use App\Services\SaveSongAudioService;
 use App\Services\CreateSongBarsService;
+use App\Services\DeleteSongsService;
+use App\Http\Requests\BulkDestroySongsRequest;
 use App\Services\SaveSongService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Redirect;
@@ -23,7 +25,9 @@ class SongController extends Controller
     {
         $filters = $request->validated();
         $songs = $service->execute($filters);
-        return view('songs.index', compact('songs', 'filters'));
+        // Every song of the filters, for selecting them all across pages.
+        $allIds = $service->ids($filters);
+        return view('songs.index', compact('songs', 'filters', 'allIds'));
     }
 
     public function create(FindSongBySourceService $sources): View
@@ -84,6 +88,19 @@ class SongController extends Controller
 
         return Redirect::route('songs.index')
             ->with('success', __('Song updated successfully.'));
+    }
+
+    public function bulkDestroy(BulkDestroySongsRequest $request, DeleteSongsService $service): RedirectResponse
+    {
+        try {
+            $count = $service->execute($request->validated('ids'));
+        } catch (\Exception $e) {
+            return Redirect::route('songs.index')
+                ->with('error', __('Something went wrong'));
+        }
+
+        return Redirect::route('songs.index')
+            ->with('success', trans_choice(':count song deleted.|:count songs deleted.', $count, ['count' => $count]));
     }
 
     public function destroy(Song $song, SaveSongAudioService $audioService): RedirectResponse
