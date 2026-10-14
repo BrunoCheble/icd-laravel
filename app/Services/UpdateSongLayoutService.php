@@ -110,6 +110,12 @@ class UpdateSongLayoutService
         } else {
             unset($block['beats_per_bar']);
         }
+        $lead = $block['lead_beats'] ?? null;
+        if (is_numeric($lead) && $lead > 0 && $lead <= 12 && fmod((float) $lead, self::DURATION_STEP) == 0.0) {
+            $block['lead_beats'] = floor($lead) == $lead ? (int) $lead : (float) $lead;
+        } else {
+            unset($block['lead_beats']);
+        }
         // Only a doubled click is stored (a click per beat is the default).
         if (($block['click_double'] ?? null) === true) {
             $block['click_double'] = true;

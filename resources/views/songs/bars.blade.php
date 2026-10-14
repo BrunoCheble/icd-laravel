@@ -463,6 +463,15 @@
                             <button type="button" class="ws-btn" @click="alignBlock(false)">{{ __('Start on beat 1 of this bar') }}</button>
                             <button type="button" class="ws-btn" @click="alignBlock(true)">{{ __('Start on the next bar') }}</button>
                         </div>
+                        {{-- Bar 1: the beat the first chord falls on (the beats before it empty) --}}
+                        <div x-show="!versionId && barMenu && barMenu.bar === 0">
+                            <p class="title" style="margin-top: .5rem;">{{ __('First chord on beat') }}</p>
+                            <div class="row" style="margin-top: 0;">
+                                <template x-for="n in perBar" :key="n">
+                                    <button type="button" class="ws-btn" :class="{ 'is-active': leadTicks === (n - 1) * 2 }" @click="setLead(n)" x-text="n"></button>
+                                </template>
+                            </div>
+                        </div>
                         <div class="row" x-show="canPlay">
                             <button type="button" class="ws-btn" @click="playFromTick(barMenu.bar * perBar * 2); barMenu = null"><i class="fa-solid fa-play"></i> {{ __('Play from here') }}</button>
                         </div>
@@ -604,6 +613,11 @@
                 if (section.beats_per_bar) perBar = section.beats_per_bar;
                 if (section.click_double) clickDouble = true;
                 delete data.click_double;
+                // Beats before the first chord in bar 1 (the song starts on beat 3, say): empty half beats first.
+                if (!blocks.some(block => !isMarkerData(block.data)) && Number(section.lead_beats) > 0) {
+                    for (let k = 0; k < Math.round(Number(section.lead_beats) * 2); k++) ticks.push('');
+                }
+                delete data.lead_beats;
                 blocks.push({ id: nextId++, startTick: ticks.length, data: { ...data, lineChords: chords, breaks } });
                 chords.forEach((chord, i) => {
                     if (i > 0 && chord === chords[i - 1]) splits.push(ticks.length);
@@ -822,7 +836,7 @@
                             const previous = start + i > 0 ? this.ticks[start + i - 1] : null;
                             beats.push({
                                 chord: this.transposeName(onBeat),
-                                repeat: i > 0 && onBeat === previous && !this.splits.includes(start + i),
+                                repeat: i > 0 && !!onBeat && onBeat === previous && !this.splits.includes(start + i),
                                 and: part[i + 1] !== undefined && (part[i + 1] !== onBeat || this.splits.includes(start + i + 1)) ? this.transposeName(part[i + 1]) : null,
                             });
                         }
@@ -886,13 +900,14 @@
                 // Delay before bar 1 in the recording: moving it moves every block by the same time.
                 get songStart() {
                     const first = this.timedBlocks()[0];
-                    return first ? Math.round(this.blockStart(first) * 10) / 10 : 0;
+                    // Bar 1 (empty beats before the first chord included).
+                    return first ? Math.max(0, Math.round((this.blockStart(first) - first.startTick * this.halfBeat) * 10) / 10) : 0;
                 },
                 setSongStart(value) {
                     const seconds = Math.max(0, Math.round(Number(value) * 10) / 10);
                     const timed = this.timedBlocks();
                     if (!timed.length || !Number.isFinite(seconds)) return;
-                    const shift = seconds - this.blockStart(timed[0]);
+                    const shift = seconds - (this.blockStart(timed[0]) - timed[0].startTick * this.halfBeat);
                     if (Math.abs(shift) < 0.05) return;
                     this.remember();
                     const starts = timed.map(block => this.blockStart(block) + shift);
@@ -1265,6 +1280,22 @@
                         items.splice(to, 0, ...moved);
                         return items;
                     });
+                },
+                // ---- The first chord on another beat of bar 1 (empty beats before it); its time in the song stays ----
+                get leadTicks() { return this.timedBlocks()[0]?.startTick ?? 0; },
+                setLead(beat) {
+                    const wanted = (beat - 1) * 2;
+                    const delta = wanted - this.leadTicks;
+                    if (!delta || wanted < 0 || wanted >= this.perBar * 2) return;
+                    this.remember();
+                    if (delta > 0) this.ticks = [...new Array(delta).fill(''), ...this.ticks];
+                    else this.ticks = this.ticks.slice(-delta);
+                    this.splits = this.splits.map(tick => tick + delta).filter(tick => tick > 0);
+                    this.blocks = this.blocks.map(block => ({ ...block, startTick: Math.max(0, block.startTick + delta) }));
+                    this.originalTicks = [];
+                    this.barMenu = null;
+                    this.revision++;
+                    this.notice = @js(__('The first chord now starts on beat :n of bar 1.')).replace(':n', beat);
                 },
                 // ---- Review: "Save as reviewed" once the bars are right ----
                 reviewedAt: config.reviewedAt || null,
@@ -2100,6 +2131,7 @@
                 isChordName(typed) { return /^[A-G][#b]?[^\s\[\]|]*$/.test(typed); },
                 // A chord typed at `tick` (in the key on screen; stored in the song's key); the equal blocks are offered.
                 typeChordAt(tick, typed) {
+                    if (tick < this.leadTicks) { this.notice = @js(__('Before the first chord: set where it starts in the menu of bar 1.')); return; }
                     const chord = this.key && this.savedKey && this.key !== this.savedKey ? ChordTransposer.transposeChord(typed, this.key, this.savedKey) : typed;
                     const found = this.copiesBefore(tick);
                     this.setFrom(tick, chord);
@@ -2672,7 +2704,9 @@
                         if (state.valid && state.passing.length) data.passing = state.passing;
                         else delete data.passing;
                         const out = state.valid ? this.withBreaks(chords, state.breaks) : chords;
-                        return { ...data, chords: out.map(chord => (chord === '|' ? chord : transpose(chord))), durations, beats_per_bar: this.perBar, ...(this.clickDouble ? { click_double: true } : {}), start: formatStart(this.blockStart(block)) };
+                        // The first chord on a later beat of bar 1: the empty beats before it.
+                        const lead = block === timed[0] && block.startTick > 0 ? { lead_beats: block.startTick / 2 } : {};
+                        return { ...data, chords: out.map(chord => (chord === '|' ? chord : transpose(chord))), durations, beats_per_bar: this.perBar, ...lead, ...(this.clickDouble ? { click_double: true } : {}), start: formatStart(this.blockStart(block)) };
                     });
                 },
                 // `options.reviewed`: saved as reviewed (true) or its review undone (false).

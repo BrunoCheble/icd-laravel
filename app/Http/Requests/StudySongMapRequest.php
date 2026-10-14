@@ -52,6 +52,8 @@ class StudySongMapRequest extends FormRequest
             'blocks.*.beats_per_bar' => ['nullable', 'integer', 'between:1,12'],
             // The metronome also clicks on each "and" (the drummer's doubled tempo); the bars keep the BPM.
             'blocks.*.click_double'  => ['nullable', 'boolean'],
+            // Empty beats before the first chord in bar 1 (first block only).
+            'blocks.*.lead_beats'    => ['nullable', 'numeric', 'min:0', 'max:12', 'multiple_of:' . UpdateSongLayoutService::DURATION_STEP],
         ];
     }
 

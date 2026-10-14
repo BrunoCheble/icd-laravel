@@ -193,7 +193,7 @@
         .live-beat .and.is-empty { color: var(--muted); font-weight: 400; opacity: .6; }
         /* Live mode, current and next bar only: big chords, the next one dimmed (tapping it goes there). */
         /* The two bars in the middle of the visible part of the page (below the top bars, above the blocks bar). */
-        .live-focus { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; align-content: center;
+        .live-focus { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; align-content: center;
             max-width: 64rem; margin-inline: auto; min-height: calc(100vh - 16rem); min-height: calc(100dvh - 16rem); }
         .focus-bar { background: var(--surface); border: 1px solid var(--border); border-top: 4px solid var(--type-color, var(--accent)); border-radius: .75rem; padding: .6rem .8rem 1rem; }
         .focus-bar.is-now { box-shadow: 0 0 0 2px var(--accent) inset; }
@@ -595,6 +595,10 @@
                              and the next one, big; while correcting chords, every bar (their chords can be corrected there). --}}
                         <template x-if="liveMode">
                         <div :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}`">
+                        {{-- ?debug=focus: what changed the chord sizes of the cards --}}
+                        <template x-if="focusDebug">
+                            <pre style="position: fixed; left: 4px; top: 4px; z-index: 99; max-width: 96vw; margin: 0; padding: 4px 6px; font: 10px/1.3 monospace; background: rgba(0,0,0,.8); color: #fff; border-radius: 4px; white-space: pre-wrap; pointer-events: none;" x-text="focusDebug.join('\n') || 'debug=focus'"></pre>
+                        </template>
                         <template x-if="!liveEdit">
                             <div class="live-focus" x-init="fitFocus()" @resize.window.debounce.150ms="fitFocus()">
                                 <template x-for="item in focusBars" :key="`${current.id}-focus-${item.index}-${item.role}`">
@@ -1308,6 +1312,10 @@
                         if (!chords.length) continue;
                         if (durations.length !== chords.length || durations.some(value => !(value > 0))) return null;
                         perBar ||= Number(section.beats_per_bar) || 4;
+                        // Empty beats before the first chord of the song.
+                        if (!starts.length && Number(section.lead_beats) > 0) {
+                            for (let t = 0; t < Math.round(Number(section.lead_beats) * 2); t++) ticks.push({ name: '–', number: null, passing: false, rest: true });
+                        }
                         const passing = this.sectionPassing(section);
                         const offset = section.edited ? null : this.mapChordOffsets[index];
                         starts.push({ index, tick: ticks.length });
@@ -1363,7 +1371,8 @@
                     });
 
                     // Rows: the bars of each block (a bar belongs to the block playing on its first beat).
-                    const owner = (tick) => starts.filter(item => item.tick <= tick).at(-1)?.index;
+                    // (Bar 1 belongs to the first block even when its first beats are empty.)
+                    const owner = (tick) => starts.filter(item => item.tick <= tick).at(-1)?.index ?? starts[0]?.index;
                     const result = sections.map(() => null);
                     let previous = null;
                     bars.forEach(bar => {
@@ -1720,7 +1729,7 @@
                     this.$watch('liveEdit', () => { if (this.liveMode) this.scrollToLiveBar(true); });
                     this.$watch('layout.fontScale', () => { this.focusFixes = {}; this.focusScale = 1; if (this.liveMode && !this.liveEdit) this.fitFocus(); });
                     // Fonts loaded after the first measures: measured again.
-                    document.fonts?.ready?.then(() => { this.focusFixes = {}; this.focusScale = 1; if (this.liveMode && !this.liveEdit) this.fitFocus(); });
+                    document.fonts?.ready?.then(() => { this.logFocus('fonts loaded (sizes measured again)'); this.focusFixes = {}; this.focusScale = 1; if (this.liveMode && !this.liveEdit) this.fitFocus(); });
                     // The area of the current and next bar follows the size of what is above it (title, buttons, fonts).
                     if (window.ResizeObserver) new ResizeObserver(() => { if (this.liveMode && !this.liveEdit) this.fitFocus(); }).observe(document.body);
                     this.$watch('bpmMode', on => {
@@ -1777,6 +1786,10 @@
                         if (!durations || durations.length !== chords.length) { complete = complete && chords.length === 0; return; }
                         if (section.beats_per_bar) perBar = section.beats_per_bar;
                         if (section.click_double) clickDouble = true;
+                        // Empty beats before the first chord of the song (it starts on beat 3, say).
+                        if (!blocks.some(block => !block.marker) && Number(section.lead_beats) > 0) {
+                            for (let k = 0; k < Math.round(Number(section.lead_beats) * 2); k++) { ticks.push(''); numbers.push(null); }
+                        }
                         blocks.push({ tick: ticks.length, marker: false, name: this.sectionName(section), index });
                         chords.forEach((chord, i) => {
                             const n = number++;
@@ -1795,7 +1808,7 @@
                                 const at = start + i;
                                 beats.push({
                                     chord: onBeat,
-                                    repeat: i > 0 && onBeat === previous,
+                                    repeat: i > 0 && !!onBeat && onBeat === previous,
                                     and: part[i + 1] !== undefined && part[i + 1] !== onBeat ? part[i + 1] : null,
                                     tick: at,
                                     // The chord starting on the beat / on its "and" (null: none starts there).
@@ -1806,7 +1819,7 @@
                             bars.push({ start, beats, blocks: blocks.filter(block => block.tick >= start && block.tick < start + size) });
                         }
                         const chordStart = [];
-                        numbers.forEach((n, t) => { if (chordStart[n] === undefined) chordStart[n] = t; });
+                        numbers.forEach((n, t) => { if (n !== null && chordStart[n] === undefined) chordStart[n] = t; });
                         value = { perBar, clickDouble, ticks, numbers, chordStart, bars, blocks: blocks.filter(block => !block.marker), markers: blocks.filter(block => block.marker).map(block => block.tick) };
                     }
                     return value;
@@ -1961,6 +1974,8 @@
                             if (!section || typeof section !== 'object' || section.jump === 'start') return;
                             const chords = chordsOnly(Array.isArray(section.chords) ? section.chords.map(String) : []);
                             const durations = Array.isArray(section.durations) ? section.durations.map(Number) : [];
+                            // Empty beats before the first chord of the song.
+                            if (!starts.length && chords.length) tick += Math.round((Number(section.lead_beats) || 0) * 2);
                             chords.forEach((chord, i) => { starts.push(tick); tick += Math.round((durations[i] || 0) * 2); });
                         });
                         return starts;
@@ -2027,6 +2042,13 @@
                 // How much wider chords are on this screen than the canvas measures (learned from those fixes), so the
                 // next cards are drawn right at once.
                 focusScale: 1,
+                // ?debug=focus: what changed the chord sizes of the Live cards, shown in a corner (to look at it on a phone).
+                focusDebug: new URLSearchParams(location.search).get('debug') === 'focus' ? [] : null,
+                logFocus(text) {
+                    if (!this.focusDebug) return;
+                    const bar = this.liveGrid ? this.liveBar + 1 : '-';
+                    this.focusDebug = [`${(performance.now() / 1000).toFixed(2)}s bar ${bar} beat ${this.liveBeat + 1}: ${text}`, ...this.focusDebug].slice(0, 8);
+                },
                 focusFixKey(index, now, beat) { return `${this.currentId}:${index}:${now ? 'now' : 'side'}:${beat}`; },
                 focusFits(item) {
                     if (!item.bar || !this.focusWidth) return [];
@@ -2050,6 +2072,7 @@
                     this.$nextTick(() => {
                         const row = document.querySelector('.focus-bar.is-now .focus-beats');
                         if (row && Math.abs(row.clientWidth - this.focusWidth) > 1) {
+                            this.logFocus(`width ${this.focusWidth} → ${row.clientWidth} (sizes measured again)`);
                             this.focusWidth = row.clientWidth;
                             this.focusFixes = {};
                             this.focusScale = 1;
@@ -2071,8 +2094,40 @@
                                     beat.style.setProperty('--focus-fit', String(fit));
                                 }
                                 fixes[this.focusFixKey(index, now, i)] = fit;
+                                this.logFocus(`bar ${index + 1} beat ${i + 1} (${now ? 'now' : 'side'}) cut → ${fit}`);
                             });
                         });
+                        // The next bar measured ahead at the size it will have as the current one (an invisible copy, with
+                        // this screen's fonts), so when it comes it is drawn at its final size and does not change.
+                        const now = document.querySelector('.focus-bar.is-now');
+                        const next = document.querySelector('.focus-bar.is-next:not(.is-empty)');
+                        if (now && next) {
+                            const copy = next.cloneNode(true);
+                            // Plain HTML: without Alpine's attributes (it would try to run them out of their place).
+                            [copy, ...copy.querySelectorAll('*')].forEach(node => [...node.attributes]
+                                .filter(attribute => /^(x-|:|@)/.test(attribute.name))
+                                .forEach(attribute => node.removeAttribute(attribute.name)));
+                            copy.querySelectorAll('template').forEach(node => node.remove());
+                            copy.classList.remove('is-next');
+                            copy.classList.add('is-now');
+                            copy.style.cssText += `;position: absolute; visibility: hidden; pointer-events: none; left: 0; top: 0; width: ${now.offsetWidth}px;`;
+                            now.parentElement.appendChild(copy);
+                            const index = Number(next.dataset.index);
+                            const estimates = this.focusFits({ index, now: true, bar: this.liveGrid?.bars[index] });
+                            copy.querySelectorAll('.focus-beat').forEach((beat, i) => {
+                                let fit = estimates[i] ?? 1;
+                                beat.style.setProperty('--focus-fit', String(fit));
+                                while (beat.scrollWidth > beat.clientWidth + 1 && fit > 0.15) {
+                                    fit = Math.max(0.15, Math.round((fit - 0.03) * 100) / 100);
+                                    beat.style.setProperty('--focus-fit', String(fit));
+                                }
+                                if (fit < (estimates[i] ?? 1)) {
+                                    fixes[this.focusFixKey(index, true, i)] = fit;
+                                    this.logFocus(`ahead: bar ${index + 1} beat ${i + 1} ${estimates[i] ?? 1} → ${fit}`);
+                                }
+                            });
+                            copy.remove();
+                        }
                         if (Object.keys(fixes).length) this.focusFixes = { ...this.focusFixes, ...fixes };
                         if (scale < 1) this.focusScale = Math.max(0.5, Math.floor(this.focusScale * scale * 100) / 100);
                     });
