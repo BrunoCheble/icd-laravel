@@ -81,6 +81,7 @@
         }
         .option-row { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .75rem; }
         .option-row > label, .option-label { font-size: .85rem; color: var(--muted); min-width: 5.5rem; }
+        .option-note { font-size: .75rem; color: var(--muted); }
         .option-row .control { flex: 0 1 22rem; min-width: 0; }
         .switch { display: inline-flex; align-items: center; gap: .4rem; min-height: 36px; padding: 0 .6rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); font-size: .85rem; cursor: pointer; user-select: none; }
         .switch input { accent-color: var(--accent); width: 1rem; height: 1rem; margin: 0; }
@@ -176,13 +177,16 @@
         /* Room below the last bars, so any block can be brought to the top of the screen. */
         .live-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .35rem; padding-bottom: 70vh; align-content: start; }
         @media (max-width: 700px) { .live-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        /* Narrow phones: one bar per line, so the beats are wide enough for names like C#m7(9). */
+        @media (max-width: 480px) { .live-grid { grid-template-columns: minmax(0, 1fr); } }
         .live-bar { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: .5rem; padding: .3rem .4rem .45rem; cursor: pointer; }
         .live-bar.is-current { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
         .live-bar.has-block { border-top: 3px solid var(--type-color, var(--accent)); }
         .live-bar .number { position: absolute; top: .15rem; right: .35rem; font-size: .62rem; color: var(--muted); }
         .live-block { font-size: calc(.7rem * var(--label-scale, 1)); font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, var(--accent)); min-height: .95rem; margin-right: 1.3rem; }
         .live-beats { display: grid; gap: .15rem; margin-top: .2rem; }
-        .live-beat { min-width: 0; padding: .1rem .2rem; border-radius: .3rem; font-weight: 800; font-size: calc(1.1rem * var(--chord-scale, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* A chord too long for its beat is shown smaller, never cut (see fitChords). */
+        .live-beat { min-width: 0; padding: .1rem .2rem; border-radius: .3rem; font-weight: 800; font-size: calc(1.1rem * var(--chord-scale, 1)); white-space: nowrap; overflow: hidden; }
         .live-beat.is-repeat { color: var(--muted); font-weight: 400; }
         .live-beat.is-on { background: var(--accent); color: var(--accent-text); }
         .live-beat .and { font-size: .8em; border-left: 1px dashed var(--muted); padding-left: .2rem; margin-left: .2rem; }
@@ -465,6 +469,17 @@
                     <label class="switch" :title="audioUrl || videoId ? '' : @js(__('This song has no audio or YouTube video.'))"><input type="checkbox" x-model="settings.youtubeSound"> {{ __('Song sound') }}</label>
                 </div>
 
+                {{-- The band's tempo for this song in this setlist (the same click for everyone) --}}
+                <div class="option-row" x-show="current">
+                    <span class="option-label">BPM</span>
+                    <input type="number" class="control" min="30" max="240" step="1" style="width: 5.5rem;" :value="Math.round(liveBpm)" @change="setLiveBpm(Number($event.target.value))" aria-label="BPM">
+                    <button type="button" class="btn" @click="tapTempo()" :title="@js(__('Tap the beat to set the tempo'))"><i class="fa-solid fa-hand-pointer"></i> Tap</button>
+                    <template x-if="current?.setlist_bpm && current?.bpm && Number(current.setlist_bpm) !== Number(current.bpm)">
+                        <button type="button" class="btn" @click="resetBpm()"><i class="fa-solid fa-rotate-left"></i> <span x-text="@js(__('Back to the original (:bpm)')).replace(':bpm', Math.round(current.bpm))"></span></button>
+                    </template>
+                    <span class="option-note" x-text="@js(__('Saved in this setlist for the whole band.'))"></span>
+                </div>
+
                 <div class="option-row" x-show="instrumentOptions.length">
                     <span class="option-label">{{ __('My instrument') }}</span>
                     <select class="control" x-model="settings.instrument" style="width: auto;">
@@ -654,7 +669,7 @@
                         </template>
 
                         <template x-if="!sheetMode && !liveMode && barChart">
-                        <p class="bar-chart-head" x-text="[selectedKey, current.bpm ? `${current.bpm} BPM` : null, meterLabel(barChart.perBar)].filter(Boolean).join(' · ')"></p>
+                        <p class="bar-chart-head" x-text="[selectedKey, liveBpm ? `${Math.round(liveBpm)} BPM` : null, meterLabel(barChart.perBar)].filter(Boolean).join(' · ')"></p>
                         </template>
                         <template x-if="!sheetMode && !liveMode">
                         <div class="sections" :class="{ 'two-columns': settings.twoColumns, 'block-swipe': blockScrollActive }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
@@ -1629,7 +1644,36 @@
                 },
                 applyInstruments() { this.songs.forEach(song => this.applyInstrument(song)); },
 
+                // Chord names never cut: a beat of the Live grid or a bar of the map whose chords do not fit gets a smaller
+                // font, just enough (redone whenever what is shown changes, or the screen size does).
+                fitChords() {
+                    const cells = [...document.querySelectorAll('.live-beat, .map-bar')];
+                    cells.forEach(cell => { if (cell.dataset.fit) { cell.style.fontSize = ''; delete cell.dataset.fit; } });
+                    // All measured first, then all changed (a single layout).
+                    const over = cells.filter(cell => cell.scrollWidth > cell.clientWidth + 1).map(cell => {
+                        const style = getComputedStyle(cell);
+                        const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+                        return { cell, size: parseFloat(style.fontSize), ratio: (cell.clientWidth - padding) / Math.max(1, cell.scrollWidth - padding) };
+                    });
+                    over.forEach(({ cell, size, ratio }) => { cell.style.fontSize = `${Math.max(8, size * ratio * 0.96)}px`; cell.dataset.fit = '1'; });
+                    // Rounding: a little smaller where still cut.
+                    over.forEach(({ cell }) => {
+                        let size = parseFloat(cell.style.fontSize);
+                        while (cell.scrollWidth > cell.clientWidth + 1 && size > 8) { size -= 1; cell.style.fontSize = `${size}px`; }
+                    });
+                },
+                watchChordFit() {
+                    let frame = null;
+                    const schedule = () => { if (!frame) frame = requestAnimationFrame(() => { frame = null; this.fitChords(); }); };
+                    new MutationObserver(schedule).observe(this.$el, { childList: true, subtree: true, characterData: true });
+                    window.addEventListener('resize', schedule);
+                    // The chord size and spacing set in the options.
+                    this.$watch('layout', schedule);
+                    schedule();
+                },
+
                 init() {
+                    this.watchChordFit();
                     window.addEventListener('install-available', () => this.installPrompt = window.installPrompt);
                     this.setupAudio();
                     this.liveBpm = this.loadLiveBpm();
@@ -1798,21 +1842,40 @@
                     for (let t = this.live.tick + 1; t < ticks.length; t++) if (ticks[t] && ticks[t] !== now) return ticks[t];
                     return '';
                 },
-                liveBpmKey() { return `live-bpm-${this.currentId}`; },
-                loadLiveBpm() {
-                    let saved = 0;
-                    try { saved = Number(localStorage.getItem(this.liveBpmKey())); } catch (e) {}
-                    return saved > 0 ? saved : (Number(this.current?.bpm) || 80);
-                },
-                setLiveBpm(value) {
+                // The tempo of the song in this setlist: the band's (saved for everyone), else the song's own.
+                loadLiveBpm() { return Number(this.current?.setlist_bpm) || Number(this.current?.bpm) || 80; },
+                setLiveBpm(value, save = true) {
                     const bpm = Math.min(240, Math.max(30, Math.round(value)));
+                    if (!Number.isFinite(bpm)) return;
                     if (this.live.running) {
                         // Keeps the position: the count goes on from the current tick at the new tempo.
                         this.live.startTick = this.live.tick;
                         this.live.startedAt = performance.now();
                     }
                     this.liveBpm = bpm;
-                    writeStorage(this.liveBpmKey(), bpm);
+                    if (save) this.saveSetlistBpm(bpm === Number(this.current?.bpm) ? null : bpm);
+                },
+                // Saved for the whole band (a moment after the last tap or change); null: back to the song's own BPM.
+                saveSetlistBpm(bpm) {
+                    const song = this.current;
+                    if (!song) return;
+                    const previous = song.setlist_bpm;
+                    song.setlist_bpm = bpm;
+                    clearTimeout(this.bpmTimer);
+                    this.bpmTimer = setTimeout(async () => {
+                        try {
+                            await this.request('PATCH', this.songUrl(song, '/bpm'), { bpm });
+                            this.notify(this.messages.saved);
+                        } catch (error) {
+                            song.setlist_bpm = previous;
+                            if (song === this.current) this.liveBpm = this.loadLiveBpm();
+                            this.notify(error.message, true);
+                        }
+                    }, 700);
+                },
+                resetBpm() {
+                    this.setLiveBpm(Number(this.current?.bpm) || 80, false);
+                    this.saveSetlistBpm(null);
                 },
                 // Tapping the tempo: the average of the last taps (a pause of 2 s starts over).
                 tapTempo() {

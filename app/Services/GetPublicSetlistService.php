@@ -37,6 +37,8 @@ class GetPublicSetlistService
             // Tempo for the live mode (bars counted by it).
             'bpm'          => $song->bpm,
             'setlist_key'  => $song->pivot?->musical_key,
+            // Tempo set for the band in this setlist (null: the song's own).
+            'setlist_bpm'  => $song->pivot?->bpm !== null ? (float) $song->pivot->bpm : null,
             'minister_name' => $song->pivot?->minister_name,
             'position'     => $song->pivot?->position,
             'structure'    => $song->structure,

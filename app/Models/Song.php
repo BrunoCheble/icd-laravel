@@ -40,7 +40,7 @@ class Song extends Model
     public function setlists(): BelongsToMany
     {
         return $this->belongsToMany(Setlist::class, 'setlist_songs')
-            ->withPivot('musical_key', 'position', 'minister_name');
+            ->withPivot('musical_key', 'bpm', 'position', 'minister_name');
     }
 
     /**

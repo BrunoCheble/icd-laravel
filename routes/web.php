@@ -46,6 +46,7 @@ Route::prefix('repertoire')->name('site.setlist')->controller(SiteSetlistControl
     Route::post('/{setlist}/songs', 'addSong')->whereNumber('setlist')->name('.songs.add');
     Route::delete('/{setlist}/songs/{song}', 'removeSong')->whereNumber(['setlist', 'song'])->name('.songs.remove');
     Route::patch('/{setlist}/songs/{song}/key', 'updateKey')->whereNumber(['setlist', 'song'])->name('.songs.key');
+    Route::patch('/{setlist}/songs/{song}/bpm', 'updateBpm')->whereNumber(['setlist', 'song'])->name('.songs.bpm');
     Route::put('/{setlist}/order', 'reorder')->whereNumber('setlist')->name('.order');
     Route::post('/{setlist}/songs/{song}/suggestions', 'suggest')->whereNumber(['setlist', 'song'])->middleware('throttle:20,1')->name('.songs.suggest');
 });

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AddSongToSetlistRequest;
 use App\Http\Requests\ReorderSetlistSongsRequest;
 use App\Http\Requests\SongSuggestionRequest;
+use App\Http\Requests\UpdateSetlistSongBpmRequest;
 use App\Http\Requests\UpdateSetlistSongKeyRequest;
 use App\Models\Setlist;
 use App\Models\Song;
@@ -18,6 +19,7 @@ use App\Services\RemoveSongFromSetlistService;
 use App\Services\ReorderSetlistSongsService;
 use App\Services\SearchSongsService;
 use App\Services\StoreSongSuggestionService;
+use App\Services\UpdateSetlistSongBpmService;
 use App\Services\UpdateSetlistSongKeyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -67,6 +69,15 @@ class SetlistController extends Controller
     {
         $this->ensureSongInSetlist($setlist, $song);
         $service->execute($setlist, $song, $request->validated('musical_key'));
+
+        return response()->noContent();
+    }
+
+    public function updateBpm(UpdateSetlistSongBpmRequest $request, Setlist $setlist, Song $song, UpdateSetlistSongBpmService $service): Response
+    {
+        $this->ensureSongInSetlist($setlist, $song);
+        $bpm = $request->validated('bpm');
+        $service->execute($setlist, $song, $bpm === null ? null : (float) $bpm);
 
         return response()->noContent();
     }

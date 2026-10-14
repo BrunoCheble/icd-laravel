@@ -28,7 +28,7 @@ class Setlist extends Model
     {
         // Pivot holds the setlist-specific settings: key, order and minister of each song.
         return $this->belongsToMany(Song::class, 'setlist_songs')
-            ->withPivot('musical_key', 'position', 'minister_name')
+            ->withPivot('musical_key', 'bpm', 'position', 'minister_name')
             ->orderByPivot('position');
     }
 }
