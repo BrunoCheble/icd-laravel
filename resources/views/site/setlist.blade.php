@@ -598,7 +598,7 @@
                         <template x-if="!liveEdit">
                             <div class="live-focus" x-init="fitFocus()" @resize.window.debounce.150ms="fitFocus()">
                                 <template x-for="item in focusBars" :key="`${current.id}-focus-${item.index}-${item.role}`">
-                                    <div class="focus-bar" :class="{ 'is-now': item.now, 'is-next': item.role === 'next', 'is-previous': item.role === 'previous', 'is-empty': item.empty }" :style="typeStyle(item.block)"
+                                    <div class="focus-bar" :class="{ 'is-now': item.now, 'is-next': item.role === 'next', 'is-previous': item.role === 'previous', 'is-empty': item.empty }" :style="`${typeStyle(item.block)}; --focus-fit: ${focusFit(item)}`"
                                         @click="!item.now && !item.empty && goToLiveBar(item.index)">
                                         <div class="focus-head">
                                             <span class="focus-block" x-text="item.restart ? '↺ ' + @js(__('Back to the start')) + ' · ' + item.block : item.block"></span>
@@ -2012,24 +2012,44 @@
                 },
                 // Each bar shown big gets the size at which its longest chord fits its beat on one line (never bigger than
                 // set in the layout, never under a third of it; a quarter for the bars around the current one).
+                // How much the chords of a focus card shrink so the longest one fits its beat, worked out from the chord
+                // names (measured on a canvas, no layout needed), so a new card is drawn at its size right away instead
+                // of big for a moment. `focusWidth`: the width of a card's beats row, measured by fitFocusText.
+                focusWidth: 0,
+                focusFit(item) {
+                    if (item.empty || !item.bar || !this.focusWidth) return 1;
+                    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+                    const base = (item.now ? 2.8 : 1.6) * rem * (Number(this.layout?.fontScale) || 1);
+                    const beats = item.bar.beats;
+                    const room = (this.focusWidth - 0.3 * rem * (beats.length - 1)) / beats.length - 0.6 * rem;
+                    this.focusCanvas ||= document.createElement('canvas').getContext('2d');
+                    this.focusCanvas.font = `800 100px ${getComputedStyle(document.body).fontFamily}`;
+                    const em = (text) => this.focusCanvas.measureText(text).width / 100;
+                    let fit = 1;
+                    beats.forEach(beat => {
+                        const main = em(beat.repeat ? '/' : (beat.chord ? this.chordFor(beat.chord) : '–'));
+                        const and = beat.and !== null ? 0.55 * em(beat.and ? this.chordFor(beat.and) : '–') : 0;
+                        const fixed = beat.and !== null ? 0.5 * rem + 1 : 0;
+                        fit = Math.min(fit, (room - fixed) / Math.max(1, base * (main + and)));
+                    });
+                    return Math.max(item.now ? 0.34 : 0.25, Math.floor(fit * 0.97 * 100) / 100);
+                },
                 fitFocusText() {
-                    this.$nextTick(() => document.querySelectorAll('.focus-bar').forEach(bar => {
-                        const beats = [...bar.querySelectorAll('.focus-beat')];
-                        bar.style.setProperty('--focus-fit', '1');
-                        let fit = 1;
-                        beats.forEach(beat => {
-                            if (beat.scrollWidth > beat.clientWidth + 1) fit = Math.min(fit, (beat.clientWidth - 6) / (beat.scrollWidth - 6));
+                    this.$nextTick(() => {
+                        const row = document.querySelector('.focus-bar.is-now .focus-beats');
+                        if (row && Math.abs(row.clientWidth - this.focusWidth) > 1) this.focusWidth = row.clientWidth;
+                        // Safety net (fonts, rounding): a little smaller where something is still cut; never bigger.
+                        document.querySelectorAll('.focus-bar').forEach(bar => {
+                            const beats = [...bar.querySelectorAll('.focus-beat')];
+                            const smallest = bar.classList.contains('is-now') ? 0.34 : 0.25;
+                            let fit = parseFloat(getComputedStyle(bar).getPropertyValue('--focus-fit')) || 1;
+                            const cut = () => beats.some(beat => beat.scrollWidth > beat.clientWidth + 1);
+                            while (cut() && fit > smallest) {
+                                fit = Math.max(smallest, Math.round((fit - 0.03) * 100) / 100);
+                                bar.style.setProperty('--focus-fit', String(fit));
+                            }
                         });
-                        const smallest = bar.classList.contains('is-now') ? 0.34 : 0.25;
-                        fit = Math.max(smallest, Math.floor(fit * 100) / 100);
-                        bar.style.setProperty('--focus-fit', String(fit));
-                        // Padding and rounding: a little smaller until nothing is cut off.
-                        const cut = () => beats.some(beat => beat.scrollWidth > beat.clientWidth + 1);
-                        while (cut() && fit > smallest) {
-                            fit = Math.max(smallest, Math.round((fit - 0.03) * 100) / 100);
-                            bar.style.setProperty('--focus-fit', String(fit));
-                        }
-                    }));
+                    });
                 },
                 // The current and next bar: the page at its top, their area filling what is visible down to the blocks bar,
                 // with the two bars in its middle.
