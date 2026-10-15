@@ -3,6 +3,7 @@
     $tabs = [
         'show'     => [route('songs.show', $song), 'fa-eye', __('Show')],
         'edit'     => [route('songs.edit', $song), 'fa-pen', __('Edit')],
+        'sheet'    => [route('songs.sheet.edit', $song), 'fa-align-left', __('Chord sheet')],
         'layout'   => [route('songs.layout.edit', $song), 'fa-layer-group', __('Layout')],
         'practice' => [route('songs.practice', $song), 'fa-graduation-cap', __('Practice')],
         'history'  => [route('songs.history', $song), 'fa-clock-rotate-left', __('History')],

@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\UpdateChordSheetSectionService;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class UpdateChordSheetSectionServiceTest extends TestCase
 {
@@ -46,6 +46,26 @@ class UpdateChordSheetSectionServiceTest extends TestCase
         $block = $this->rebuild(['chords' => ['G', 'D'], 'durations' => [0.5, 4]], ['G', 'A', 'D']);
 
         $this->assertSame([0.5, 2, 2], $block['durations']);
+    }
+
+    public function test_many_chords_pasted_into_few_bars_share_the_block_beats(): void
+    {
+        // Two bars of "?", and nine chords pasted over the lyrics: the 8 beats shared, the block keeps its length.
+        $block = $this->rebuild(['chords' => ['?', '?'], 'durations' => [4, 4], 'beats_per_bar' => 4], ['C', 'F', 'C', 'F', 'G', 'C', 'F', 'G', 'C']);
+
+        $this->assertSame(['C', 'F', 'C', 'F', 'G', 'C', 'F', 'G', 'C'], $block['chords']);
+        $this->assertSame(8.0, (float) array_sum($block['durations']));
+        $this->assertSame([1, 1, 1, 1, 1, 1, 1, 0.5, 0.5], $block['durations']);
+    }
+
+    public function test_more_chords_than_half_beats_grow_the_block_by_whole_bars(): void
+    {
+        // Half a bar of "?" and five chords: two bars, a beat for each chord (the first ones a little longer).
+        $block = $this->rebuild(['chords' => ['?'], 'durations' => [2], 'beats_per_bar' => 4], ['C', 'F', 'G', 'Am', 'D']);
+
+        $this->assertSame(['C', 'F', 'G', 'Am', 'D'], $block['chords']);
+        $this->assertSame(8.0, (float) array_sum($block['durations']));
+        $this->assertSame([2, 1.5, 1.5, 1.5, 1.5], $block['durations']);
     }
 
     private function rebuild(array $block, array $chords): array

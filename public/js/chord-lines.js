@@ -278,3 +278,41 @@ function sheetWithChords(sections, baseStructure, structure) {
         })))),
     }));
 }
+
+// Chords written over the lyrics (a line of chords, the lyrics under it), as pasted from chord sites, turned into
+// lines with the chords in brackets: each chord goes into the lyrics at its column ("C      F" over "Além do rio" ->
+// "[C]Além do [F]rio"); over a space, on the word after it. A line of chords without lyrics under it (or over a line
+// already in brackets) stays a line of chords; "[Intro]" alone becomes a note "{c: Intro}". Other lines stay as they are.
+const SHEET_CHORD = /^(?:[A-G][#b]?[^\s|]*|\?|N\.C\.)$/;
+function isChordOnlyLine(line) {
+    const tokens = String(line).trim().split(/\s+/).filter(Boolean);
+    return tokens.length > 0 && !String(line).includes('[') && tokens.every(token => SHEET_CHORD.test(token));
+}
+function chordsOverLyrics(text) {
+    const lines = String(text).replace(/\r/g, '').split('\n');
+    const result = [];
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const label = /^\s*\[([^\]]+)\]\s*$/.exec(line);
+        if (label && !SHEET_CHORD.test(label[1].trim())) { result.push(`{c: ${label[1].trim()}}`); continue; }
+        if (!isChordOnlyLine(line)) { result.push(line); continue; }
+        const chords = [...line.matchAll(/\S+/g)].map(match => ({ at: match.index, name: match[0] }));
+        const next = lines[i + 1];
+        if (next === undefined || next.trim() === '' || isChordOnlyLine(next) || /[\[{]/.test(next)) {
+            result.push(chords.map(chord => `[${chord.name}]`).join(' '));
+            continue;
+        }
+        let lyrics = next;
+        [...chords].reverse().forEach(chord => {
+            let at = chord.at;
+            if (at > lyrics.length) lyrics = lyrics.padEnd(at, ' ');
+            while (at < lyrics.length && lyrics[at] === ' ' && at + 1 < lyrics.length && lyrics[at + 1] !== ' ' && !chords.some(other => other.at === at + 1)) at++;
+            lyrics = lyrics.slice(0, at) + `[${chord.name}]` + lyrics.slice(at);
+        });
+        result.push(lyrics.replace(/\s+$/, ''));
+        i++;
+    }
+    return result.join('\n');
+}
+// Whether a text has chords written over lyrics (to be turned by chordsOverLyrics).
+const hasChordsOverLyrics = (text) => String(text).split('\n').some(isChordOnlyLine);

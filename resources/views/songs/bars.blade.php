@@ -353,9 +353,9 @@
                                                             @blur="commitInline(true)">
                                                     </template>
                                                     <span class="halves" x-show="!(inline && Math.floor(inline.tick / 2) === b * perBar + i)">
-                                                        <span class="chord" :class="{ 'is-repeat': beat.repeat, 'is-long': !beat.repeat && beat.chord.length > 4, 'can-drag': mode === 'edit' && isChangeAt((b * perBar + i) * 2) }" x-text="beat.repeat ? '/' : (beat.chord || '–')"
+                                                        <span class="chord" :class="{ 'is-repeat': beat.repeat, 'is-long': !beat.repeat && beat.chord.length > 4, 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2) }" x-text="beat.repeat ? '/' : (beat.chord || '–')"
                                                             @pointerdown="startDrag($event, b, i, 0)"></span>
-                                                        <template x-if="beat.and !== null"><span class="chord is-and" :class="{ 'is-long': beat.and.length > 4, 'can-drag': mode === 'edit' && isChangeAt((b * perBar + i) * 2 + 1) }" x-text="beat.and || '–'"
+                                                        <template x-if="beat.and !== null"><span class="chord is-and" :class="{ 'is-long': beat.and.length > 4, 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2 + 1) }" x-text="beat.and || '–'"
                                                             @pointerdown="startDrag($event, b, i, 1)"></span></template>
                                                     </span>
                                                     <span class="count" x-text="i + 1"></span>
@@ -390,8 +390,11 @@
                                                     </button>
                                                     <button type="button" class="ws-btn" x-show="sheetEdit.copies" @click="saveSheetSection(true)" :disabled="sheetEdit.saving"
                                                         x-text="@js(__('Save in every :name (:count)')).replace(':name', sheetEdit.name).replace(':count', sheetEdit.copies + 1)"></button>
+                                                    <button type="button" class="ws-btn" x-show="hasChordsOverLyrics(sheetEdit.text)" @click="sheetEdit.text = chordsOverLyrics(sheetEdit.text)"
+                                                        title="{{ __('Chords pasted over the lyrics go into the lyrics, at their columns') }}"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('Interpret') }}</button>
                                                     <button type="button" class="ws-btn" @click="sheetEdit = null">{{ __('Cancel') }}</button>
                                                 </div>
+                                                <p class="help">{{ __('You can also paste chords over the lyrics (a line of chords, the lyrics under it) and click Interpret.') }}</p>
                                                 <p class="help">{{ __('Chords stay in brackets, e.g. Esp[G]írito Santo: change the lyrics, move, swap, add or remove chords (the map changes too: an added chord takes half of the one before it, a removed one gives its beats to the one before).') }}</p>
                                                 <p class="error" x-show="sheetEdit.error" x-text="sheetEdit.error"></p>
                                             </div>
@@ -463,16 +466,7 @@
                             <button type="button" class="ws-btn" @click="alignBlock(false)">{{ __('Start on beat 1 of this bar') }}</button>
                             <button type="button" class="ws-btn" @click="alignBlock(true)">{{ __('Start on the next bar') }}</button>
                         </div>
-                        {{-- Bar 1: the beat the first chord falls on (the beats before it empty) --}}
-                        <div x-show="!versionId && barMenu && barMenu.bar === 0">
-                            <p class="title" style="margin-top: .5rem;">{{ __('First chord on beat') }}</p>
-                            <div class="row" style="margin-top: 0;">
-                                <template x-for="n in perBar" :key="n">
-                                    <button type="button" class="ws-btn" :class="{ 'is-active': leadTicks === (n - 1) * 2 }" @click="setLead(n)" x-text="n"></button>
-                                </template>
-                            </div>
-                        </div>
-                        <div class="row" x-show="canPlay">
+                                <div class="row" x-show="canPlay">
                             <button type="button" class="ws-btn" @click="playFromTick(barMenu.bar * perBar * 2); barMenu = null"><i class="fa-solid fa-play"></i> {{ __('Play from here') }}</button>
                         </div>
                         {{-- Bars added (the chord sounding there goes on one bar longer) or removed --}}
@@ -552,6 +546,16 @@
                             </div>
                             <p class="ws-panel-help mt-2">{{ __('One line per bar: the block that starts in it and the chord of each beat ("/" or empty: the chord goes on; "G D": G on the beat and D on the "and"). Importing needs the same number of bars and is not saved until you save; in a version only the chords are imported.') }}</p>
                             <p class="ws-panel-help mt-2" x-show="csvMessage" x-text="csvMessage" :style="csvError ? 'color: #dc2626' : ''"></p>
+                        </div>
+                        {{-- Wrong chord sheet: the chords out, to write them by ear (blocks and bars stay) --}}
+                        <div class="ws-panel-section" x-show="!versionId">
+                            <div class="ws-panel-label"><i class="fa-solid fa-eraser"></i> {{ __('Clear chords') }}</div>
+                            <form method="POST" action="{{ route('songs.bars.clear', $song) }}"
+                                @submit="if (!confirm(@js(__('Clear every chord? The blocks and their bars stay, each bar gets a "?" (in the map and in the chord sheet, over its lyrics) to be written by ear. Unsaved changes here are lost; the current version stays in the history.')))) $event.preventDefault(); else dirty = false">
+                                @csrf
+                                <button type="submit" class="ws-btn"><i class="fa-solid fa-eraser"></i> {{ __('Clear chords') }}</button>
+                            </form>
+                            <p class="ws-panel-help mt-2">{{ __('For a wrong chord sheet: keeps the blocks, the bars and the lyrics, and puts a "?" in each bar (also in the chord sheet) to write the chords by ear.') }}</p>
                         </div>
                         <div class="ws-panel-section">
                             <div class="ws-panel-label"><i class="fa-solid fa-circle-info"></i> {{ __('How it works') }}</div>
@@ -1281,22 +1285,8 @@
                         return items;
                     });
                 },
-                // ---- The first chord on another beat of bar 1 (empty beats before it); its time in the song stays ----
+                // Ticks before the song's first chord (empty beats in bar 1).
                 get leadTicks() { return this.timedBlocks()[0]?.startTick ?? 0; },
-                setLead(beat) {
-                    const wanted = (beat - 1) * 2;
-                    const delta = wanted - this.leadTicks;
-                    if (!delta || wanted < 0 || wanted >= this.perBar * 2) return;
-                    this.remember();
-                    if (delta > 0) this.ticks = [...new Array(delta).fill(''), ...this.ticks];
-                    else this.ticks = this.ticks.slice(-delta);
-                    this.splits = this.splits.map(tick => tick + delta).filter(tick => tick > 0);
-                    this.blocks = this.blocks.map(block => ({ ...block, startTick: Math.max(0, block.startTick + delta) }));
-                    this.originalTicks = [];
-                    this.barMenu = null;
-                    this.revision++;
-                    this.notice = @js(__('The first chord now starts on beat :n of bar 1.')).replace(':n', beat);
-                },
                 // ---- Review: "Save as reviewed" once the bars are right ----
                 reviewedAt: config.reviewedAt || null,
                 formatDay(iso) { const date = iso ? new Date(iso) : null; return date && !isNaN(date) ? date.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''; },
@@ -1493,6 +1483,8 @@
                 async saveSheetSection(same = false) {
                     const edit = this.sheetEdit;
                     if (!edit || edit.saving) return;
+                    // Chords pasted over the lyrics and not interpreted yet: put into the lyrics first.
+                    if (hasChordsOverLyrics(edit.text)) edit.text = chordsOverLyrics(edit.text);
                     edit.saving = true;
                     edit.error = '';
                     // Chords swapped: the map changed too, the page reads it again.
@@ -1540,18 +1532,22 @@
                     const now = this.timedBlocks().flatMap(block => this.blockChords(block));
                     let value = { view: sheetView, changed: false };
                     if (this.sheetLinked && JSON.stringify(saved) !== JSON.stringify(now)) {
-                        // Where each chord starts, as saved and now (unknown after chords were moved on the sheet).
+                        // Where each chord starts, as saved and now (unknown after chords were moved on the sheet): its
+                        // block and its place in it, so a chord is only taken for the same one inside the same block (a bar
+                        // duplicated in one block moves the next blocks, but their chords stay theirs).
+                        const BLOCK = 1e6;
                         let savedAt = null;
-                        if (!this.sheetBase) {
+                        const timedNow = this.timedBlocks();
+                        const timedSaved = this.baseStructure.filter(block => block && !isMarkerData(block));
+                        if (!this.sheetBase && timedSaved.length === timedNow.length) {
                             savedAt = [];
-                            let tick = 0;
-                            this.baseStructure.forEach(block => {
-                                if (!block || isMarkerData(block)) return;
+                            timedSaved.forEach((block, b) => {
+                                let tick = b === 0 ? Math.round((Number(block.lead_beats) || 0) * 2) : 0;
                                 const chords = chordsOnly(Array.isArray(block.chords) ? block.chords.map(String) : []);
-                                chords.forEach((chord, i) => { savedAt.push(tick); tick += Math.round((block.durations?.[i] ?? this.perBar) * 2); });
+                                chords.forEach((chord, i) => { savedAt.push(b * BLOCK + tick); tick += Math.round((block.durations?.[i] ?? this.perBar) * 2); });
                             });
                         }
-                        const nowAt = this.chordStarts();
+                        const nowAt = timedNow.flatMap((block, b) => this.blockChordTicks(block).map(tick => b * BLOCK + tick - (b === 0 ? 0 : block.startTick)));
                         const { replace, after } = savedAt && savedAt.length === saved.length && nowAt.length === now.length
                             ? chordChanges(saved, now, savedAt, nowAt) : chordChanges(saved, now);
                         const added = (chords, text) => chords.map((chord, k) => ({ chord, text: k === chords.length - 1 ? text : '', added: true }));
@@ -1932,8 +1928,20 @@
                 startsChord(tick, ticks = this.ticks, splits = this.splits) {
                     return ticks[tick] !== ticks[tick - 1] || splits.includes(tick);
                 },
+                // A chord change, or the first chord of a block (moved within the block's first bar).
+                canDragAt(tick) { return this.isChangeAt(tick) || this.isBlockStartAt(tick); },
+                isBlockStartAt(tick) { return !this.versionId && !!this.ticks[tick] && this.timedBlocks().some(block => block.startTick === tick); },
                 startDrag(event, bar, beat, half) {
                     const tick = (bar * this.perBar + beat) * 2 + half;
+                    if (this.mode === 'edit' && this.isBlockStartAt(tick)) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        this.inline = null;
+                        this.editor = null;
+                        this.copyOffer = null;
+                        this.drag = { blockStart: true, from: tick, to: tick, base: [...this.ticks], baseSplits: [...this.splits], baseBlocks: this.blocks.map(block => ({ ...block, data: { ...block.data } })), x: event.clientX, y: event.clientY, moved: false };
+                        return;
+                    }
                     if (this.mode !== 'edit' || !this.isChangeAt(tick)) return;
                     event.preventDefault();
                     event.stopPropagation();
@@ -1952,7 +1960,18 @@
                     const beat = Number(cell?.dataset.beat);
                     if (!cell || !Number.isFinite(bar) || !Number.isFinite(beat)) return;
                     const box = cell.getBoundingClientRect();
-                    const [to, ticks, splits] = this.dragResult(drag.base, drag.baseSplits, drag.from, (bar * this.perBar + beat) * 2 + (event.clientX > box.left + box.width / 2 ? 1 : 0));
+                    const target = (bar * this.perBar + beat) * 2 + (event.clientX > box.left + box.width / 2 ? 1 : 0);
+                    if (drag.blockStart) {
+                        const [to, ticks, splits, blocks] = this.movedBlockStart(drag.base, drag.baseSplits, drag.baseBlocks, drag.from, target);
+                        if (to === drag.to) return;
+                        drag.to = to;
+                        this.ticks = ticks;
+                        this.splits = splits;
+                        this.blocks = blocks;
+                        this.revision++;
+                        return;
+                    }
+                    const [to, ticks, splits] = this.dragResult(drag.base, drag.baseSplits, drag.from, target);
                     if (to === drag.to) return;
                     drag.to = to;
                     this.ticks = ticks;
@@ -1966,6 +1985,18 @@
                     if (!drag.moved) return;
                     this.dragEnded = performance.now();
                     if (drag.to === drag.from) return;
+                    if (drag.blockStart) {
+                        // Undo goes back to before the drag.
+                        const moved = [this.ticks, this.splits, this.blocks];
+                        [this.ticks, this.splits, this.blocks] = [drag.base, drag.baseSplits, drag.baseBlocks];
+                        this.remember();
+                        [this.ticks, this.splits, this.blocks] = moved;
+                        this.originalTicks = [];
+                        this.revision++;
+                        const beat = Math.floor((drag.to % (this.perBar * 2)) / 2) + 1;
+                        this.notice = @js(__('The block now starts on beat :n of its bar.')).replace(':n', beat + (drag.to % 2 ? ' e' : ''));
+                        return;
+                    }
                     // Undo goes back to before the drag; the equal blocks are offered (compared as they were).
                     const moved = [this.ticks, this.splits];
                     this.ticks = drag.base;
@@ -1992,6 +2023,47 @@
                     const chord = ticks[from];
                     const [without, withoutSplits] = this.withoutChord(ticks, splits, from);
                     return [to, ...this.withChord(without, withoutSplits, to, chord)];
+                },
+                // The first chord of a block moved to `to`, within the block's first bar: moved later, the block starts
+                // there and the beats left behind keep the chord before (the previous block's) or, in the song's first
+                // block, stay empty; moved earlier, the chord before gets shorter. The song's other chords keep their
+                // time. Returns [to, ticks, splits, blocks].
+                movedBlockStart(ticks, splits, blocks, from, to) {
+                    const size = this.perBar * 2;
+                    const timed = blocks.filter(block => !isMarkerData(block.data)).sort((a, b) => a.startTick - b.startTick);
+                    const index = timed.findIndex(block => block.startTick === from);
+                    const block = timed[index];
+                    const previous = timed[index - 1];
+                    const barStart = Math.floor(from / size) * size;
+                    let end = from + 1;
+                    while (end < ticks.length && ticks[end] === ticks[from] && !splits.includes(end) && !timed.some(item => item.startTick === end)) end++;
+                    let low = barStart;
+                    if (previous) {
+                        // The chord before keeps at least half a beat.
+                        let chordStart = from - 1;
+                        while (chordStart > previous.startTick && ticks[chordStart - 1] === ticks[from - 1] && !splits.includes(chordStart)) chordStart--;
+                        low = Math.max(barStart, chordStart + 1);
+                    } else {
+                        // Song's first block: only over empty beats.
+                        while (low < from && ticks[low] !== '') low++;
+                    }
+                    to = Math.max(low, Math.min(to, end - 1, barStart + size - 1));
+                    if (to === from) return [from, ticks, splits, blocks];
+                    const chord = ticks[from];
+                    const filler = previous ? ticks[from - 1] : '';
+                    const next = [...ticks];
+                    for (let t = Math.min(from, to); t < Math.max(from, to); t++) next[t] = to > from ? filler : chord;
+                    let nextSplits = splits.filter(tick => tick < Math.min(from, to) || tick > Math.max(from, to));
+                    // The same chord on both sides of the block start stays two chords.
+                    if (to > 0 && next[to - 1] === next[to]) nextSplits = [...nextSplits, to];
+                    nextSplits = nextSplits.filter((tick, i, list) => list.indexOf(tick) === i && next[tick] === next[tick - 1]);
+                    const nextBlocks = blocks.map(item => {
+                        if (item.id !== block.id) return item;
+                        // The song's first chord keeps its own time when it moves (the bars stay where they are).
+                        const data = previous ? item.data : { ...item.data, start: formatStart(Math.max(0, this.blockStart(item) + (to - from) * this.halfBeat)) };
+                        return { ...item, startTick: to, data };
+                    });
+                    return [to, next, nextSplits, nextBlocks];
                 },
                 // [start, end) of the block of `tick`.
                 blockBounds(tick) {
@@ -2128,10 +2200,11 @@
                     for (let t = tick; t < Math.min(end, this.ticks.length) && (t === tick || (this.ticks[t] === old && !this.splits.includes(t))); t++) this.ticks[t] = chord;
                     this.revision++;
                 },
-                isChordName(typed) { return /^[A-G][#b]?[^\s\[\]|]*$/.test(typed); },
+                // A chord name, or "?" (a chord not known yet).
+                isChordName(typed) { return typed === '?' || /^[A-G][#b]?[^\s\[\]|]*$/.test(typed); },
                 // A chord typed at `tick` (in the key on screen; stored in the song's key); the equal blocks are offered.
                 typeChordAt(tick, typed) {
-                    if (tick < this.leadTicks) { this.notice = @js(__('Before the first chord: set where it starts in the menu of bar 1.')); return; }
+                    if (tick < this.leadTicks) { this.notice = @js(__('Before the first chord: drag the first chord to move where it starts.')); return; }
                     const chord = this.key && this.savedKey && this.key !== this.savedKey ? ChordTransposer.transposeChord(typed, this.key, this.savedKey) : typed;
                     const found = this.copiesBefore(tick);
                     this.setFrom(tick, chord);
@@ -2574,10 +2647,41 @@
                 },
                 // The bar copied right after itself (its chords and where they change), in its block; the equal blocks
                 // are offered the same.
-                duplicateBar(bar) {
+                // The ticks of `count` bars from bar `bar` taken inside one block (the block playing on the bar's first
+                // beat, or the song's first block), counted from the block's start: when they would go past the block's
+                // end, its last bars instead, so a duplicate or a removal stays in that block and the next blocks only
+                // move by whole bars.
+                barsInBlock(bar, count = 1) {
                     const size = this.perBar * 2;
-                    const from = bar * size;
-                    const to = Math.min(from + size, this.ticks.length);
+                    const block = this.blockOfTick(bar * size) ?? this.timedBlocks()[0];
+                    if (!block) return { from: bar * size, to: Math.min((bar + count) * size, this.ticks.length) };
+                    const timed = this.timedBlocks();
+                    const end = timed[timed.indexOf(block) + 1]?.startTick ?? this.ticks.length;
+                    // Bars counted from the block's start (a block starting on beat 3 has its bars from beat 3).
+                    let from = block.startTick + Math.max(0, Math.floor((bar * size - block.startTick) / size)) * size;
+                    let to = from + count * size;
+                    if (to > end) {
+                        to = end;
+                        from = Math.max(block.startTick, end - count * size);
+                    }
+                    return { from, to };
+                },
+                duplicateBar(bar) {
+                    // A block starting within the bar (the bar begins with the chord of the block before it): one more
+                    // bar of the chord that goes on at the bar's end, in that block ("D / A /" -> "D / A /", "A / / /").
+                    const size = this.perBar * 2;
+                    const barEnd = Math.min((bar + 1) * size, this.ticks.length);
+                    const starting = this.timedBlocks().find(block => block.startTick > bar * size && block.startTick < barEnd);
+                    if (starting && this.ticks[barEnd - 1]) {
+                        const found = this.copiesBefore(starting.startTick);
+                        this.remember();
+                        this.insertTicks(barEnd, true);
+                        this.revision++;
+                        this.notice = @js(__('Bar :n duplicated.')).replace(':n', bar + 1);
+                        if (found) this.offerBarCopies(found, barEnd, tick => this.insertTicks(tick, true));
+                        return;
+                    }
+                    const { from, to } = this.barsInBlock(bar);
                     if (from >= to) return;
                     const found = this.copiesBefore(from);
                     this.remember();
@@ -2591,9 +2695,11 @@
                     const slice = this.ticks.slice(from, to);
                     const size = to - from;
                     const inside = this.splits.filter(tick => tick >= from && tick < to).map(tick => tick - from);
-                    // A copy starting with the chord the bar ends on just makes that chord longer (as "insert after").
+                    // A copy starting with the chord the bar ends on just makes that chord longer (as "insert after"),
+                    // except a "?" (one per bar, each to be written on its own).
+                    const own = slice[0] === '?' && this.ticks[to - 1] === '?' ? [to] : [];
                     this.ticks = [...this.ticks.slice(0, to), ...slice, ...this.ticks.slice(to)];
-                    this.splits = [...this.splits.map(tick => (tick >= to ? tick + size : tick)), ...inside.map(tick => tick + to)]
+                    this.splits = [...this.splits.map(tick => (tick >= to ? tick + size : tick)), ...inside.map(tick => tick + to), ...own]
                         .filter((tick, i, list) => list.indexOf(tick) === i && this.ticks[tick] === this.ticks[tick - 1]);
                     this.blocks = this.blocks.map(block => (block.startTick >= to ? { ...block, startTick: block.startTick + size } : block));
                     this.originalTicks = [];
@@ -2613,9 +2719,8 @@
                 // The bar, or the marked bars when it is one of them (or none is given).
                 removeBar(bar) {
                     const { from: first, to: last } = this.barsFor(bar);
-                    const size = this.perBar * 2;
-                    const from = first * size;
-                    const to = Math.min((last + 1) * size, this.ticks.length);
+                    // Inside the block of the first bar (see barsInBlock).
+                    const { from, to } = this.barsInBlock(first, last - first + 1);
                     if (this.ticks.length - (to - from) < 1) return;
                     const found = this.copiesBefore(from);
                     this.remember();

@@ -7,6 +7,7 @@ use App\Http\Requests\SongLayoutRequest;
 use App\Http\Requests\SongBarsRequest;
 use App\Http\Requests\SongSheetSectionRequest;
 use App\Http\Requests\StudySongMapRequest;
+use App\Services\ClearSongChordsService;
 use App\Services\CreateSongBarsService;
 use App\Services\MarkSongReviewedService;
 use App\Services\SaveStudySongMapService;
@@ -99,6 +100,18 @@ class SongLayoutController extends Controller
             'lyrics'     => $blocks->map(fn ($block) => is_array($block) ? ($block['lyrics'] ?? null) : null)->all(),
             'anchors'    => $blocks->map(fn ($block) => is_array($block) ? ($block['anchor'] ?? null) : null)->all(),
         ]);
+    }
+
+    /**
+     * Takes every chord out (bars and blocks kept, a "?" in each bar, also over the chord sheet's lyrics), to write
+     * them again by ear.
+     */
+    public function clearChords(Song $song, ClearSongChordsService $service): RedirectResponse
+    {
+        $service->execute($song);
+
+        return Redirect::route('songs.layout.edit', $song)
+            ->with('success', __('Chords cleared: every bar has a "?", also in the chord sheet. Write them by ear here or on the Chord sheet page (the previous version is in the history).'));
     }
 
     /**

@@ -91,6 +91,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/songs', [SongController::class, 'bulkDestroy'])->name('songs.bulk-destroy');
     Route::resource('songs', SongController::class);
     Route::get('/songs/{song}/layout', [SongLayoutController::class, 'edit'])->name('songs.layout.edit');
+    Route::get('/songs/{song}/sheet', [\App\Http\Controllers\SongSheetController::class, 'edit'])->name('songs.sheet.edit');
+    Route::put('/songs/{song}/sheet', [\App\Http\Controllers\SongSheetController::class, 'update'])->name('songs.sheet.update');
+    Route::post('/songs/{song}/sheet/bars', [\App\Http\Controllers\SongSheetController::class, 'bars'])->name('songs.sheet.bars');
     Route::put('/songs/{song}/layout', [SongLayoutController::class, 'update'])->name('songs.layout.update');
     Route::put('/songs/{song}/bars', [SongLayoutController::class, 'updateBars'])->name('songs.bars.update');
     Route::put('/songs/{song}/sheet-section', [SongLayoutController::class, 'updateSheetSection'])->name('songs.sheet-section.update');
@@ -98,6 +101,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/songs/{song}/versions/{version}', [SongVersionController::class, 'update'])->name('songs.versions.update');
     Route::delete('/songs/{song}/versions/{version}', [SongVersionController::class, 'destroy'])->name('songs.versions.destroy');
     Route::post('/songs/{song}/bars', [SongLayoutController::class, 'createBars'])->name('songs.bars.create');
+    Route::post('/songs/{song}/bars/clear', [SongLayoutController::class, 'clearChords'])->name('songs.bars.clear');
     Route::get('/songs/{song}/practice', [SongPracticeController::class, 'show'])->name('songs.practice');
     Route::get('/songs/{song}/history', [SongHistoryController::class, 'index'])->name('songs.history');
     Route::get('/song-suggestions', [SongSuggestionController::class, 'index'])->name('song-suggestions.index');

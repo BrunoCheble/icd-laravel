@@ -147,24 +147,24 @@ class UpdateChordSheetSectionService
 
         if ($durations !== null) {
             $step = UpdateSongLayoutService::DURATION_STEP;
-            foreach ($result as $k => $entry) {
-                if ($entry['from'] !== null || $entry['beats'] > 0) {
-                    continue;
+            $total = array_sum(array_column($result, 'beats'));
+            $halved = self::halveForAdded($result, $step);
+            if ($halved !== null) {
+                $result = $halved;
+            } else {
+                // Too many chords added in one place for halves: the block's beats shared by all its chords (in half
+                // beats, the first ones a little longer), the block keeping its length; when it has fewer half beats
+                // than chords (a chord sheet written doubled, say), it grows to the whole bars giving each chord a beat.
+                $count = count($result);
+                if ($total < $count * $step) {
+                    $perBar = max(1, (int) ($block['beats_per_bar'] ?? 4));
+                    $total = (float) (ceil($count / $perBar) * $perBar);
                 }
-                // Half of a neighbour (in half beats): the chord before, or the next one with room.
-                $giver = null;
-                foreach ([$k - 1, ...array_keys(array_slice($result, $k + 1, null, true))] as $candidate) {
-                    if (isset($result[$candidate]) && $result[$candidate]['beats'] >= 2 * $step) {
-                        $giver = $candidate;
-                        break;
-                    }
+                $each = floor($total / $count / $step) * $step;
+                $extra = (int) round(($total - $each * $count) / $step);
+                foreach ($result as $k => $entry) {
+                    $result[$k]['beats'] = $each + ($k < $extra ? $step : 0);
                 }
-                if ($giver === null) {
-                    throw ValidationException::withMessages(['lines' => __('There is no room for the added chord: lengthen the chords around it on the grid first.')]);
-                }
-                $half = floor($result[$giver]['beats'] / 2 / $step) * $step;
-                $result[$giver]['beats'] -= $half;
-                $result[$k]['beats'] = $half;
             }
         }
 
@@ -191,6 +191,34 @@ class UpdateChordSheetSectionService
         }
 
         return $block;
+    }
+
+    /**
+     * Each added chord (no beats yet) takes half of a neighbour (the chord before, or the next one with room); null
+     * when some added chord finds no room that way.
+     */
+    private static function halveForAdded(array $result, float $step): ?array
+    {
+        foreach ($result as $k => $entry) {
+            if ($entry['from'] !== null || $entry['beats'] > 0) {
+                continue;
+            }
+            $giver = null;
+            foreach ([$k - 1, ...array_keys(array_slice($result, $k + 1, null, true))] as $candidate) {
+                if (isset($result[$candidate]) && $result[$candidate]['beats'] >= 2 * $step) {
+                    $giver = $candidate;
+                    break;
+                }
+            }
+            if ($giver === null) {
+                return null;
+            }
+            $half = floor($result[$giver]['beats'] / 2 / $step) * $step;
+            $result[$giver]['beats'] -= $half;
+            $result[$k]['beats'] = $half;
+        }
+
+        return $result;
     }
 
     /**
