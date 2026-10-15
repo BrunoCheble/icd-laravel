@@ -60,6 +60,9 @@
         .bar.is-current.is-looped { box-shadow: 0 0 0 2px #f59e0b inset, 0 0 0 4px #6366f1 inset; }
         .passage-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: .4rem; font-size: .8rem; color: #4b5563; }
         .passage-bar .ws-btn { min-height: 32px; padding: 0 .55rem; font-size: .8rem; }
+        .block-mark { display: inline-flex; align-items: center; gap: .25rem; padding: .05rem .3rem; border: 1px dashed #9ca3af; border-radius: .3rem; background: #fff; color: #6b7280; font-size: .68rem; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
+        .block-mark.is-marked { border-style: solid; border-color: #4f46e5; color: #4f46e5; background: #eef2ff; }
+        .popover .help { margin: .35rem 0 0; font-size: .75rem; color: #6b7280; }
         .popover hr { margin: .5rem 0 .1rem; border: 0; border-top: 1px solid #e5e7eb; }
         /* Lines view: the map's chords in lines as on the public page; clicking a chord breaks the line there or
            marks it as a passing chord (the bars do not change) */
@@ -195,6 +198,10 @@
                             :title="loop ? @js(__('Stop repeating')) : @js(__('Repeat the marked bars (or the current bar)'))" aria-label="{{ __('Repeat') }}"><i class="fa-solid fa-repeat"></i></button>
                         <button type="button" class="ws-btn" x-show="canPlay && !clickOnly" :class="{ 'is-active': metronome }" @click="metronome = !metronome"
                             title="{{ __('Metronome') }}" aria-label="{{ __('Metronome') }}"><i class="fa-solid fa-stopwatch"></i></button>
+                        {{-- Count-in: a bar of drumsticks before playing --}}
+                        <button type="button" class="ws-btn" x-show="canPlay && bpm > 0" :class="{ 'is-active': countIn }" @click="toggleCountIn()"
+                            :title="countIn ? @js(__('Count-in on: a bar of drumsticks at the BPM before playing. Click to turn it off')) : @js(__('Count-in off. Click for a bar of drumsticks at the BPM before playing'))"
+                            aria-label="{{ __('Count-in') }}"><i class="fa-solid fa-drum"></i><span class="ws-label" x-text="counting ? ` ${countBeat || ''}` : ' ' + @js(__('Count-in'))"></span></button>
                         <span class="ws-spacer"></span>
                         {{-- Tapping "BPM" in the rhythm of the song sets it; the number can be typed too --}}
                         <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId">
@@ -212,6 +219,10 @@
                             <button type="button" @click="markStartNow()" :disabled="!canPlay" title="{{ __('Click on the first beat of bar 1 while the song plays') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;">{{ __('Start') }} <i class="fa-solid fa-flag"></i></button>
                             <input type="number" class="bpm-input" min="0" step="0.1" :value="songStart" @change="setSongStart($event.target.value)" aria-label="{{ __('Start of bar 1 (seconds)') }}" title="{{ __('Start of bar 1 (seconds)') }}" style="border: 0; min-height: 0;">
                         </span>
+                        {{-- Free timing: each block starts where it was marked (songs whose tempo changes), or every block on the BPM --}}
+                        <button type="button" class="ws-btn" x-show="!versionId" :class="{ 'is-active': freeTiming }" @click="toggleFreeTiming()"
+                            :title="freeTiming ? @js(__('Free timing: each block starts where it was marked with its clock. Click to follow the bars (BPM) again')) : @js(__('Following the bars: every block starts where the BPM puts it. Click for free timing (mark where each block starts)'))">
+                            <i class="fa-regular fa-clock"></i> <span class="ws-label">{{ __('Free timing') }}</span></button>
                         {{-- Time signature: only the bar lines move, every chord stays on its beat --}}
                         <select class="ws-btn" x-show="!versionId" :value="perBar" @change="setMeter(Number($event.target.value))" title="{{ __('Time signature (the chords keep their beats)') }}" aria-label="{{ __('Time signature') }}" style="padding-right: 1.8rem;">
                             @foreach (\App\Services\CreateSongBarsService::METERS as $label => $beats)
@@ -332,12 +343,18 @@
                                         </span>
                                         <div class="bar-blocks">
                                             <template x-for="block in bar.blocks" :key="block.id">
-                                                <button type="button" class="block-chip" :class="{ 'is-marker': isMarker(block) }" :style="typeStyle(blockName(block))"
-                                                    @click.stop="isMarker(block) ? null : playFromTick(block.startTick)" @contextmenu.stop.prevent="openBarMenu(b, $event.currentTarget.closest('.bar'))"
-                                                    :title="isMarker(block) ? '' : @js(__('Play from here'))">
-                                                    <i class="fa-solid fa-play play" x-show="!isMarker(block) && canPlay"></i>
-                                                    <span x-text="isMarker(block) ? '↺ ' + @js(__('Back to the start')) : blockName(block)"></span>
-                                                </button>
+                                                <span style="display: contents">
+                                                    <button type="button" class="block-chip" :class="{ 'is-marker': isMarker(block) }" :style="typeStyle(blockName(block))"
+                                                        @click.stop="isMarker(block) ? null : playFromTick(block.startTick)" @contextmenu.stop.prevent="openBarMenu(b, $event.currentTarget.closest('.bar'))"
+                                                        :title="isMarker(block) ? '' : @js(__('Play from here'))">
+                                                        <i class="fa-solid fa-play play" x-show="!isMarker(block) && canPlay"></i>
+                                                        <span x-text="isMarker(block) ? '↺ ' + @js(__('Back to the start')) : blockName(block)"></span>
+                                                    </button>
+                                                    <template x-if="freeTiming && !versionId && !isMarker(block)">
+                                                        <button type="button" class="block-mark" :class="{ 'is-marked': isMarked(block) }" @click.stop="openMark(block, $event)" @pointerdown.stop
+                                                            :title="`${@js(__('Mark the start of this block now'))} (${formatClock(blockStart(block))})`" :aria-label="@js(__('Mark the start of this block now'))"><i class="fa-regular fa-clock"></i></button>
+                                                    </template>
+                                                </span>
                                             </template>
                                         </div>
                                         <div class="bar-beats" :style="`grid-template-columns: repeat(${bar.beats.length}, minmax(0, 1fr))`">
@@ -375,6 +392,11 @@
                                     <div class="sheet-section" :class="{ 'is-current': s === currentSheetSection }" :style="typeStyle(section.label)" :data-sheet="s">
                                         <div class="sheet-head">
                                             <div class="sheet-label" x-text="section.label" @click="playFromSheet(s)"></div>
+                                            <template x-if="freeTiming && !versionId && !section.marker && sheetBlock(s)">
+                                                <button type="button" class="block-mark" :class="{ 'is-marked': isMarked(sheetBlock(s)) }" @click.stop="openMark(sheetBlock(s), $event)"
+                                                    :title="@js(__('Mark the start of this block now'))" :aria-label="@js(__('Mark the start of this block now'))">
+                                                    <i class="fa-regular fa-clock"></i> <span x-text="formatClock(blockStart(sheetBlock(s)))"></span></button>
+                                            </template>
                                             <button type="button" class="sheet-edit-btn" x-show="!versionId && !section.marker && sheetEdit?.index !== s" @click.stop="editSheetSection(s)"
                                                 title="{{ __('Edit the lyrics') }}" aria-label="{{ __('Edit the lyrics') }}"><i class="fa-solid fa-pen"></i></button>
                                         </div>
@@ -446,6 +468,38 @@
                             <button type="button" class="ws-btn ws-btn-primary" x-ref="copyOfferAll" @click="applyToCopies()">{{ __('In all of them') }}</button>
                             <button type="button" class="ws-btn" @click="copyOffer = null">{{ __('Only this one') }}</button>
                         </div>
+                    </div>
+
+                    {{-- Clock of a block (free timing): its start at the player's time, on the nearest bar or exact --}}
+                    <div class="popover" x-show="markMenu" x-cloak @click.outside="markMenu = null" @keydown.escape.window="markMenu = null"
+                        :style="markMenu ? `position: fixed; left: ${Math.max(8, markMenu?.x)}px; top: ${markMenu?.y}px;` : ''">
+                        <template x-if="markMenu">
+                            <div>
+                                <p class="title" x-text="`${blockName(blocks.find(item => item.id === markMenu?.id) ?? { data: {} })} · ${@js(__('starts at'))}`"></p>
+                                <template x-if="markMenu?.first">
+                                    <div>
+                                        <p class="help">{{ __('The first block is where the song starts (bar 1): the exact time.') }}</p>
+                                        <div class="row"><button type="button" class="ws-btn ws-btn-primary" @click="applyMark(markMenu?.exact)"><i class="fa-regular fa-clock"></i> <span x-text="formatClock(markMenu?.exact)"></span></button></div>
+                                    </div>
+                                </template>
+                                <template x-if="!markMenu?.first">
+                                    <div>
+                                        <div class="row">
+                                            <button type="button" class="ws-btn" :class="{ 'ws-btn-primary': !markMenu?.far }" @click="applyMark(markMenu?.snapped)" :disabled="markMenu?.snapped <= 0"
+                                                title="{{ __('On a bar line, counted from the block before it') }}">
+                                                <i class="fa-solid fa-table-cells"></i> <span x-text="`${formatClock(markMenu?.snapped)} (${markLabel(markMenu)})`"></span></button>
+                                            <button type="button" class="ws-btn" :class="{ 'ws-btn-primary': markMenu?.far }" @click="applyMark(markMenu?.exact)"
+                                                title="{{ __('Exactly where you clicked, off the bars: the blocks after it count from here') }}">
+                                                <i class="fa-regular fa-clock"></i> <span x-text="`${formatClock(markMenu?.exact)} (${@js(__('exact'))})`"></span></button>
+                                        </div>
+                                        <p class="help" x-show="markMenu?.far">{{ __('Far from the bar lines: the tempo probably changed here, the exact time is better.') }}</p>
+                                        <div class="row" x-show="markMenu?.marked">
+                                            <button type="button" class="ws-btn" @click="applyMark(null)" x-text="`${@js(__('Right after the block before'))} (${formatClock(markMenu?.expected)})`"></button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
                     </div>
 
                     {{-- Block of a bar: new, rename, join; play from the bar --}}
@@ -587,6 +641,13 @@
                 if (typeof value !== 'string' || !/^\d+(:\d{1,2}){0,2}(\.\d+)?$/.test(value.trim())) return null;
                 return value.trim().split(':').reduce((total, part) => total * 60 + Number(part), 0);
             };
+            // Hundredths: a start marked by ear may sit off the bars.
+            const formatFineStart = (seconds) => {
+                const units = Math.round(seconds * 100);
+                const whole = Math.floor(units / 100);
+                const fraction = String(units % 100).padStart(2, '0').replace(/0+$/, '');
+                return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}${fraction ? '.' + fraction : ''}`;
+            };
             const formatStart = (seconds) => {
                 const tenths = Math.round(seconds * 10);
                 const whole = Math.floor(tenths / 10);
@@ -603,6 +664,7 @@
             const splits = [];
             let perBar = 4;
             let clickDouble = false;
+            let freeTiming = false;
             (Array.isArray(structure) ? structure : []).forEach(section => {
                 if (!section || typeof section !== 'object') return;
                 const { chords: raw, durations, order, ...data } = section;
@@ -617,6 +679,8 @@
                 if (section.beats_per_bar) perBar = section.beats_per_bar;
                 if (section.click_double) clickDouble = true;
                 delete data.click_double;
+                if (section.free_timing) freeTiming = true;
+                delete data.free_timing;
                 // Beats before the first chord in bar 1 (the song starts on beat 3, say): empty half beats first.
                 if (!blocks.some(block => !isMarkerData(block.data)) && Number(section.lead_beats) > 0) {
                     for (let k = 0; k < Math.round(Number(section.lead_beats) * 2); k++) ticks.push('');
@@ -628,9 +692,9 @@
                     for (let k = 0; k < Math.round((durations?.[i] ?? perBar) * 2); k++) ticks.push(chord);
                 });
             });
-            return { ticks, blocks, perBar, splits, clickDouble };
+            return { ticks, blocks, perBar, splits, clickDouble, freeTiming };
             };
-            const { ticks, blocks, perBar, splits, clickDouble } = parseStructure(config.structure);
+            const { ticks, blocks, perBar, splits, clickDouble, freeTiming } = parseStructure(config.structure);
 
             // ChordPro lines -> { comment } or { units: [{ chord, text }] }.
             const parseLine = (line) => {
@@ -705,6 +769,10 @@
                 perBar,
                 // The click also sounds on each "and" (the drummer's doubled tempo); the bars keep the BPM.
                 clickDouble,
+                // Free timing: each block starts where it was marked in the recording (songs whose tempo changes);
+                // otherwise every block follows bar 1 and the BPM.
+                freeTiming,
+                markMenu: null,
                 key: config.key || null,
                 savedKey: config.key || null,
                 bpm: Number(config.bpm) || 80,
@@ -897,9 +965,122 @@
                 // (the blocks' own start times are not followed: with another BPM they would leave gaps between blocks).
                 get halfBeat() { return 30 / this.bpm; },
                 blockStart(block) {
-                    const first = this.timedBlocks()[0];
+                    const timed = this.timedBlocks();
+                    const first = timed[0];
                     const origin = first ? (toSeconds(first.data.start) ?? 0) - first.startTick * this.halfBeat : 0;
+                    if (this.freeTiming) {
+                        const start = this.freeStarts(timed)[timed.indexOf(block)];
+                        if (start !== undefined) return start;
+                    }
                     return origin + block.startTick * this.halfBeat;
+                },
+                // Free timing: the start of each block (in the order of `timed`). The first one is the song's start;
+                // each other one its marked time ("free_start") or, unmarked, right after the block before it at the
+                // BPM. A mark not after the block before it is not followed.
+                freeStarts(timed) {
+                    const key = `${this.bpm}|${timed.map(block => `${block.startTick}:${block.data.free_start ?? ''}`).join(',')}|${timed[0]?.data.start ?? ''}`;
+                    if (this.freeStartsCache?.key === key) return this.freeStartsCache.value;
+                    const value = [];
+                    timed.forEach((block, i) => {
+                        if (i === 0) return value.push(toSeconds(block.data.start) ?? block.startTick * this.halfBeat);
+                        const chained = value[i - 1] + (block.startTick - timed[i - 1].startTick) * this.halfBeat;
+                        const mark = toSeconds(block.data.free_start);
+                        value.push(mark !== null && mark > value[i - 1] ? mark : chained);
+                    });
+                    this.freeStartsCache = { key, value };
+                    return value;
+                },
+                freeStartsCache: null,
+                // Free timing on or off. The marks stay in the blocks either way (only followed while it is on). Turned
+                // on, a block whose stored start is off the bars (a time marked before the song had bars) keeps that
+                // time as its mark.
+                toggleFreeTiming() {
+                    this.remember();
+                    this.markMenu = null;
+                    if (this.freeTiming) {
+                        this.freeTiming = false;
+                        this.notice = @js(__('Following the bars: every block starts where the BPM puts it (the marked times are kept).'));
+                        this.revision++;
+                        return;
+                    }
+                    const timed = this.timedBlocks();
+                    let previous = null;
+                    let recovered = 0;
+                    timed.forEach((block, i) => {
+                        if (i > 0 && block.data.free_start === undefined) {
+                            const stored = toSeconds(block.data.start);
+                            const chained = previous + (block.startTick - timed[i - 1].startTick) * this.halfBeat;
+                            if (stored !== null && stored > previous && Math.abs(stored - chained) > 0.15) {
+                                block.data = { ...block.data, free_start: formatFineStart(stored) };
+                                recovered++;
+                            }
+                        }
+                        previous = this.freeStarts(timed.slice(0, i + 1))[i];
+                    });
+                    this.freeTiming = true;
+                    this.notice = recovered
+                        ? @js(__('Free timing: :n blocks kept the times marked before the bars. Use the clock of each block to mark the others.')).replace(':n', recovered)
+                        : @js(__('Free timing: use the clock of each block, while the song plays, to mark where it starts.'));
+                    this.revision++;
+                },
+                // The clock of a block (free timing): its start at the player's time. The first block's is the song's
+                // start; for the others, the nearest bar line counted from the block before it is suggested, or the
+                // exact time (the blocks after it count from there).
+                openMark(block, event) {
+                    if (!block || this.isMarker(block)) return;
+                    if (!this.hasMusic || this.clickOnly) {
+                        this.notice = @js(__('Play the song (with its sound) to mark the blocks.'));
+                        return;
+                    }
+                    const timed = this.timedBlocks();
+                    const i = timed.indexOf(block);
+                    const time = Math.max(0, this.now());
+                    const rect = event?.currentTarget?.getBoundingClientRect();
+                    const place = rect ? { x: Math.min(rect.left, window.innerWidth - 300), y: rect.bottom + 4 } : { x: 16, y: 80 };
+                    if (i <= 0) {
+                        this.markMenu = { id: block.id, first: true, exact: time, ...place };
+                        return;
+                    }
+                    const starts = this.freeStarts(timed);
+                    const expected = starts[i - 1] + (block.startTick - timed[i - 1].startTick) * this.halfBeat;
+                    const bar = this.perBar * 2 * this.halfBeat;
+                    const bars = Math.round((time - expected) / bar);
+                    const snapped = expected + bars * bar;
+                    this.markMenu = {
+                        id: block.id, first: false, exact: time, snapped, bars, expected,
+                        // Far from any bar line (near the middle of a bar): the tempo probably changed there.
+                        far: Math.abs(time - snapped) > bar * 0.3 || snapped <= starts[i - 1],
+                        marked: block.data.free_start !== undefined,
+                        ...place,
+                    };
+                },
+                applyMark(value) {
+                    const menu = this.markMenu;
+                    this.markMenu = null;
+                    const block = this.blocks.find(item => item.id === menu?.id);
+                    if (!block) return;
+                    this.remember();
+                    if (menu.first) {
+                        block.data = { ...block.data, start: formatFineStart(value) };
+                    } else {
+                        const data = { ...block.data };
+                        // Where the block before it would end anyway: no mark needed.
+                        if (value === null || Math.abs(value - menu.expected) < 0.005) delete data.free_start;
+                        else data.free_start = formatFineStart(value);
+                        block.data = data;
+                    }
+                    this.revision++;
+                },
+                markLabel(menu) {
+                    if (!menu || menu.first) return '';
+                    if (!menu.bars) return @js(__('on the bars'));
+                    const n = Math.abs(menu.bars);
+                    return (menu.bars > 0 ? '+' : '−') + n + ' ' + (n === 1 ? @js(__('bar')) : @js(__('bars')));
+                },
+                isMarked(block) { return this.freeTiming && block?.data?.free_start !== undefined && this.timedBlocks().indexOf(block) > 0; },
+                sheetBlock(s) {
+                    const timed = this.shownSheet.map((section, i) => (section.marker ? null : i)).filter(i => i !== null);
+                    return this.timedBlocks()[timed.indexOf(s)] ?? null;
                 },
                 // Delay before bar 1 in the recording: moving it moves every block by the same time.
                 get songStart() {
@@ -1007,11 +1188,92 @@
                     return time + Math.min(0.1, (performance.now() - this.mediaAt) / 1000) * (audio.playbackRate || 1);
                 },
                 togglePlay() {
+                    if (this.counting) return this.stopCountIn();
+                    // With the count-in, from the start of the current bar (bar 1 before the song starts): the
+                    // drumsticks lead right into it.
+                    if (this.countIn && !this.isPlaying()) {
+                        const size = this.perBar * 2;
+                        return this.playFromTick(this.atEnd() ? 0 : Math.floor(Math.max(0, this.tickAt(this.clock)) / size) * size);
+                    }
+                    this.togglePlayNow();
+                },
+                togglePlayNow() {
                     if (audio) return audio.paused ? audio.play() : audio.pause();
                     if (this.clickOnly) return this.playing ? this.stopClock() : this.startClock(this.atEnd() ? 0 : this.clickOffset);
                     this.toggleVideo();
                 },
+                // Count-in: a bar of drumsticks at the BPM before the song starts playing (not when it jumps while
+                // playing, e.g. repeating the marked bars). Remembered on this device.
+                countIn: (() => { try { return localStorage.getItem('bars-count-in') === '1'; } catch (error) { return false; } })(),
+                counting: false,
+                countBeat: 0,
+                countTimers: [],
+                countSounds: [],
+                toggleCountIn() {
+                    this.countIn = !this.countIn;
+                    try { localStorage.setItem('bars-count-in', this.countIn ? '1' : '0'); } catch (error) {}
+                    if (!this.countIn) this.stopCountIn();
+                },
+                withCountIn(start) {
+                    let context;
+                    try {
+                        context = this.clickContext = this.clickContext || new AudioContext();
+                        if (context.state === 'suspended') context.resume();
+                    } catch (e) { return start(); }
+                    this.stopCountIn();
+                    const rate = this.clickOnly ? 1 : audio ? (audio.playbackRate || 1) : (this.video?.speed || 1);
+                    const beat = 60 / this.bpm / rate;
+                    const lead = 0.1;
+                    const at = context.currentTime + lead;
+                    this.counting = true;
+                    for (let i = 0; i < this.perBar; i++) {
+                        this.stick(i === 0, context, at + i * beat);
+                        this.countTimers.push(setTimeout(() => { this.countBeat = i + 1; }, (lead + i * beat) * 1000));
+                    }
+                    this.countTimers.push(setTimeout(() => {
+                        this.counting = false;
+                        this.countBeat = 0;
+                        this.countTimers = [];
+                        start();
+                    }, (lead + this.perBar * beat) * 1000));
+                },
+                stopCountIn() {
+                    this.countTimers.forEach(timer => clearTimeout(timer));
+                    this.countSounds.forEach(sound => { try { sound.stop(); } catch (e) {} });
+                    this.countTimers = [];
+                    this.countSounds = [];
+                    this.counting = false;
+                    this.countBeat = 0;
+                },
+                // A drumstick: a short burst of noise, brighter on beat 1.
+                stick(accent, context, when) {
+                    try {
+                        const length = Math.floor(context.sampleRate * 0.04);
+                        const buffer = context.createBuffer(1, length, context.sampleRate);
+                        const data = buffer.getChannelData(0);
+                        for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 3);
+                        const source = context.createBufferSource();
+                        source.buffer = buffer;
+                        const filter = context.createBiquadFilter();
+                        filter.type = 'bandpass';
+                        filter.frequency.value = accent ? 3200 : 2400;
+                        filter.Q.value = 1.5;
+                        const gain = context.createGain();
+                        gain.gain.value = accent ? 1.6 : 1.1;
+                        source.connect(filter).connect(gain).connect(context.destination);
+                        source.start(when);
+                        this.countSounds.push(source);
+                    } catch (e) {}
+                },
                 playFromTick(tick) {
+                    if (this.counting) this.stopCountIn();
+                    if (this.countIn && !this.isPlaying()) {
+                        this.moveTo(tick);
+                        return this.withCountIn(() => this.playFromTickNow(tick));
+                    }
+                    this.playFromTickNow(tick);
+                },
+                playFromTickNow(tick) {
                     const time = Math.max(0, this.timeOfTick(tick));
                     this.currentTick = tick;
                     if (audio) {
@@ -1028,6 +1290,12 @@
                 formatTime(seconds) {
                     const total = Math.max(0, Math.floor(seconds || 0));
                     return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+                },
+                // m:ss.cc (a block's start).
+                formatClock(seconds) {
+                    const units = Math.max(0, Math.round((seconds || 0) * 100));
+                    const whole = Math.floor(units / 100);
+                    return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}.${String(units % 100).padStart(2, '0')}`;
                 },
 
                 // ---- Chord sheet: the section of the block being played is lit ----
@@ -1855,7 +2123,7 @@
                 // ---- Editing ----
                 setMode(mode) { this.mode = mode; this.inline = null; this.editor = null; this.barMenu = null; },
                 remember() {
-                    this.history.push(JSON.stringify({ ticks: this.ticks, blocks: this.blocks, splits: this.splits, sheetMoves: this.sheetMoves, sheetBase: this.sheetBase, perBar: this.perBar }));
+                    this.history.push(JSON.stringify({ ticks: this.ticks, blocks: this.blocks, splits: this.splits, sheetMoves: this.sheetMoves, sheetBase: this.sheetBase, perBar: this.perBar, freeTiming: this.freeTiming }));
                     if (this.history.length > 80) this.history.shift();
                     this.markDirty();
                 },
@@ -1868,6 +2136,7 @@
                     this.sheetMoves = state.sheetMoves || {};
                     this.sheetBase = state.sheetBase || null;
                     if (state.perBar) this.perBar = state.perBar;
+                    if (state.freeTiming !== undefined) this.freeTiming = state.freeTiming;
                     this.sheetBaseRevision++;
                     this.revision++;
                     this.markDirty();
@@ -2331,7 +2600,7 @@
                     const one = bar ?? this.cursorBar();
                     return { from: one, to: one };
                 },
-                menuBarsLabel() { const { from, to } = this.barsFor(this.barMenu.bar); return this.barsLabel(from, to); },
+                menuBarsLabel() { if (!this.barMenu) return ''; const { from, to } = this.barsFor(this.barMenu.bar); return this.barsLabel(from, to); },
                 // The tap that ends a long press (which opened the bar's menu) does nothing else.
                 pressDone() {
                     if (!this.pressOpened) return false;
@@ -2811,7 +3080,7 @@
                         const out = state.valid ? this.withBreaks(chords, state.breaks) : chords;
                         // The first chord on a later beat of bar 1: the empty beats before it.
                         const lead = block === timed[0] && block.startTick > 0 ? { lead_beats: block.startTick / 2 } : {};
-                        return { ...data, chords: out.map(chord => (chord === '|' ? chord : transpose(chord))), durations, beats_per_bar: this.perBar, ...lead, ...(this.clickDouble ? { click_double: true } : {}), start: formatStart(this.blockStart(block)) };
+                        return { ...data, chords: out.map(chord => (chord === '|' ? chord : transpose(chord))), durations, beats_per_bar: this.perBar, ...lead, ...(this.clickDouble ? { click_double: true } : {}), ...(this.freeTiming ? { free_timing: true } : {}), start: formatStart(this.blockStart(block)) };
                     });
                 },
                 // `options.reviewed`: saved as reviewed (true) or its review undone (false).

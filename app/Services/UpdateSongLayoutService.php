@@ -58,6 +58,13 @@ class UpdateSongLayoutService
             } elseif (trim((string) ($block['start'] ?? '')) === '') {
                 unset($block['start']);
             }
+            // Start marked by hand for free timing (hundredths kept: it may sit off the bars).
+            $freeStart = self::toSeconds($block['free_start'] ?? null);
+            if ($freeStart !== null) {
+                $block['free_start'] = self::format($freeStart, 2);
+            } else {
+                unset($block['free_start']);
+            }
             $block['lyrics'] = $lyrics === '' ? null : $lyrics;
             // A new block gets the first line of its lyrics as anchor.
             if (($block['anchor'] ?? null) === null || $block['anchor'] === '') {
@@ -122,6 +129,12 @@ class UpdateSongLayoutService
         } else {
             unset($block['click_double']);
         }
+        // Only free timing is stored (following the bars is the default).
+        if (($block['free_timing'] ?? null) === true) {
+            $block['free_timing'] = true;
+        } else {
+            unset($block['free_timing']);
+        }
 
         return $block;
     }
@@ -145,15 +158,18 @@ class UpdateSongLayoutService
     }
 
     /**
-     * 65 -> "1:05"; 65.34 -> "1:05.3" (tenths kept, for starts taken from the beats of the audio).
+     * 65 -> "1:05"; 65.34 -> "1:05.3" (tenths kept, for starts taken from the beats of the audio); with 2 decimals,
+     * 65.34 -> "1:05.34" (trailing zeros dropped).
      */
-    public static function format(float $seconds): string
+    public static function format(float $seconds, int $decimals = 1): string
     {
-        $tenths = (int) round($seconds * 10);
-        $whole = intdiv($tenths, 10);
+        $scale = 10 ** $decimals;
+        $units = (int) round($seconds * $scale);
+        $whole = intdiv($units, $scale);
         $text = intdiv($whole, 60) . ':' . str_pad((string) ($whole % 60), 2, '0', STR_PAD_LEFT);
+        $fraction = rtrim(str_pad((string) ($units % $scale), $decimals, '0', STR_PAD_LEFT), '0');
 
-        return $tenths % 10 === 0 ? $text : $text . '.' . ($tenths % 10);
+        return $fraction === '' ? $text : $text . '.' . $fraction;
     }
 
     /**

@@ -54,6 +54,10 @@ class StudySongMapRequest extends FormRequest
             'blocks.*.click_double'  => ['nullable', 'boolean'],
             // Empty beats before the first chord in bar 1 (first block only).
             'blocks.*.lead_beats'    => ['nullable', 'numeric', 'min:0', 'max:12', 'multiple_of:' . UpdateSongLayoutService::DURATION_STEP],
+            // Free timing: each block starts where it was marked in the recording ("free_start"), not where the BPM
+            // puts it (songs whose tempo changes).
+            'blocks.*.free_timing'   => ['nullable', 'boolean'],
+            'blocks.*.free_start'    => ['nullable'],
         ];
     }
 

@@ -470,14 +470,14 @@
                 </div>
 
                 {{-- The band's tempo for this song in this setlist (the same click for everyone) --}}
-                <div class="option-row" x-show="current">
+                <div class="option-row" x-show="current" style="flex-wrap: nowrap;" :title="@js(__('Saved in this setlist for the whole band.'))">
                     <span class="option-label">BPM</span>
-                    <input type="number" class="control" min="30" max="240" step="1" style="width: 5.5rem;" :value="Math.round(liveBpm)" @change="setLiveBpm(Number($event.target.value))" aria-label="BPM">
-                    <button type="button" class="btn" @click="tapTempo()" :title="@js(__('Tap the beat to set the tempo'))"><i class="fa-solid fa-hand-pointer"></i> Tap</button>
+                    <input type="number" class="control" min="30" max="240" step="1" style="width: 5rem; flex: 0 0 auto;" :value="Math.round(liveBpm)" @change="setLiveBpm(Number($event.target.value))" aria-label="BPM">
+                    <button type="button" class="btn" style="white-space: nowrap;" @click="tapTempo()" :title="@js(__('Tap the beat to set the tempo'))"><i class="fa-solid fa-hand-pointer"></i> Tap</button>
                     <template x-if="current?.setlist_bpm && current?.bpm && Number(current.setlist_bpm) !== Number(current.bpm)">
-                        <button type="button" class="btn" @click="resetBpm()"><i class="fa-solid fa-rotate-left"></i> <span x-text="@js(__('Back to the original (:bpm)')).replace(':bpm', Math.round(current.bpm))"></span></button>
+                        <button type="button" class="btn" style="white-space: nowrap;" @click="resetBpm()" :title="@js(__('Back to the original (:bpm)')).replace(':bpm', Math.round(current.bpm))"
+                            :aria-label="@js(__('Back to the original (:bpm)')).replace(':bpm', Math.round(current.bpm))"><i class="fa-solid fa-rotate-left"></i> <span x-text="Math.round(current.bpm)"></span></button>
                     </template>
-                    <span class="option-note" x-text="@js(__('Saved in this setlist for the whole band.'))"></span>
                 </div>
 
                 <div class="option-row" x-show="instrumentOptions.length">
@@ -2265,7 +2265,12 @@
                     let times = [];
                     const beat = 60 / Number(song?.bpm);
                     let end = null;
-                    for (const section of (Array.isArray(song?.structure) ? song.structure : [])) {
+                    let previousStart = null;
+                    const structure = Array.isArray(song?.structure) ? song.structure : [];
+                    // Free timing (songs whose tempo changes): a block with a marked start begins there; chords of the
+                    // block before it that would sound after that do not (the block is cut short).
+                    const free = structure.some(section => section?.free_timing === true);
+                    for (const section of structure) {
                         if (!section || typeof section !== 'object' || section.jump === 'start') continue;
                         const chords = chordsOnly(Array.isArray(section.chords) ? section.chords.map(String) : []);
                         const durations = Array.isArray(section.durations) ? section.durations.map(Number) : [];
@@ -2273,6 +2278,12 @@
                         // The first block's start is the delay in the recording; from there only the BPM counts
                         // (other blocks' marked starts would leave gaps when the BPM was changed).
                         let time = end ?? parseStart(section.start) ?? 0;
+                        const mark = free && end !== null ? parseStart(section.free_start) : null;
+                        if (mark !== null && mark > previousStart) {
+                            time = mark;
+                            for (let k = times.length - 1; k >= 0 && times[k] > time; k--) times[k] = time;
+                        }
+                        previousStart = time;
                         durations.forEach(value => { times.push(time); time += value * beat; });
                         end = time;
                     }
