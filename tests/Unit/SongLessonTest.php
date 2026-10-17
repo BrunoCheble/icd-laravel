@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Http\Requests\ContributeSongLessonRequest;
 use App\Http\Requests\SongLessonRequest;
 use App\Models\SongLesson;
+use App\Models\SongVersion;
 use App\Services\ContributeLessonLoopService;
 use App\Services\ContributeSongLessonService;
 use App\Services\ListSongLessonsService;
@@ -115,5 +116,13 @@ class SongLessonTest extends TestCase
         $this->assertSame(1, $lesson->saves);
         // The team saving every stretch keeps the musician's mark.
         $this->assertTrue(SaveSongLessonLoopsService::clean($lesson->loops)[1]['contributed']);
+    }
+
+    public function test_usual_instruments_are_offered_only_when_not_named_otherwise(): void
+    {
+        // "Bass" and "Keys" already used: "Baixo" and "Teclado" are not added; "Guitarra" and "Violão" are.
+        $this->assertSame(['Bass', 'Guitarra', 'Keys', 'Violão'], SongVersion::withUsualInstruments(['Bass', 'Keys', 'bass ']));
+        $this->assertSame(['Acoustic guitar', 'Baixo', 'Drums', 'Guitarra', 'Teclado'], SongVersion::withUsualInstruments(['Drums', 'Acoustic guitar']));
+        $this->assertSame(['Baixo', 'Guitarra', 'Teclado', 'Violão'], SongVersion::withUsualInstruments([]));
     }
 }

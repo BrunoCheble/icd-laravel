@@ -101,8 +101,7 @@ class SetlistController extends Controller
         $setlistOptions = $listService->execute();
         $keyOptions = MusicalKey::pairs();
         // Instruments offered for lessons (filter and videos sent by musicians): the usual ones and any with lessons.
-        $instruments = collect(SongVersion::instrumentNames())->merge(SongLesson::query()->distinct()->pluck('instrument'))
-            ->unique()->sort()->values()->all();
+        $instruments = SongVersion::instrumentNames();
 
         return view('site.setlist', compact('data', 'setlistOptions', 'keyOptions', 'instruments'));
     }

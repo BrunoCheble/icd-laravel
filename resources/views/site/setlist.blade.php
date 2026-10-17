@@ -937,7 +937,7 @@
 
         @if ($data)
             {{-- Blocks bar: quick way back to a block (e.g. the chorus): goes to the last one with that name --}}
-            <nav class="jump-bar" x-show="current && jumpTargets.length > 1" x-cloak aria-label="{{ __('Blocks') }}" x-effect="centerJumpButton(currentJumpIndex)">
+            <nav class="jump-bar" x-show="current && jumpTargets.length > 1 && !optionsOpen" x-cloak aria-label="{{ __('Blocks') }}" x-effect="centerJumpButton(currentJumpIndex)">
                 <template x-for="target in jumpTargets" :key="target.key">
                     <button type="button" :style="typeStyle(target.name)" :class="{ 'is-current': isCurrentTarget(target) }" :data-jump="target.index" @click="jumpTo(target)"><span x-text="target.name"></span><span class="jump-count" x-show="target.count > 1" x-text="` (${target.count}x)`"></span></button>
                 </template>

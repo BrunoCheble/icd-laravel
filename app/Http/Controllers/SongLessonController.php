@@ -25,9 +25,7 @@ class SongLessonController extends Controller
     public function index(Song $song, ListSongLessonsService $list): View
     {
         $groups = $list->execute($song);
-        $instruments = collect(SongVersion::instrumentNames())
-            ->merge(SongLesson::query()->distinct()->pluck('instrument'))
-            ->unique()->sort()->values()->all();
+        $instruments = SongVersion::instrumentNames();
         $maxMegabytes = SaveSongAudioService::maxUploadMegabytes();
 
         return view('songs.lessons', compact('song', 'groups', 'instruments', 'maxMegabytes'));
