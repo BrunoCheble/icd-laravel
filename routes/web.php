@@ -48,6 +48,8 @@ Route::prefix('repertoire')->name('site.setlist')->controller(SiteSetlistControl
     Route::patch('/{setlist}/songs/{song}/key', 'updateKey')->whereNumber(['setlist', 'song'])->name('.songs.key');
     Route::patch('/{setlist}/songs/{song}/bpm', 'updateBpm')->whereNumber(['setlist', 'song'])->name('.songs.bpm');
     Route::put('/{setlist}/order', 'reorder')->whereNumber('setlist')->name('.order');
+    Route::post('/{setlist}/songs/{song}/lessons/{lesson}/loops', 'contributeLessonLoop')->whereNumber(['setlist', 'song', 'lesson'])->middleware('throttle:20,1')->name('.songs.lessons.loops');
+    Route::post('/{setlist}/songs/{song}/lessons', 'contributeLesson')->whereNumber(['setlist', 'song'])->middleware('throttle:10,1')->name('.songs.lessons');
     Route::post('/{setlist}/songs/{song}/suggestions', 'suggest')->whereNumber(['setlist', 'song'])->middleware('throttle:20,1')->name('.songs.suggest');
 });
 
@@ -103,6 +105,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/songs/{song}/bars', [SongLayoutController::class, 'createBars'])->name('songs.bars.create');
     Route::post('/songs/{song}/bars/clear', [SongLayoutController::class, 'clearChords'])->name('songs.bars.clear');
     Route::get('/songs/{song}/practice', [SongPracticeController::class, 'show'])->name('songs.practice');
+    Route::get('/songs/{song}/lessons', [\App\Http\Controllers\SongLessonController::class, 'index'])->name('songs.lessons.index');
+    Route::post('/songs/{song}/lessons', [\App\Http\Controllers\SongLessonController::class, 'store'])->name('songs.lessons.store');
+    Route::put('/songs/{song}/lessons/{lesson}', [\App\Http\Controllers\SongLessonController::class, 'update'])->name('songs.lessons.update');
+    Route::delete('/songs/{song}/lessons/{lesson}', [\App\Http\Controllers\SongLessonController::class, 'destroy'])->name('songs.lessons.destroy');
+    Route::put('/songs/{song}/lessons/{lesson}/loops', [\App\Http\Controllers\SongLessonController::class, 'loops'])->name('songs.lessons.loops');
     Route::get('/songs/{song}/history', [SongHistoryController::class, 'index'])->name('songs.history');
     Route::get('/song-suggestions', [SongSuggestionController::class, 'index'])->name('song-suggestions.index');
     Route::post('/song-suggestions/{suggestion}/approve', [SongSuggestionController::class, 'approve'])->name('song-suggestions.approve');

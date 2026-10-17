@@ -63,6 +63,10 @@
         .block-mark { display: inline-flex; align-items: center; gap: .25rem; padding: .05rem .3rem; border: 1px dashed #9ca3af; border-radius: .3rem; background: #fff; color: #6b7280; font-size: .68rem; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
         .block-mark.is-marked { border-style: solid; border-color: #4f46e5; color: #4f46e5; background: #eef2ff; }
         .popover .help { margin: .35rem 0 0; font-size: .75rem; color: #6b7280; }
+        /* Toolbar: icons only (each one says what it does in its title); numbers stay */
+        .ws-toolbar .ws-label { display: none; }
+        .ws-toolbar .bpm-input { width: 3.6rem; }
+        @media (max-width: 640px) { .ws-toolbar .ws-spacer { display: none; } .ws-toolbar .bpm-input { width: 3rem; } }
         .popover hr { margin: .5rem 0 .1rem; border: 0; border-top: 1px solid #e5e7eb; }
         /* Lines view: the map's chords in lines as on the public page; clicking a chord breaks the line there or
            marks it as a passing chord (the bars do not change) */
@@ -98,6 +102,8 @@
         .line-block.drop-before { box-shadow: 0 -3px 0 0 #4f46e5; }
         .line-block.drop-after { box-shadow: 0 3px 0 0 #4f46e5; }
         .bars-page.is-moving-block, .bars-page.is-moving-block * { cursor: grabbing !important; user-select: none; }
+        /* Moving a block: every block shows only its head, so the order is easy to see */
+        .bars-page.is-moving-block .line-block > :not(.line-head) { display: none; }
         .block-actions .ws-btn { padding: .15rem .45rem; }
         .inline-chord { width: 100%; min-width: 0; padding: 0 .2rem; border: 1px solid #4f46e5; border-radius: .25rem; font: inherit; font-weight: 800; font-size: .95rem; background: #fff; outline: none; }
         .inline-chord.is-invalid { border-color: #dc2626; background: #fef2f2; }
@@ -201,7 +207,7 @@
                         {{-- Count-in: a bar of drumsticks before playing --}}
                         <button type="button" class="ws-btn" x-show="canPlay && bpm > 0" :class="{ 'is-active': countIn }" @click="toggleCountIn()"
                             :title="countIn ? @js(__('Count-in on: a bar of drumsticks at the BPM before playing. Click to turn it off')) : @js(__('Count-in off. Click for a bar of drumsticks at the BPM before playing'))"
-                            aria-label="{{ __('Count-in') }}"><i class="fa-solid fa-drum"></i><span class="ws-label" x-text="counting ? ` ${countBeat || ''}` : ' ' + @js(__('Count-in'))"></span></button>
+                            aria-label="{{ __('Count-in') }}"><i class="fa-solid fa-drum"></i><span class="ws-label"> {{ __('Count-in') }}</span><span x-show="counting" x-text="` ${countBeat || ''}`"></span></button>
                         <span class="ws-spacer"></span>
                         {{-- Tapping "BPM" in the rhythm of the song sets it; the number can be typed too --}}
                         <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId">
@@ -210,13 +216,13 @@
                         </span>
                         {{-- The music on, or only the BPM click (the bars play on their own clock) --}}
                         <button type="button" class="ws-btn" x-show="hasMusic && bpm > 0" :class="{ 'is-active': !musicOff }" @click="toggleMusic()"
-                            :title="musicOff ? @js(__('Playing only with the BPM: click to play with the music')) : @js(__('Playing with the music: click to play only with the BPM'))"><i class="fa-solid" :class="musicOff ? 'fa-volume-xmark' : 'fa-music'"></i> {{ __('Song sound') }}</button>
+                            :title="musicOff ? @js(__('Playing only with the BPM: click to play with the music')) : @js(__('Playing with the music: click to play only with the BPM'))"><i class="fa-solid" :class="musicOff ? 'fa-volume-xmark' : 'fa-music'"></i><span class="ws-label"> {{ __('Song sound') }}</span></button>
                         {{-- Click on every beat, or doubled (also on each "and") for the drummer: only the sound changes --}}
                         <button type="button" class="ws-btn" x-show="!versionId && (clickOnly || metronome)" :class="{ 'is-active': clickDouble }" @click="clickDouble = !clickDouble; markDirty(); clickUntil = null"
                             :title="clickDouble ? @js(__('Doubled click: it also sounds on each "and" (the bars keep the BPM). Click for one click per beat')) : @js(__('One click per beat. Click to double it (the drummer\'s tempo); the bars keep the BPM'))"><i class="fa-solid fa-stopwatch"></i> 2×</button>
                         {{-- Where bar 1 starts in the recording (seconds): typed, or marked on the beat while it plays --}}
                         <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId && !clickOnly">
-                            <button type="button" @click="markStartNow()" :disabled="!canPlay" title="{{ __('Click on the first beat of bar 1 while the song plays') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;">{{ __('Start') }} <i class="fa-solid fa-flag"></i></button>
+                            <button type="button" @click="markStartNow()" :disabled="!canPlay" title="{{ __('Click on the first beat of bar 1 while the song plays') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;" aria-label="{{ __('Start') }}"><span class="ws-label">{{ __('Start') }} </span><i class="fa-solid fa-flag"></i></button>
                             <input type="number" class="bpm-input" min="0" step="0.1" :value="songStart" @change="setSongStart($event.target.value)" aria-label="{{ __('Start of bar 1 (seconds)') }}" title="{{ __('Start of bar 1 (seconds)') }}" style="border: 0; min-height: 0;">
                         </span>
                         {{-- Free timing: each block starts where it was marked (songs whose tempo changes), or every block on the BPM --}}
@@ -235,14 +241,14 @@
                         {{-- Review: once the bars are right, saved as reviewed (a decision of whoever reviews); undone from the badge --}}
                         <button type="button" class="ws-btn review-done" x-show="!versionId && reviewedAt" @click="unmarkReviewed()" :disabled="saving"
                             :title="@js(__('Saved as reviewed on :date. Click to undo the review.')).replace(':date', formatDay(reviewedAt))">
-                            <i class="fa-solid fa-circle-check"></i> <span x-text="`${@js(__('Reviewed'))} ${formatDay(reviewedAt)}`"></span>
+                            <i class="fa-solid fa-circle-check"></i> <span x-text="formatDay(reviewedAt)"></span>
                         </button>
                         <button type="button" class="ws-btn review-save" x-show="!versionId && !reviewedAt" @click="save({ reviewed: true })" :disabled="saving"
                             title="{{ __('Save and mark the song as reviewed (its bars are right)') }}"><i class="fa-solid fa-check-double"></i> <span class="ws-label">{{ __('Save as reviewed') }}</span></button>
                         <button type="button" class="ws-btn ws-btn-primary" @click="save()" :disabled="saving" title="{{ __('Save') }}">
                             <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i><span class="ws-label">{{ __('Save') }}</span>
                         </button>
-                        <button type="button" class="ws-btn" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" aria-label="{{ __('Options') }}"><i class="fa-solid fa-gear"></i></button>
+                        <button type="button" class="ws-btn" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" aria-label="{{ __('Options') }}" title="{{ __('Options') }}"><i class="fa-solid fa-gear"></i></button>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 mt-1">
                         <span class="save-state" :class="{ 'is-dirty': dirty, 'is-error': saveError }" x-text="saveState"></span>
@@ -1520,7 +1526,15 @@
                     const drag = this.blockDrag;
                     if (!drag) return;
                     if (!drag.moved && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 6) return;
-                    drag.moved = true;
+                    if (!drag.moved) {
+                        // The blocks fold to their heads: the dragged one is brought back under the pointer.
+                        drag.moved = true;
+                        this.$nextTick(() => {
+                            const element = document.querySelector(`[data-line-block="${drag.id}"]`);
+                            if (element) window.scrollBy(0, element.getBoundingClientRect().top - (event.clientY - 16));
+                        });
+                        return;
+                    }
                     // The block under the pointer, and which half of it: the dragged one goes before or after it.
                     const boxes = [...document.querySelectorAll('[data-line-block]')].map(element => ({ id: Number(element.dataset.lineBlock), box: element.getBoundingClientRect() }));
                     const over = boxes.find(item => event.clientY < item.box.bottom) ?? boxes[boxes.length - 1];

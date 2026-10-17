@@ -36,6 +36,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="{{ asset('js/chord-transposer.js') }}?v={{ filemtime(public_path('js/chord-transposer.js')) }}"></script>
     <script src="{{ asset('js/chord-lines.js') }}?v={{ filemtime(public_path('js/chord-lines.js')) }}"></script>
+    <script src="{{ asset('js/lesson-player.js') }}?v={{ filemtime(public_path('js/lesson-player.js')) }}"></script>
 
     @include('site.partials.theme')
     <style>
@@ -76,26 +77,45 @@
         .btn.is-active { border-color: var(--accent); color: var(--accent); }
 
         .options {
-            display: grid; gap: .6rem; padding: .6rem max(.75rem, env(safe-area-inset-left));
+            display: grid; gap: .25rem; padding: .25rem max(.9rem, env(safe-area-inset-left)) .9rem;
+            max-height: calc(100dvh - 7rem); overflow-y: auto; overscroll-behavior: contain;
             background: var(--surface); border-bottom: 1px solid var(--border); box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
         }
-        .option-row { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .75rem; }
-        .option-row > label, .option-label { font-size: .85rem; color: var(--muted); min-width: 5.5rem; }
-        .option-note { font-size: .75rem; color: var(--muted); }
-        .option-row .control { flex: 0 1 22rem; min-width: 0; }
-        .switch { display: inline-flex; align-items: center; gap: .4rem; min-height: 36px; padding: 0 .6rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); font-size: .85rem; cursor: pointer; user-select: none; }
-        .switch input { accent-color: var(--accent); width: 1rem; height: 1rem; margin: 0; }
+        @media (min-width: 720px) { .options { grid-template-columns: 1fr 1fr; column-gap: 2rem; align-items: start; } }
+        .opt-group { display: grid; }
+        .opt-title { margin: .7rem 0 .1rem; font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+        .opt-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-height: 48px; padding: .3rem 0; border-bottom: 1px solid var(--border); cursor: default; }
+        label.opt-row { cursor: pointer; }
+        .opt-row.is-stacked { display: grid; gap: .35rem; justify-content: stretch; }
+        .opt-row.is-end { justify-content: flex-end; border-bottom: 0; }
+        .opt-name { display: grid; font-size: .95rem; color: var(--text); }
+        .opt-hint { font-size: .75rem; color: var(--muted); line-height: 1.3; }
+        .opt-controls, .opt-stepper { display: inline-flex; align-items: center; gap: .35rem; flex: none; }
+        .opt-control { flex: none; width: auto; }
+        .opt-number { width: 4.6rem; padding-right: .5rem; }
+        .opt-stack { display: grid; gap: .45rem; padding: .5rem 0; }
+        /* Switch: a checkbox drawn as an on/off toggle */
+        .opt-switch { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 2.75rem; height: 1.6rem; margin: 0; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); cursor: pointer; transition: background .15s; }
+        .opt-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: calc(1.6rem - 6px); height: calc(1.6rem - 6px); border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+        .opt-switch:checked { background: var(--accent); border-color: var(--accent); }
+        .opt-switch:checked::after { transform: translateX(1.15rem); background: var(--accent-text); }
+        .opt-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
         .font-size { font-variant-numeric: tabular-nums; font-size: .85rem; min-width: 3rem; text-align: center; }
 
         .stage { flex: 1; width: 100%; max-width: 72rem; margin: 0 auto; padding: .6rem .9rem 1rem; box-sizing: border-box; }
         /* Song dragged sideways (see dragSong): no horizontal page scroll while it is off its place */
         .stage.is-swiping { overflow-x: clip; }
-        .song-head { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+        .song-head { display: grid; gap: .5rem; }
+        .song-title-row { display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap; min-width: 0; }
+        .song-title-row .song-title { overflow-wrap: anywhere; }
+        .song-tools { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
+        .song-tools .lessons-btn { margin-left: auto; }
+        @media (max-width: 400px) { .lessons-btn-label { display: none; } }
         .song-title { margin: 0; font-size: clamp(1.15rem, 3.4vw, 1.75rem); font-weight: 700; line-height: 1.15; }
-        .key-badge { border: 1px solid var(--accent); color: var(--accent); background: none; border-radius: 999px; padding: .1rem .6rem; font-weight: 700; font-size: .95rem; cursor: pointer; white-space: nowrap; }
+        .key-badge { min-height: 32px; border: 1px solid var(--accent); color: var(--accent); background: none; border-radius: 999px; padding: .1rem .7rem; font-weight: 700; font-size: .95rem; cursor: pointer; white-space: nowrap; }
         .key-badge small { font-weight: 500; color: var(--muted); }
         .song-head { position: relative; }
-        .key-picker-anchor { display: inline-block; }
+        .key-picker-anchor { display: inline-block; position: relative; }
         .key-picker {
             position: absolute; top: calc(100% + .35rem); left: 0; z-index: 35; max-width: calc(100vw - 1.5rem); box-sizing: border-box;
             display: grid; grid-template-columns: repeat(4, minmax(3.25rem, 1fr)); gap: .35rem;
@@ -127,7 +147,7 @@
         .hint { font-size: .85rem; color: var(--muted); }
 
         .sections { margin-top: .6rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--section-gap, 1) * .6rem); font-size: calc(clamp(1.1rem, 3.6vw, 1.7rem) * var(--chord-scale, 1)); }
-        /* A block selected: a vertical swipe on the blocks goes to the block above / below (see onTouchMove), never a page scroll */
+        /* Playing, with a block selected: a vertical swipe on the blocks goes to the block above / below (see onTouchMove), never a page scroll */
         .sections.block-swipe { touch-action: pan-x pinch-zoom; }
         /* Each block: a side line and its chords in the color of its kind (intro, chorus...) */
         .sections section {
@@ -140,6 +160,12 @@
         .sections section.is-return { border-left: 3px dashed var(--muted, #9ca3af); cursor: pointer; }
         .return-label { grid-column: 1 / -1; padding: .15rem 0; font-size: calc(.8rem * var(--label-scale, 1)); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted, #6b7280); }
         .sections section.is-current { background: var(--accent-soft); box-shadow: inset 4px 0 0 var(--accent); }
+        /* Cursor off (options): nothing lit where the song is */
+        .no-cursor .sections section.is-current { background: none; box-shadow: none; }
+        .no-cursor .live-bar.is-current { border-color: var(--border); box-shadow: none; }
+        .no-cursor .focus-bar.is-now { box-shadow: none; }
+        .no-cursor .map-bar.is-playing { background: none; }
+        .no-cursor .live-beat.is-on, .no-cursor .focus-beat.is-on, .no-cursor .bar-chords .is-playing, .no-cursor .seg-chord.is-playing > span, .no-cursor .chord-step .is-playing { background: none; color: inherit; }
         .sections section.is-next { box-shadow: inset 4px 0 0 var(--border); }
         .sections section.is-past { opacity: .4; }
         .section-time { margin-left: .4rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--muted); font-size: .9em; font-variant-numeric: tabular-nums; }
@@ -218,7 +244,6 @@
         .section-lyrics { margin-top: .2rem; font-size: calc(.95rem * var(--label-scale, 1)); color: var(--muted); line-height: 1.35; white-space: pre-line; }
         /* Room between chord lines: set in the options ("line spacing"), per song */
         /* Map as a bar chart: one cell per bar, bars per row as written, each block on new rows. */
-        .bar-chart-head { margin: 0 0 .5rem; font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .03em; }
         .bar-chart { font-weight: 700; color: var(--type-color, var(--chord)); }
         .bar-row { display: grid; grid-template-columns: repeat(var(--bars-per-row, 4), minmax(0, 1fr)); border-left: 2px solid var(--border); }
         .bar-row + .bar-row { margin-top: calc(.3rem * var(--line-gap, 1)); }
@@ -291,6 +316,17 @@
         .result:hover:not(:disabled) { background: var(--surface-2); border-color: var(--border); }
         .result:disabled { opacity: .5; cursor: default; }
 
+        .lessons-btn { display: inline-flex; align-items: center; gap: .35rem; min-height: 32px; padding: .2rem .7rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); color: var(--text); font-weight: 700; font-size: .85rem; cursor: pointer; }
+        .lessons-panel { position: fixed; z-index: 60; inset: 0; display: flex; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; }
+        .lessons-panel .overlay { z-index: 0; }
+        .lessons-box { position: relative; z-index: 1; width: min(46rem, 100%); background: var(--bg, var(--surface)); border: 1px solid var(--border); border-radius: .75rem; padding: 1rem; }
+        .lessons-box-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .6rem; }
+        .lessons-filter { margin-bottom: .75rem; }
+        .lessons-filter select { width: 100%; max-width: 20rem; }
+        .lesson-contribute { display: grid; gap: .45rem; margin-top: 1rem; padding-top: .9rem; border-top: 1px solid var(--border); }
+        .lesson-contribute-row { display: flex; flex-wrap: wrap; gap: .4rem; }
+        .lessons-group h3 { margin: .5rem 0; font-size: .95rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+        @media (max-width: 640px) { .lessons-panel { padding: 0; } .lessons-box { min-height: 100%; border-radius: 0; border: 0; } }
         .modal { position: fixed; z-index: 60; inset: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; }
         .modal .overlay { z-index: 0; }
         .modal-box { position: relative; z-index: 1; width: min(24rem, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1.25rem; }
@@ -320,7 +356,8 @@
         /* Above the blocks bar when it is shown */
         .has-jump-bar .yt-mini { bottom: calc(4.2rem + max(.75rem, env(safe-area-inset-bottom))); }
 
-        /* Blocks bar: one button per block of the song; a tap goes to the last block with that name */
+        /* Blocks bar: one button per block of the song, in order (it scrolls sideways, following the song); a tap goes to that block.
+           Blocks in a row with the same name share one button ("CHORUS (3x)"), which goes to the first of them */
         .jump-bar {
             position: fixed; z-index: 34; left: 0; right: 0; bottom: 0;
             display: flex; gap: .35rem; overflow-x: auto; scrollbar-width: none;
@@ -334,6 +371,7 @@
             font-size: .9rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;
         }
         .jump-bar button.is-current { background: var(--type-color, var(--accent)); color: var(--surface); }
+        .jump-bar .jump-count { text-transform: none; }
         .has-jump-bar .stage { padding-bottom: 4.8rem; }
         .toast {
             position: fixed; z-index: 70; left: 50%; bottom: 1rem; transform: translateX(-50%);
@@ -353,6 +391,7 @@
     <div class="page" x-data="setlistPage(@js([
         'setlist' => $data,
         'keyOptions' => $keyOptions,
+        'instruments' => $instruments,
         'urls' => [
             'setlist' => url('/repertoire'),
             'search' => route('site.setlist.songs.search'),
@@ -372,7 +411,7 @@
             'offlineOnly' => __('No connection: changed only on this device, not saved.'),
             'offlineNoCatalog' => __('No connection: download the setlist for offline to add songs.'),
         ],
-    ]))" @keydown.window="onKeydown($event)" :class="{ 'has-jump-bar': current && jumpTargets.length > 1, 'is-suggesting': settings.suggest && !current?.instrumentVersion }">
+    ]))" @keydown.window="onKeydown($event)" :class="{ 'has-jump-bar': current && jumpTargets.length > 1, 'is-suggesting': settings.suggest && !current?.instrumentVersion, 'no-cursor': !settings.showCursor }">
 
         <div class="chrome">
         <header class="topbar">
@@ -428,121 +467,136 @@
         @endif
 
         {{-- Secondary options, hidden by default --}}
+        {{-- Options: one setting per line (its name, then its control), grouped; scrolls on its own on a phone --}}
         <div class="options" x-show="optionsOpen" x-cloak @keydown.escape="optionsOpen = false">
-            <div class="option-row">
-                <label for="setlist_select">{{ __('Setlist') }}</label>
-                <select id="setlist_select" class="control" @change="openSetlist($event.target.value)">
-                    @if (! $data)
-                        <option value="">—</option>
-                    @endif
-                    @foreach ($setlistOptions as $option)
-                        <option value="{{ $option['id'] }}" @selected($data && $option['id'] === $data['id'])>{{ $option['label'] }}</option>
-                    @endforeach
-                </select>
-            </div>
+            <section class="opt-group">
+                <label class="opt-row is-stacked" for="setlist_select">
+                    <span class="opt-name">{{ __('Setlist') }}</span>
+                    <select id="setlist_select" class="control" @change="openSetlist($event.target.value)">
+                        @if (! $data)
+                            <option value="">—</option>
+                        @endif
+                        @foreach ($setlistOptions as $option)
+                            <option value="{{ $option['id'] }}" @selected($data && $option['id'] === $data['id'])>{{ $option['label'] }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            </section>
 
             @if ($data)
-                <div class="option-row" x-show="current">
-                    <label for="song_key">{{ __('Key') }}</label>
-                    <select id="song_key" x-ref="keySelect" class="control" style="flex: 0 0 auto; font-weight: 700;" :value="selectedKey" @change="changeKey($event.target.value)" :disabled="savingKey">
-                        <template x-if="!selectedKey">
-                            <option value="" :selected="!selectedKey">—</option>
-                        </template>
-                        <template x-for="key in extraKeys" :key="'extra-' + key">
-                            <option :value="key" x-text="key" :selected="key === selectedKey"></option>
-                        </template>
-                        <template x-for="choice in keyChoices" :key="choice.value">
-                            <option :value="choice.value" x-text="choice.label" :selected="choice.value === selectedKey"></option>
-                        </template>
-                    </select>
-                    <span class="hint" x-show="current?.original_key && current.original_key !== selectedKey">
-                        {{ __('Original key') }}: <strong x-text="current?.original_key"></strong>
-                    </span>
-                </div>
+                <section class="opt-group" x-show="current">
+                    <h3 class="opt-title">{{ __('This song') }}</h3>
+                    <label class="opt-row" for="song_key">
+                        <span class="opt-name">{{ __('Key') }}
+                            <small class="opt-hint" x-show="current?.original_key && current.original_key !== selectedKey" x-text="`${@js(__('Original key'))}: ${current?.original_key}`"></small>
+                        </span>
+                        <select id="song_key" x-ref="keySelect" class="control opt-control" style="font-weight: 700;" :value="selectedKey" @change="changeKey($event.target.value)" :disabled="savingKey">
+                            <template x-if="!selectedKey">
+                                <option value="" :selected="!selectedKey">—</option>
+                            </template>
+                            <template x-for="key in extraKeys" :key="'extra-' + key">
+                                <option :value="key" x-text="key" :selected="key === selectedKey"></option>
+                            </template>
+                            <template x-for="choice in keyChoices" :key="choice.value">
+                                <option :value="choice.value" x-text="choice.label" :selected="choice.value === selectedKey"></option>
+                            </template>
+                        </select>
+                    </label>
+                    {{-- The band's tempo for this song in this setlist (the same click for everyone) --}}
+                    <div class="opt-row" :title="@js(__('Saved in this setlist for the whole band.'))">
+                        <span class="opt-name">BPM</span>
+                        <span class="opt-controls">
+                            <input type="number" class="control opt-number" min="30" max="240" step="1" :value="Math.round(liveBpm)" @change="setLiveBpm(Number($event.target.value))" aria-label="BPM">
+                            <button type="button" class="btn" @click="tapTempo()" :title="@js(__('Tap the beat to set the tempo'))"><i class="fa-solid fa-hand-pointer"></i> Tap</button>
+                            <template x-if="current?.setlist_bpm && current?.bpm && Number(current.setlist_bpm) !== Number(current.bpm)">
+                                <button type="button" class="btn" @click="resetBpm()" :title="@js(__('Back to the original (:bpm)')).replace(':bpm', Math.round(current.bpm))"
+                                    :aria-label="@js(__('Back to the original (:bpm)')).replace(':bpm', Math.round(current.bpm))"><i class="fa-solid fa-rotate-left"></i> <span x-text="Math.round(current.bpm)"></span></button>
+                            </template>
+                        </span>
+                    </div>
+                </section>
 
-                <div class="option-row">
-                    <span class="option-label">{{ __('Display') }}</span>
-                    <label class="switch"><input type="checkbox" x-model="settings.showDetails"> {{ __('Artist and minister') }}</label>
-                    <label class="switch"><input type="checkbox" x-model="settings.showAnchors"> {{ __('Anchors') }}</label>
-                    <label class="switch"><input type="checkbox" x-model="settings.showLyrics"> {{ __('Lyrics') }}</label>
-                    <label class="switch"><input type="checkbox" x-model="settings.twoColumns"> {{ __('Two columns') }}</label>
-                    <label class="switch" :title="audioUrl || videoId ? '' : @js(__('This song has no audio or YouTube video.'))"><input type="checkbox" x-model="settings.youtubeSound"> {{ __('Song sound') }}</label>
-                </div>
+                <section class="opt-group">
+                    <h3 class="opt-title">{{ __('Display') }}</h3>
+                    <label class="opt-row"><span class="opt-name">{{ __('Artist and minister') }}</span><input type="checkbox" class="opt-switch" x-model="settings.showDetails"></label>
+                    <label class="opt-row"><span class="opt-name">{{ __('Anchors') }}</span><input type="checkbox" class="opt-switch" x-model="settings.showAnchors"></label>
+                    <label class="opt-row"><span class="opt-name">{{ __('Lyrics') }}</span><input type="checkbox" class="opt-switch" x-model="settings.showLyrics"></label>
+                    <label class="opt-row"><span class="opt-name">{{ __('Two columns') }}</span><input type="checkbox" class="opt-switch" x-model="settings.twoColumns"></label>
+                    <label class="opt-row"><span class="opt-name">{{ __('Song sound') }}
+                        <small class="opt-hint" x-show="!(audioUrl || videoId)">{{ __('This song has no audio or YouTube video.') }}</small></span>
+                        <input type="checkbox" class="opt-switch" x-model="settings.youtubeSound"></label>
+                    <label class="opt-row"><span class="opt-name">{{ __('Cursor') }}
+                        <small class="opt-hint">{{ __('The block, bar, chord and beat being played are lit') }}</small></span>
+                        <input type="checkbox" class="opt-switch" x-model="settings.showCursor"></label>
+                </section>
 
-                {{-- The band's tempo for this song in this setlist (the same click for everyone) --}}
-                <div class="option-row" x-show="current" style="flex-wrap: nowrap;" :title="@js(__('Saved in this setlist for the whole band.'))">
-                    <span class="option-label">BPM</span>
-                    <input type="number" class="control" min="30" max="240" step="1" style="width: 5rem; flex: 0 0 auto;" :value="Math.round(liveBpm)" @change="setLiveBpm(Number($event.target.value))" aria-label="BPM">
-                    <button type="button" class="btn" style="white-space: nowrap;" @click="tapTempo()" :title="@js(__('Tap the beat to set the tempo'))"><i class="fa-solid fa-hand-pointer"></i> Tap</button>
-                    <template x-if="current?.setlist_bpm && current?.bpm && Number(current.setlist_bpm) !== Number(current.bpm)">
-                        <button type="button" class="btn" style="white-space: nowrap;" @click="resetBpm()" :title="@js(__('Back to the original (:bpm)')).replace(':bpm', Math.round(current.bpm))"
-                            :aria-label="@js(__('Back to the original (:bpm)')).replace(':bpm', Math.round(current.bpm))"><i class="fa-solid fa-rotate-left"></i> <span x-text="Math.round(current.bpm)"></span></button>
-                    </template>
-                </div>
+                <section class="opt-group" x-show="instrumentOptions.length">
+                    <h3 class="opt-title">{{ __('My instrument') }}</h3>
+                    <label class="opt-row is-stacked">
+                        <span class="opt-name opt-hint">{{ __('Songs with a version for your instrument show its chords; the others show the base.') }}</span>
+                        <select class="control" x-model="settings.instrument" aria-label="{{ __('My instrument') }}">
+                            <option value="">{{ __('Base (everyone)') }}</option>
+                            <template x-for="name in instrumentOptions" :key="name">
+                                <option :value="name" x-text="name" :selected="name === settings.instrument"></option>
+                            </template>
+                        </select>
+                    </label>
+                </section>
 
-                <div class="option-row" x-show="instrumentOptions.length">
-                    <span class="option-label">{{ __('My instrument') }}</span>
-                    <select class="control" x-model="settings.instrument" style="width: auto;">
-                        <option value="">{{ __('Base (everyone)') }}</option>
-                        <template x-for="name in instrumentOptions" :key="name">
-                            <option :value="name" x-text="name" :selected="name === settings.instrument"></option>
-                        </template>
-                    </select>
-                    <span class="hint">{{ __('Songs with a version for your instrument show its chords; the others show the base.') }}</span>
-                </div>
+                <section class="opt-group">
+                    <h3 class="opt-title">{{ __('Size') }}</h3>
+                    <div class="opt-row">
+                        <span class="opt-name">{{ __('Font size') }}</span>
+                        <span class="opt-stepper">
+                            <button type="button" class="btn btn-icon" @click="scaleFont(-1)" :disabled="layout.fontScale <= 0.7" aria-label="{{ __('Smaller') }}">A−</button>
+                            <span class="font-size" x-text="Math.round(layout.fontScale * 100) + '%'"></span>
+                            <button type="button" class="btn btn-icon" @click="scaleFont(1)" :disabled="layout.fontScale >= 1.6" aria-label="{{ __('Larger') }}">A+</button>
+                        </span>
+                    </div>
+                    <div class="opt-row">
+                        <span class="opt-name">{{ __('Section text') }}</span>
+                        <span class="opt-stepper">
+                            <button type="button" class="btn btn-icon" @click="step('labelScale', -0.1, 0.8, 2)" :disabled="layout.labelScale <= 0.8" aria-label="{{ __('Smaller') }}">A−</button>
+                            <span class="font-size" x-text="Math.round(layout.labelScale * 100) + '%'"></span>
+                            <button type="button" class="btn btn-icon" @click="step('labelScale', 0.1, 0.8, 2)" :disabled="layout.labelScale >= 2" aria-label="{{ __('Larger') }}">A+</button>
+                        </span>
+                    </div>
+                    <div class="opt-row">
+                        <span class="opt-name">{{ __('Line spacing') }}</span>
+                        <span class="opt-stepper">
+                            <button type="button" class="btn btn-icon" @click="step('lineGap', -0.25, 1, 3)" :disabled="layout.lineGap <= 1" aria-label="{{ __('Less space') }}"><i class="fa-solid fa-minus"></i></button>
+                            <span class="font-size" x-text="Math.round(layout.lineGap * 100) + '%'"></span>
+                            <button type="button" class="btn btn-icon" @click="step('lineGap', 0.25, 1, 3)" :disabled="layout.lineGap >= 3" aria-label="{{ __('More space') }}"><i class="fa-solid fa-plus"></i></button>
+                        </span>
+                    </div>
+                    <div class="opt-row is-end">
+                        <button type="button" class="btn" @click="resetLayout()" :disabled="isDefaultLayout">{{ __('Reset this song\'s layout') }}</button>
+                    </div>
+                </section>
 
-                <div class="option-row">
-                    <span class="option-label">{{ __('Suggest chords') }}</span>
-                    <label class="switch"><input type="checkbox" x-model="settings.suggest"> {{ __('Correct chords of the songs (sent for review)') }}</label>
+                <section class="opt-group">
+                    <h3 class="opt-title">{{ __('Suggest chords') }}</h3>
+                    <label class="opt-row"><span class="opt-name">{{ __('Correct chords of the songs (sent for review)') }}</span><input type="checkbox" class="opt-switch" x-model="settings.suggest"></label>
                     <template x-if="settings.suggest">
-                        <div style="display: grid; gap: .45rem; width: 100%;">
-                            <span class="hint" x-show="current?.instrumentVersion">{{ __('Choose "Base" in My instrument to suggest corrections.') }}</span>
-                            <span class="hint" x-show="!current?.instrumentVersion">{{ __('Tap a chord to change or remove it. Nothing changes for the others until an admin approves.') }}</span>
+                        <div class="opt-stack">
+                            <span class="opt-hint" x-show="current?.instrumentVersion">{{ __('Choose "Base" in My instrument to suggest corrections.') }}</span>
+                            <span class="opt-hint" x-show="!current?.instrumentVersion">{{ __('Tap a chord to change or remove it. Nothing changes for the others until an admin approves.') }}</span>
                             <input type="text" class="control" x-model="suggestAuthor" @change="saveSuggestAuthor()" placeholder="{{ __('Your name (optional)') }}" maxlength="60">
                             <textarea class="control" rows="2" x-model="suggestNote" placeholder="{{ __('Comment (optional)') }}" maxlength="500"></textarea>
                             <div style="display: flex; flex-wrap: wrap; gap: .4rem; align-items: center;">
                                 <button type="button" class="btn btn-accent" @click="sendSuggestion()" :disabled="!suggestCount || sendingSuggestion"
                                     x-text="@js(__('Send suggestion (:count)')).replace(':count', suggestCount)"></button>
                                 <button type="button" class="btn" x-show="suggestCount" @click="discardSuggestion()">{{ __('Discard') }}</button>
-                                <span class="hint" x-show="otherSuggestions" x-text="@js(__('Other songs with changes not sent: :count')).replace(':count', otherSuggestions)"></span>
+                                <span class="opt-hint" x-show="otherSuggestions" x-text="@js(__('Other songs with changes not sent: :count')).replace(':count', otherSuggestions)"></span>
                             </div>
                         </div>
                     </template>
-                </div>
-
-                {{-- Chords edited by block on this device before editing moved to each chord (suggestions) --}}
-                <div class="option-row" x-show="current && hasChordEdits">
-                    <span class="option-label">{{ __('Chords') }}</span>
-                    <button type="button" class="btn" @click="resetChords()" x-show="hasChordEdits">{{ __('Restore original chords') }}</button>
-                    <span class="hint">{{ __('Edits are saved only on this device.') }}</span>
-                </div>
-
-                <div class="option-row">
-                    <span class="option-label">{{ __('Font size') }}</span>
-                    <button type="button" class="btn btn-icon" @click="scaleFont(-1)" :disabled="layout.fontScale <= 0.7" aria-label="{{ __('Smaller') }}">A−</button>
-                    <span class="font-size" x-text="Math.round(layout.fontScale * 100) + '%'"></span>
-                    <button type="button" class="btn btn-icon" @click="scaleFont(1)" :disabled="layout.fontScale >= 1.6" aria-label="{{ __('Larger') }}">A+</button>
-                </div>
-
-                <div class="option-row">
-                    <span class="option-label">{{ __('Section text') }}</span>
-                    <button type="button" class="btn btn-icon" @click="step('labelScale', -0.1, 0.8, 2)" :disabled="layout.labelScale <= 0.8" aria-label="{{ __('Smaller') }}">A−</button>
-                    <span class="font-size" x-text="Math.round(layout.labelScale * 100) + '%'"></span>
-                    <button type="button" class="btn btn-icon" @click="step('labelScale', 0.1, 0.8, 2)" :disabled="layout.labelScale >= 2" aria-label="{{ __('Larger') }}">A+</button>
-                </div>
-
-                <div class="option-row">
-                    <span class="option-label">{{ __('Line spacing') }}</span>
-                    <button type="button" class="btn btn-icon" @click="step('lineGap', -0.25, 1, 3)" :disabled="layout.lineGap <= 1" aria-label="{{ __('Less space') }}"><i class="fa-solid fa-minus"></i></button>
-                    <span class="font-size" x-text="Math.round(layout.lineGap * 100) + '%'"></span>
-                    <button type="button" class="btn btn-icon" @click="step('lineGap', 0.25, 1, 3)" :disabled="layout.lineGap >= 3" aria-label="{{ __('More space') }}"><i class="fa-solid fa-plus"></i></button>
-                </div>
-
-
-                <div class="option-row">
-                    <span class="option-label"></span>
-                    <button type="button" class="btn" @click="resetLayout()" :disabled="isDefaultLayout">{{ __('Reset this song\'s layout') }}</button>
-                </div>
+                    {{-- Chords edited by block on this device before editing moved to each chord (suggestions) --}}
+                    <div class="opt-row" x-show="current && hasChordEdits">
+                        <span class="opt-name">{{ __('Chords') }} <small class="opt-hint">{{ __('Edits are saved only on this device.') }}</small></span>
+                        <button type="button" class="btn" @click="resetChords()">{{ __('Restore original chords') }}</button>
+                    </div>
+                </section>
             @endif
         </div>
         </div>
@@ -560,29 +614,36 @@
 
                 <template x-if="current">
                     <article>
+                        {{-- The title on its own line; under it, the song's key, how it is shown and its lessons --}}
                         <div class="song-head">
-                            <h1 class="song-title" x-text="current.title"></h1>
-                            <span class="instrument-badge" x-show="current.instrumentVersion" x-text="current.instrumentVersion" :title="@js(__('Version of this song for your instrument'))"></span>
-                            <span class="key-picker-anchor" @click.outside="keyPickerOpen = false" @keydown.escape.window="keyPickerOpen = false">
-                                <button type="button" class="key-badge" @click.stop="keyPickerOpen = !keyPickerOpen" :aria-expanded="keyPickerOpen" :title="@js(__('Change key'))">
-                                    <span x-text="selectedKey || '—'"></span>
-                                    <small x-show="current.original_key && current.original_key !== selectedKey" x-text="`(${current.original_key})`"></small>
-                                </button>
-                                <div class="key-picker" x-show="keyPickerOpen" x-cloak @click.stop role="listbox" :aria-label="@js(__('Key'))">
-                                    <template x-for="choice in [...extraKeys.map(key => ({ value: key, label: key })), ...keyChoices]" :key="choice.value">
-                                        <button type="button" class="key-option" role="option"
-                                            :class="{ 'is-selected': choice.value === selectedKey, 'is-original': choice.value === current.original_key }"
-                                            :aria-selected="choice.value === selectedKey" :disabled="savingKey"
-                                            :title="choice.value === current.original_key ? @js(__('Original key')) : ''"
-                                            @click="pickKey(choice.value)" x-text="choice.label"></button>
-                                    </template>
-                                </div>
-                            </span>
-                            <span class="mode-toggle" x-show="hasSheet || hasLive" role="group" :aria-label="@js(__('View'))">
-                                <button type="button" :class="{ 'is-active': !sheetMode && !liveMode }" @click.stop="setViewMode('map')">{{ __('Map') }}</button>
-                                <button type="button" x-show="hasSheet" :class="{ 'is-active': sheetMode }" @click.stop="setViewMode('sheet')">{{ __('Chord sheet') }}</button>
-                                <button type="button" x-show="hasLive" :class="{ 'is-active': liveMode }" @click.stop="setViewMode('live')"><i class="fa-solid fa-circle" style="font-size: .55em; color: #ef4444;"></i> {{ __('Live') }}</button>
-                            </span>
+                            <div class="song-title-row">
+                                <h1 class="song-title" x-text="current.title"></h1>
+                                <span class="instrument-badge" x-show="current.instrumentVersion" x-text="current.instrumentVersion" :title="@js(__('Version of this song for your instrument'))"></span>
+                            </div>
+                            <div class="song-tools">
+                                <span class="key-picker-anchor" @click.outside="keyPickerOpen = false" @keydown.escape.window="keyPickerOpen = false">
+                                    <button type="button" class="key-badge" @click.stop="keyPickerOpen = !keyPickerOpen" :aria-expanded="keyPickerOpen" :title="@js(__('Change key'))">
+                                        <span x-text="selectedKey || '—'"></span>
+                                        <small x-show="current.original_key && current.original_key !== selectedKey" x-text="`(${current.original_key})`"></small>
+                                    </button>
+                                    <div class="key-picker" x-show="keyPickerOpen" x-cloak @click.stop role="listbox" :aria-label="@js(__('Key'))">
+                                        <template x-for="choice in [...extraKeys.map(key => ({ value: key, label: key })), ...keyChoices]" :key="choice.value">
+                                            <button type="button" class="key-option" role="option"
+                                                :class="{ 'is-selected': choice.value === selectedKey, 'is-original': choice.value === current.original_key }"
+                                                :aria-selected="choice.value === selectedKey" :disabled="savingKey"
+                                                :title="choice.value === current.original_key ? @js(__('Original key')) : ''"
+                                                @click="pickKey(choice.value)" x-text="choice.label"></button>
+                                        </template>
+                                    </div>
+                                </span>
+                                <span class="mode-toggle" x-show="hasSheet || hasLive" role="group" :aria-label="@js(__('View'))">
+                                    <button type="button" :class="{ 'is-active': !sheetMode && !liveMode }" @click.stop="setViewMode('map')">{{ __('Map') }}</button>
+                                    <button type="button" x-show="hasSheet" :class="{ 'is-active': sheetMode }" @click.stop="setViewMode('sheet')">{{ __('Chord sheet') }}</button>
+                                    <button type="button" x-show="hasLive" :class="{ 'is-active': liveMode }" @click.stop="setViewMode('live')"><i class="fa-solid fa-circle" style="font-size: .55em; color: #ef4444;"></i> {{ __('Live') }}</button>
+                                </span>
+                                <button type="button" class="lessons-btn" @click.stop="openLessons()" :title="@js(__('Lessons'))">
+                                    <i class="fa-solid fa-chalkboard-user"></i> <span class="lessons-btn-label">{{ __('Lessons') }}</span> <span x-text="lessonsCountLabel"></span></button>
+                            </div>
                         </div>
                         <p class="song-meta" x-show="settings.showDetails">
                             <span x-text="current.artist"></span>
@@ -645,7 +706,7 @@
                         <template x-if="sheetMode">
                         <div class="sections" :class="{ 'two-columns': settings.twoColumns, 'block-swipe': blockScrollActive }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
                             <template x-for="(section, index) in current.chord_sheet" :key="`${current.id}-${index}`">
-                                <section :class="sectionState(index)" :style="typeStyle(timedName(index))" @click="selectSection(index)">
+                                <section :class="sectionState(index)" :style="typeStyle(timedName(index))" @click="tapSection(index)">
                                     <div class="return-label" x-show="section.jump === 'start'"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</div>
                                     <div class="section-label">
                                         <div class="section-name">
@@ -672,13 +733,10 @@
                         </div>
                         </template>
 
-                        <template x-if="!sheetMode && !liveMode && barChart">
-                        <p class="bar-chart-head" x-text="[selectedKey, liveBpm ? `${Math.round(liveBpm)} BPM` : null, meterLabel(barChart.perBar)].filter(Boolean).join(' · ')"></p>
-                        </template>
                         <template x-if="!sheetMode && !liveMode">
                         <div class="sections" :class="{ 'two-columns': settings.twoColumns, 'block-swipe': blockScrollActive }" :style="`--chord-scale: ${layout.fontScale}; --label-scale: ${layout.labelScale}; --line-gap: ${layout.lineGap}; --section-gap: 3`">
                             <template x-for="(section, index) in sections" :key="`${current.id}-${index}`">
-                                <section :class="sectionState(index)" :style="typeStyle(sectionName(section))" @click="selectSection(index)">
+                                <section :class="sectionState(index)" :style="typeStyle(sectionName(section))" @click="tapSection(index)">
                                     <div class="return-label" x-show="section?.jump === 'start'"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</div>
                                     <div class="section-label">
                                         <div class="section-name">
@@ -803,6 +861,51 @@
                 </div>
             </aside>
 
+            {{-- Lessons of the song, by instrument (the one picked in the options first); stretches of a video or audio can be repeated --}}
+            <div class="lessons-panel" x-show="lessonsOpen && current" x-cloak @keydown.escape.window="lessonsOpen = false">
+                <div class="overlay" @click="lessonsOpen = false"></div>
+                <div class="lessons-box" role="dialog" aria-modal="true" :aria-label="@js(__('Lessons'))">
+                    <div class="lessons-box-head">
+                        <strong x-text="`${@js(__('Lessons'))} · ${current?.title || ''}`"></strong>
+                        <button type="button" class="btn btn-icon" @click="lessonsOpen = false" aria-label="{{ __('Close') }}" title="{{ __('Close') }}"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="lessons-filter">
+                        <select class="control" x-model="settings.lessonInstrument" aria-label="{{ __('Instrument of the lessons') }}">
+                            <option value="" x-text="`${@js(__('All instruments'))} (${(current?.lessons || []).length})`"></option>
+                            <template x-for="name in lessonInstrumentOptions" :key="name">
+                                <option :value="name" x-text="`${name} (${lessonCount(name)})`" :selected="name === settings.lessonInstrument"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <template x-if="lessonsOpen && current">
+                        <div class="lessons-body">
+                            <p class="hint" x-show="!shownLessonGroups.length" x-text="settings.lessonInstrument ? @js(__('No lessons for :instrument in this song yet.')).replace(':instrument', settings.lessonInstrument) : @js(__('No lessons for this song yet.'))"></p>
+                            <template x-for="group in shownLessonGroups" :key="`${current.id}-${group.instrument}`">
+                                <section class="lessons-group">
+                                    <h3 x-show="!settings.lessonInstrument" x-text="group.instrument"></h3>
+                                    <template x-for="lesson in group.lessons" :key="lesson.id">
+                                        <div style="margin-bottom: .75rem;">@include('songs.partials.lesson-card', ['saveUrl' => 'null', 'contributeUrl' => "songUrl(current, '/lessons/' + lesson.id + '/loops')"])</div>
+                                    </template>
+                                </section>
+                            </template>
+                        </div>
+                    </template>
+
+                    {{-- A YouTube video for the instrument picked in the filter, sent by a musician: it becomes a lesson for
+                         everyone; only the team changes or removes it --}}
+                    <form class="lesson-contribute" @submit.prevent="contributeLesson()">
+                        <strong x-text="settings.lessonInstrument ? @js(__('Add a YouTube video for :instrument')).replace(':instrument', settings.lessonInstrument) : @js(__('Add a YouTube video for your instrument'))"></strong>
+                        <p class="hint" style="margin: 0;" x-show="!settings.lessonInstrument">{{ __('Pick your instrument in the filter above to send a video.') }}</p>
+                        <div class="lesson-contribute-row" x-show="settings.lessonInstrument">
+                            <input type="url" class="control" x-model="contribution.url" required maxlength="255" placeholder="https://youtu.be/…" aria-label="{{ __('YouTube link') }}" style="flex: 1 1 14rem;">
+                            <button type="submit" class="btn btn-accent" :disabled="contribution.sending || !settings.lessonInstrument"><i class="fa-solid" :class="contribution.sending ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i> {{ __('Send') }}</button>
+                        </div>
+                        <p class="hint" style="margin: 0;" x-show="settings.lessonInstrument">{{ __('It shows for everyone as "Sent by a musician". Only the team can change or remove it.') }}</p>
+                        <p class="hint" style="margin: 0; color: var(--danger);" x-show="contribution.error" x-text="contribution.error"></p>
+                    </form>
+                </div>
+            </div>
+
             {{-- Installing on iPhone / iPad: only by hand, from Safari's share menu --}}
             <div class="modal" x-show="installHelp" x-cloak @keydown.escape.window="installHelp = false">
                 <div class="overlay" @click="installHelp = false"></div>
@@ -834,9 +937,9 @@
 
         @if ($data)
             {{-- Blocks bar: quick way back to a block (e.g. the chorus): goes to the last one with that name --}}
-            <nav class="jump-bar" x-show="current && jumpTargets.length > 1" x-cloak aria-label="{{ __('Blocks') }}">
+            <nav class="jump-bar" x-show="current && jumpTargets.length > 1" x-cloak aria-label="{{ __('Blocks') }}" x-effect="centerJumpButton(currentJumpIndex)">
                 <template x-for="target in jumpTargets" :key="target.key">
-                    <button type="button" :style="typeStyle(target.name)" :class="{ 'is-current': isCurrentTarget(target) }" @click="jumpTo(target)" x-text="target.name"></button>
+                    <button type="button" :style="typeStyle(target.name)" :class="{ 'is-current': isCurrentTarget(target) }" :data-jump="target.index" @click="jumpTo(target)"><span x-text="target.name"></span><span class="jump-count" x-show="target.count > 1" x-text="` (${target.count}x)`"></span></button>
                 </template>
             </nav>
         @endif
@@ -882,7 +985,7 @@
         // Per-viewer display preferences; the page works the same when storage is unavailable.
         // Toggles are shared by every song; size settings are stored per song_id.
         const SETTINGS_KEY = 'setlist-view-settings';
-        const DEFAULT_SETTINGS = { showDetails: true, showAnchors: true, showLyrics: false, twoColumns: true, viewMode: 'map', youtubeSound: false, instrument: '', suggest: false };
+        const DEFAULT_SETTINGS = { showDetails: true, showAnchors: true, showLyrics: false, twoColumns: true, viewMode: 'map', youtubeSound: false, instrument: '', suggest: false, lessonInstrument: '', showCursor: true };
 
         // Values worked out once per song data, outside Alpine's reactive state: the songs' structure and chord sheet
         // are replaced (never changed in place), so the same objects give the same result. Read by every bar, beat and
@@ -1149,6 +1252,59 @@
                 // Installing as an app: the browser's offer (Android / desktop) or the steps for iPhone.
                 installPrompt: window.installPrompt ?? null,
                 installHelp: false,
+                // ---- Lessons of the current song (see SongLesson), grouped by instrument ----
+                lessonsOpen: false,
+                contribution: { url: '', sending: false, error: '' },
+                // Instruments to filter by or send a video for: the usual ones, the ones with lessons, and the picked one.
+                get lessonInstrumentOptions() {
+                    const names = new Set([...(config.instruments || []), ...this.songs.flatMap(song => (song.lessons || []).map(lesson => lesson.instrument))]);
+                    if (this.settings.lessonInstrument) names.add(this.settings.lessonInstrument);
+                    if (this.settings.instrument) names.add(this.settings.instrument);
+                    return [...names].sort((a, b) => a.localeCompare(b));
+                },
+                lessonCount(instrument) { return (this.current?.lessons || []).filter(lesson => lesson.instrument === instrument).length; },
+                get shownLessonGroups() {
+                    return this.lessonGroups.filter(group => !this.settings.lessonInstrument || group.instrument === this.settings.lessonInstrument);
+                },
+                async contributeLesson() {
+                    const song = this.current;
+                    const data = this.contribution;
+                    const instrument = this.settings.lessonInstrument;
+                    if (!song || !instrument || data.sending) return;
+                    data.sending = true;
+                    data.error = '';
+                    try {
+                        const lesson = await this.request('POST', this.songUrl(song, '/lessons'), { instrument, video_url: data.url.trim() });
+                        song.lessons = [...(song.lessons || []).filter(item => item.id !== lesson.id), lesson];
+                        this.settings.lessonInstrument = lesson.instrument;
+                        Alpine.store('lessons').open = lesson.id;
+                        data.url = '';
+                        this.notify(@js(__('Video added. Thank you!')));
+                    } catch (error) {
+                        data.error = error.message;
+                    } finally {
+                        data.sending = false;
+                    }
+                },
+                get lessonGroups() {
+                    const groups = [];
+                    (this.current?.lessons || []).forEach(lesson => {
+                        let group = groups.find(item => item.instrument === lesson.instrument);
+                        if (!group) groups.push(group = { instrument: lesson.instrument, lessons: [] });
+                        group.lessons.push(lesson);
+                    });
+                    return groups.sort((a, b) => a.instrument.localeCompare(b.instrument));
+                },
+                // The lessons of the instrument picked for lessons (of all of them when none is picked).
+                get lessonsCountLabel() {
+                    const all = (this.current?.lessons || []).length;
+                    if (!this.settings.lessonInstrument) return String(all);
+                    return `${(this.current?.lessons || []).filter(lesson => lesson.instrument === this.settings.lessonInstrument).length}/${all}`;
+                },
+                openLessons() {
+                    this.contribution.error = '';
+                    this.lessonsOpen = true;
+                },
                 get isApp() { return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; },
                 get isIos() { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); },
                 get canInstall() { return !this.isApp && (!!this.installPrompt || this.isIos); },
@@ -1393,8 +1549,6 @@
                     });
                     return { perBar, perRow, size, sections: result, chordTicks };
                 },
-                // Time signature shown for the beats of a bar: 6 (eighth notes) is 6/8.
-                meterLabel(beats) { return { 6: '6/8', 9: '9/8', 12: '12/8' }[beats] ?? `${beats}/4`; },
                 playingBar: -1,
                 // Bar being played: from the chord being played and the time since it started.
                 barAt(n, time) {
@@ -1632,7 +1786,7 @@
                 // ---- Versions for an instrument: whoever picks an instrument sees its version of each song that has
                 // one (its map and the chord sheet with its chords); the base map stays kept in `_base` ----
                 get instrumentOptions() {
-                    const names = new Set(this.songs.flatMap(song => (song.versions || []).map(version => version.instrument)));
+                    const names = new Set(this.songs.flatMap(song => [...(song.versions || []), ...(song.lessons || [])].map(item => item.instrument)));
                     if (this.settings.instrument) names.add(this.settings.instrument);
                     return [...names].sort((a, b) => a.localeCompare(b));
                 },
@@ -2152,6 +2306,9 @@
                 // only scrolls when the current bar would be out of sight.
                 scrollToLiveBar(force = false) {
                     if (!this.liveEdit) return this.fitFocus();
+                    // Stopped, the page stays where the person left it (the jump bar still goes to its block).
+                    if (!this.isRunning && !this.scrollNext) return;
+                    this.scrollNext = false;
                     if (force) this.live.shownBlock = null;
                     const size = (this.liveGrid?.perBar ?? 4) * 2;
                     const block = (this.liveGrid?.blocks || []).filter(item => !item.marker && item.tick <= this.live.tick).at(-1);
@@ -2360,6 +2517,8 @@
                 typeStyle(name) { return `--type-color: var(--type-${blockType(name)})`; },
                 // Blocks bar: one button per block name of the current view, going to the last time that block is
                 // played: the first of its last run (a chorus split into consecutive parts starts at its first part).
+                // One button per block, in the song's order ("back to the start" markers left out); blocks in a row with
+                // the same name share one button, which goes to the first of them (`index`..`last`, `count` blocks).
                 get jumpTargets() {
                     const names = this.sheetMode
                         ? (this.current?.chord_sheet || []).map((section, index) => this.isReturn(index) ? '' : this.timedName(index))
@@ -2368,35 +2527,54 @@
                     names.forEach((name, index) => {
                         const key = String(name).trim().toUpperCase();
                         if (!key) return;
-                        const target = targets.find(item => item.key === key);
-                        if (target) target.index = index;
-                        else targets.push({ key, name, index });
-                    });
-                    const keyAt = (index) => String(names[index] ?? '').trim().toUpperCase();
-                    targets.forEach(target => {
-                        while (target.index > 0 && keyAt(target.index - 1) === target.key) target.index--;
+                        const previous = targets.at(-1);
+                        if (previous && previous.last === index - 1 && previous.name.trim().toUpperCase() === key) {
+                            previous.last = index;
+                            previous.count++;
+                        } else {
+                            targets.push({ key: `${index}`, name, index, last: index, count: 1 });
+                        }
                     });
                     return targets;
                 },
+                isCurrentTarget(target) {
+                    const index = this.currentJumpIndex;
+                    return index !== null && index >= target.index && index <= target.last;
+                },
+                // The block being played or picked (its index in the view), lit in the blocks bar.
+                get currentJumpIndex() {
+                    if (this.liveMode) {
+                        const block = (this.liveGrid?.blocks || []).filter(item => !item.marker && item.tick <= this.live.tick).at(-1);
+                        return block ? this.viewIndexOf(block.index) : null;
+                    }
+                    return this.currentSection;
+                },
+                // The blocks bar slides sideways so the current block's button is in its middle.
+                centerJumpButton(index) {
+                    if (index === null || index === undefined) return;
+                    const target = this.jumpTargets.find(item => index >= item.index && index <= item.last);
+                    if (!target) return;
+                    this.$nextTick(() => {
+                        const bar = document.querySelector('.jump-bar');
+                        const button = bar?.querySelector(`[data-jump="${target.index}"]`);
+                        if (!button) return;
+                        bar.scrollTo({ left: Math.max(0, button.offsetLeft - (bar.clientWidth - button.offsetWidth) / 2), behavior: 'smooth' });
+                    });
+                },
                 jumpTo(target) {
+                    // Going to a block is what the jump bar is for: the page goes there even when stopped.
+                    this.scrollNext = true;
                     // Live view: the count goes on from the first bar of that block.
                     if (this.liveMode) {
                         const block = this.liveGrid.blocks.find(item => item.index === target.index);
                         if (!block) return;
                         this.goToLiveBar(Math.floor(block.tick / (this.liveGrid.perBar * 2)));
-                        return this.scrollToLiveBar();
+                        this.scrollToLiveBar();
+                        this.scrollNext = false;
+                        return;
                     }
                     this.selectSection(target.index);
-                },
-                isCurrentTarget(target) {
-                    if (this.liveMode) {
-                        const block = this.liveGrid.blocks.filter(item => item.tick <= this.live.tick).at(-1);
-                        return !!block && String(block.name).trim().toUpperCase() === target.key;
-                    }
-                    const names = this.sheetMode ? null : this.sections;
-                    if (this.currentSection === null) return false;
-                    const name = this.sheetMode ? this.timedName(this.currentSection) : this.sectionName(names[this.currentSection]);
-                    return String(name).trim().toUpperCase() === target.key;
+                    this.scrollNext = false;
                 },
                 // ChordPro line -> comment ("{c: Riff 2}") or units of [chord over text], split between words
                 // so long lines wrap on small screens without losing the chord position.
@@ -2588,6 +2766,11 @@
                 // Tapping a block marks it as the current section and re-syncs the timer to its start time.
                 // "Back to the start" marker of the map (no chords): tapping it goes to the first block.
                 isReturn(index) { return this.timedList?.[index]?.jump === 'start'; },
+                // A tap on a block goes there only while the song plays; stopped, the page is only read (and scrolled),
+                // nothing changes (the jump bar and the arrow keys still pick a block).
+                tapSection(index) {
+                    if (this.isRunning) this.selectSection(index);
+                },
                 selectSection(index) {
                     if (this.isReturn(index)) {
                         const first = this.timedList.findIndex((section, i) => !this.isReturn(i));
@@ -2604,8 +2787,15 @@
                     if (start !== null) this.seek(start);
                     this.showSection(index);
                 },
+                // The block is lit; the page goes to it only while the song plays (or when asked, e.g. the jump bar):
+                // stopped, the page stays where the person left it.
+                get isRunning() { return this.playing || !!this.live?.running; },
+                scrollNext: false,
                 showSection(index) {
                     this.currentSection = index;
+                    const scroll = this.isRunning || this.scrollNext;
+                    this.scrollNext = false;
+                    if (!scroll) return;
                     this.$nextTick(() => {
                         const section = document.querySelectorAll('.sections section')[index];
                         if (!section) return;
@@ -2700,7 +2890,7 @@
                 },
                 onKeydown(event) {
                     if (event.key === 'Escape') this.optionsOpen = false;
-                    if (this.panelOpen || this.removing || ['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName)) return;
+                    if (this.panelOpen || this.removing || this.lessonsOpen || ['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName)) return;
                     if (event.key === ' ' && this.current) { event.preventDefault(); this.bpmMode ? this.toggleLive() : this.togglePlay(); }
                     if (['ArrowRight', 'PageDown'].includes(event.key)) { event.preventDefault(); this.go(this.currentIndex + 1); }
                     if (['ArrowLeft', 'PageUp'].includes(event.key)) { event.preventDefault(); this.go(this.currentIndex - 1); }
@@ -2728,11 +2918,12 @@
                     do { index += step; } while (index >= 0 && index < count && this.isReturn(index));
                     return index >= 0 && index < count ? index : null;
                 },
-                // With a block selected, scrolling the page (wheel or swipe) goes to the block above / below, like ↑ ↓.
-                // Past the first / last block the page scrolls as usual.
+                // While the song plays, with a block selected, scrolling the page (wheel or swipe) goes to the block above
+                // / below, like ↑ ↓; past the first / last block the page scrolls as usual. Stopped, the page scrolls
+                // freely and the block stays.
                 blockScroll: { wheel: 0, wheelAt: 0, lockedUntil: 0, touchX: null, touchY: null, lastY: 0, dragX: 0, touch: null },
                 get blockScrollActive() {
-                    return !!this.current && !this.liveMode && this.currentSection !== null && this.gesturesFree;
+                    return !!this.current && !this.liveMode && this.currentSection !== null && this.isRunning && this.gesturesFree;
                 },
                 // No panel / popup open.
                 get gesturesFree() {

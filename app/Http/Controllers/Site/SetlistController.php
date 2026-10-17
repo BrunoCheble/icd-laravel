@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Site;
 
 use App\Enums\MusicalKey;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ContributeLessonLoopRequest;
+use App\Http\Requests\ContributeSongLessonRequest;
 use App\Http\Requests\AddSongToSetlistRequest;
 use App\Http\Requests\ReorderSetlistSongsRequest;
 use App\Http\Requests\SongSuggestionRequest;
@@ -11,6 +13,10 @@ use App\Http\Requests\UpdateSetlistSongBpmRequest;
 use App\Http\Requests\UpdateSetlistSongKeyRequest;
 use App\Models\Setlist;
 use App\Models\Song;
+use App\Models\SongLesson;
+use App\Models\SongVersion;
+use App\Services\ContributeLessonLoopService;
+use App\Services\ContributeSongLessonService;
 use App\Services\GetSongCatalogService;
 use App\Services\AddSongToSetlistService;
 use App\Services\GetPublicSetlistService;
@@ -94,8 +100,11 @@ class SetlistController extends Controller
         $data = $setlist ? $getService->execute($setlist) : null;
         $setlistOptions = $listService->execute();
         $keyOptions = MusicalKey::pairs();
+        // Instruments offered for lessons (filter and videos sent by musicians): the usual ones and any with lessons.
+        $instruments = collect(SongVersion::instrumentNames())->merge(SongLesson::query()->distinct()->pluck('instrument'))
+            ->unique()->sort()->values()->all();
 
-        return view('site.setlist', compact('data', 'setlistOptions', 'keyOptions'));
+        return view('site.setlist', compact('data', 'setlistOptions', 'keyOptions', 'instruments'));
     }
 
     /**
@@ -107,6 +116,31 @@ class SetlistController extends Controller
         $suggestion = $service->execute($song, $setlist, $request->validated());
 
         return response()->json(['id' => $suggestion?->id], $suggestion ? 201 : 200);
+    }
+
+    /**
+     * A YouTube video for an instrument, sent by a musician on the public page: it becomes a lesson of the song, marked
+     * as sent by a musician (the page cannot change or remove it).
+     */
+    public function contributeLesson(ContributeSongLessonRequest $request, Setlist $setlist, Song $song, ContributeSongLessonService $service): JsonResponse
+    {
+        $this->ensureSongInSetlist($setlist, $song);
+        $lesson = $service->execute($song, $request->validated('instrument'), $request->validated('video_url'));
+
+        return response()->json($lesson->payload(), $lesson->wasRecentlyCreated ? 201 : 200);
+    }
+
+    /**
+     * A stretch of a lesson's video or audio (an intro, a solo…) saved by a musician on the public page: kept in the
+     * lesson for everyone, marked as sent by a musician (the page cannot change or remove it).
+     */
+    public function contributeLessonLoop(ContributeLessonLoopRequest $request, Setlist $setlist, Song $song, SongLesson $lesson, ContributeLessonLoopService $service): JsonResponse
+    {
+        $this->ensureSongInSetlist($setlist, $song);
+        abort_unless($lesson->song_id === $song->id && in_array($lesson->type, ['youtube', 'audio'], true), 404);
+        $lesson = $service->execute($lesson, (float) $request->validated('start'), (float) $request->validated('end'), $request->validated('label'));
+
+        return response()->json(['loops' => $lesson->loops ?? []]);
     }
 
     private function ensureSongInSetlist(Setlist $setlist, Song $song): void

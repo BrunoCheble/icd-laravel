@@ -22,6 +22,11 @@
         .sheet-block.is-drop-before { box-shadow: 0 -3px 0 #4f46e5; }
         .sheet-block.is-drop-after { box-shadow: 0 3px 0 #4f46e5; }
         .sheet-block.is-dragging { opacity: .45; }
+        /* Moving a block: every block shows only its head, so the order is easy to see */
+        .sheet-page.is-moving-block .sheet-block { margin: .35rem 0; padding: .35rem .8rem; }
+        .sheet-page.is-moving-block .sheet-block > :not(.block-head) { display: none; }
+        .sheet-page.is-moving-block .block-head { margin-bottom: 0; }
+        .sheet-page.is-moving-block, .sheet-page.is-moving-block * { cursor: grabbing !important; user-select: none; }
         .block-head { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-bottom: .4rem; }
         .block-grip { cursor: grab; color: #9ca3af; padding: .1rem .3rem; touch-action: none; }
         .block-name { font-size: .8rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, #4f46e5); background: none; border: 0; cursor: pointer; padding: .1rem .2rem; }
@@ -59,7 +64,7 @@
                 @include('songs.partials.tabs', ['song' => $song, 'current' => 'sheet'])
                 @include('layouts.alert')
 
-                <div class="sheet-page" x-data="songSheet(@js([
+                <div class="sheet-page" :class="{ 'is-moving-block': blockDrag?.moved }" x-data="songSheet(@js([
                     'sections' => $sections,
                     'updatedAt' => $song->updated_at?->toIso8601String(),
                     'saveUrl' => route('songs.sheet.update', $song),
@@ -415,7 +420,15 @@
                     const drag = this.blockDrag;
                     if (!drag) return;
                     if (!drag.moved && Math.abs(event.clientY - drag.y) < 6) return;
-                    drag.moved = true;
+                    if (!drag.moved) {
+                        // The blocks fold to their heads: the dragged one is brought back under the pointer.
+                        drag.moved = true;
+                        this.$nextTick(() => {
+                            const element = document.querySelector(`.sheet-block[data-block="${drag.id}"]`);
+                            if (element) window.scrollBy(0, element.getBoundingClientRect().top - (event.clientY - 16));
+                        });
+                        return;
+                    }
                     const element = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-block]');
                     if (!element) return;
                     const box = element.getBoundingClientRect();

@@ -14,7 +14,7 @@ class GetPublicSetlistService
      */
     public function execute(Setlist $setlist): array
     {
-        $setlist->load('songs.versions');
+        $setlist->load('songs.versions', 'songs.lessons');
 
         return [
             'id'            => $setlist->id,
@@ -51,6 +51,8 @@ class GetPublicSetlistService
                 'musical_key' => $version->musical_key,
                 'structure'   => $version->structure,
             ])->values()->all(),
+            // Lessons for the instruments (see SongLesson), shown on the page by instrument.
+            'lessons'      => $song->lessons->map->payload()->values()->all(),
             // Chord sheet split like the chord map's blocks, which give it their section times.
             'chord_sheet'  => isset($song->chord_sheet['sections'])
                 ? app(AlignSectionStartsService::class)->execute(

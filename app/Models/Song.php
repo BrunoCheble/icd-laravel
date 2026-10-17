@@ -68,6 +68,14 @@ class Song extends Model
     }
 
     /**
+     * Lessons of this song (see SongLesson), by instrument and then in their order.
+     */
+    public function lessons(): HasMany
+    {
+        return $this->hasMany(SongLesson::class)->orderBy('instrument')->orderBy('position')->orderBy('id');
+    }
+
+    /**
      * Lyrics of a structure section as text: accepts a string or a list of lines; empty when absent.
      */
     public static function sectionLyrics(mixed $section): string

@@ -6,6 +6,7 @@
         'sheet'    => [route('songs.sheet.edit', $song), 'fa-align-left', __('Chord sheet')],
         'layout'   => [route('songs.layout.edit', $song), 'fa-layer-group', __('Layout')],
         'practice' => [route('songs.practice', $song), 'fa-graduation-cap', __('Practice')],
+        'lessons'  => [route('songs.lessons.index', $song), 'fa-chalkboard-user', __('Lessons')],
         'history'  => [route('songs.history', $song), 'fa-clock-rotate-left', __('History')],
     ];
 @endphp
