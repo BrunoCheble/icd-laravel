@@ -22,20 +22,21 @@ Route::middleware('guest')->group(function () {
                 ->name('register');
 
     Route::post('register', [RegisteredUserController::class, 'store']);
+    */
 
-
-
+    // Password recovery: a link sent by email, then the new password.
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
                 ->name('password.request');
 
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
+                ->middleware('throttle:6,1')
                 ->name('password.email');
 
     Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
                 ->name('password.reset');
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
-                ->name('password.store');*/
+                ->name('password.store');
 });
 
 Route::middleware('auth')->group(function () {
