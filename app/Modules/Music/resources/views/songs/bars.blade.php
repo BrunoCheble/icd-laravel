@@ -48,6 +48,15 @@
         .bar-group-head .group-remove:disabled { opacity: .3; cursor: default; }
         /* Moving a block: the blocks look as they are; a line shows where it goes */
         .bars-page.is-moving-block, .bars-page.is-moving-block * { cursor: grabbing !important; user-select: none; }
+        /* Toolbar on one line: play on the left, undo / save / options on the right, the rest slides in between */
+        .bars-toolbar, .bars-toolbar.ws-toolbar { flex-wrap: nowrap; }
+        .bars-toolbar .tb-scroll { flex: 1; min-width: 0; display: flex; align-items: center; gap: .35rem; overflow-x: auto; scrollbar-width: none; padding: 2px 1px; }
+        .bars-toolbar .tb-scroll::-webkit-scrollbar { display: none; }
+        .bars-toolbar .tb-scroll.fade-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+        .bars-toolbar .tb-scroll.fade-left { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px); mask-image: linear-gradient(to right, transparent, #000 28px); }
+        .bars-toolbar .tb-scroll.fade-left.fade-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
+        .bars-toolbar .tb-end { display: flex; align-items: center; gap: .35rem; flex: none; }
+        @media (max-width: 639px) { .bars-toolbar .tb-scroll, .bars-toolbar .tb-end { gap: .25rem; } }
         .bar-group-head.is-dragging { opacity: .45; }
         .bar-group-head.drop-before { box-shadow: 0 -3px 0 0 #4f46e5; }
         .bar-group-head.drop-after { box-shadow: 0 3px 0 0 #4f46e5; }
@@ -221,74 +230,80 @@
                 ]))" @keydown.window="onKey($event)">
 
                     {{-- Toolbar: player, play / edit, undo, tempo, key, save, options --}}
-                    <div class="ws-toolbar">
+                    <div class="ws-toolbar bars-toolbar">
                         @include('music::songs.partials.play-button', ['toggle' => 'togglePlay()', 'time' => 'formatTime(clock)', 'show' => 'canPlay'])
-                        <span class="ws-seg" role="group" aria-label="{{ __('Mode') }}">
-                            <button type="button" :class="{ 'is-active': mode === 'play' }" @click="setMode('play')" title="{{ __('Clicking a beat plays from it') }}"><i class="fa-solid fa-headphones"></i><span class="ws-label"> {{ __('Play') }}</span></button>
-                            <button type="button" :class="{ 'is-active': mode === 'edit' }" @click="setMode('edit')" title="{{ __('Clicking a beat edits its chord') }}"><i class="fa-solid fa-pen"></i><span class="ws-label"> {{ __('Edit') }}</span></button>
-                        </span>
-                        <select class="version-select" :value="versionId ?? ''" @change="selectVersion($event.target.value ? Number($event.target.value) : null); $event.target.value = versionId ?? ''"
-                            title="{{ __('Version: the base or the map of an instrument') }}" aria-label="{{ __('Version') }}">
-                            <option value="">{{ __('Base') }}</option>
-                            <template x-for="version in versions" :key="version.id">
-                                <option :value="version.id" x-text="version.instrument" :selected="version.id === versionId"></option>
-                            </template>
-                        </select>
-                        <button type="button" class="ws-btn" @click="openVersionMenu($event.currentTarget)" title="{{ __('New version for an instrument') }}" aria-label="{{ __('New version for an instrument') }}"><i class="fa-solid fa-plus"></i></button>
-                        <button type="button" class="ws-btn" x-show="versionId" @click="deleteVersion()" title="{{ __('Delete this version') }}" aria-label="{{ __('Delete this version') }}"><i class="fa-solid fa-trash"></i></button>
-                        <button type="button" class="ws-btn" @click="undo()" :disabled="!history.length" title="{{ __('Undo') }}" aria-label="{{ __('Undo') }}"><i class="fa-solid fa-rotate-left"></i></button>
-                        {{-- Accordion: only the blocks' heads, one block open at a time --}}
-                        <button type="button" class="ws-btn" :class="{ 'is-active': accordion }" @click="toggleAccordion()" aria-label="{{ __('Collapse the blocks') }}"
-                            :title="accordion ? @js(__('Blocks collapsed: one open at a time (the one playing opens). Click to show every block')) : @js(__('Collapse every block: only their names, one open at a time'))"><i class="fa-solid fa-down-left-and-up-right-to-center"></i></button>
-                        <button type="button" class="ws-btn" x-show="canPlay" :class="{ 'is-active': loop }" @click="toggleLoop()"
-                            :title="loop ? @js(__('Stop repeating')) : @js(__('Repeat the marked bars (or the current bar)'))" aria-label="{{ __('Repeat') }}"><i class="fa-solid fa-repeat"></i></button>
-                        <button type="button" class="ws-btn" x-show="canPlay && !clickOnly" :class="{ 'is-active': metronome }" @click="metronome = !metronome"
-                            title="{{ __('Metronome') }}" aria-label="{{ __('Metronome') }}"><i class="fa-solid fa-stopwatch"></i></button>
-                        {{-- Count-in: a bar of drumsticks before playing --}}
-                        <button type="button" class="ws-btn" x-show="canPlay && bpm > 0" :class="{ 'is-active': countIn }" @click="toggleCountIn()"
-                            :title="countIn ? @js(__('Count-in on: a bar of drumsticks at the BPM before playing. Click to turn it off')) : @js(__('Count-in off. Click for a bar of drumsticks at the BPM before playing'))"
-                            aria-label="{{ __('Count-in') }}"><i class="fa-solid fa-drum"></i><span class="ws-label"> {{ __('Count-in') }}</span><span x-show="counting" x-text="` ${countBeat || ''}`"></span></button>
-                        <span class="ws-spacer"></span>
-                        {{-- Tapping "BPM" in the rhythm of the song sets it; the number can be typed too --}}
-                        <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId">
-                            <button type="button" @click="tapTempo()" title="{{ __('Tap the beat to set the tempo') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;">BPM <i class="fa-solid fa-hand-pointer"></i></button>
-                            <input type="number" class="bpm-input" min="30" max="300" step="0.1" :value="bpm" @change="setBpm($event.target.value)" aria-label="BPM" style="border: 0; min-height: 0;">
-                        </span>
-                        {{-- The music on, or only the BPM click (the bars play on their own clock) --}}
-                        <button type="button" class="ws-btn" x-show="hasMusic && bpm > 0" :class="{ 'is-active': !musicOff }" @click="toggleMusic()"
-                            :title="musicOff ? @js(__('Playing only with the BPM: click to play with the music')) : @js(__('Playing with the music: click to play only with the BPM'))"><i class="fa-solid" :class="musicOff ? 'fa-volume-xmark' : 'fa-music'"></i><span class="ws-label"> {{ __('Song sound') }}</span></button>
-                        {{-- Click on every beat, or doubled (also on each "and") for the drummer: only the sound changes --}}
-                        <button type="button" class="ws-btn" x-show="!versionId && (clickOnly || metronome)" :class="{ 'is-active': clickDouble }" @click="clickDouble = !clickDouble; markDirty(); clickUntil = null"
-                            :title="clickDouble ? @js(__('Doubled click: it also sounds on each "and" (the bars keep the BPM). Click for one click per beat')) : @js(__('One click per beat. Click to double it (the drummer\'s tempo); the bars keep the BPM'))"><i class="fa-solid fa-stopwatch"></i> 2×</button>
-                        {{-- Where bar 1 starts in the recording (seconds): typed, or marked on the beat while it plays --}}
-                        <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId && !clickOnly">
-                            <button type="button" @click="markStartNow()" :disabled="!canPlay" title="{{ __('Click on the first beat of bar 1 while the song plays') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;" aria-label="{{ __('Start') }}"><span class="ws-label">{{ __('Start') }} </span><i class="fa-solid fa-flag"></i></button>
-                            <input type="number" class="bpm-input" min="0" step="0.1" :value="songStart" @change="setSongStart($event.target.value)" aria-label="{{ __('Start of bar 1 (seconds)') }}" title="{{ __('Start of bar 1 (seconds)') }}" style="border: 0; min-height: 0;">
-                        </span>
-                        {{-- Free timing: each block starts where it was marked (songs whose tempo changes), or every block on the BPM --}}
-                        <button type="button" class="ws-btn" x-show="!versionId" :class="{ 'is-active': freeTiming }" @click="toggleFreeTiming()"
-                            :title="freeTiming ? @js(__('Free timing: each block starts where it was marked with its clock. Click to follow the bars (BPM) again')) : @js(__('Following the bars: every block starts where the BPM puts it. Click for free timing (mark where each block starts)'))">
-                            <i class="fa-regular fa-clock"></i> <span class="ws-label">{{ __('Free timing') }}</span></button>
-                        {{-- Time signature: only the bar lines move, every chord stays on its beat --}}
-                        <select class="ws-btn" x-show="!versionId" :value="perBar" @change="setMeter(Number($event.target.value))" title="{{ __('Time signature (the chords keep their beats)') }}" aria-label="{{ __('Time signature') }}" style="padding-right: 1.8rem;">
-                            @foreach (\App\Modules\Music\Services\CreateSongBarsService::METERS as $label => $beats)
-                                <option value="{{ $beats }}">{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        <button type="button" class="ws-btn" x-show="!versionId" :class="{ 'is-active': keyOpen }" @click="keyOpen = !keyOpen" title="{{ __('Key') }}">
-                            <i class="fa-solid fa-music"></i> <strong x-text="keyLabel(key)"></strong>
-                        </button>
-                        {{-- Review: once the bars are right, saved as reviewed (a decision of whoever reviews); undone from the badge --}}
-                        <button type="button" class="ws-btn review-done" x-show="!versionId && reviewedAt" @click="unmarkReviewed()" :disabled="saving"
-                            :title="@js(__('Saved as reviewed on :date. Click to undo the review.')).replace(':date', formatDay(reviewedAt))">
-                            <i class="fa-solid fa-circle-check"></i> <span x-text="formatDay(reviewedAt)"></span>
-                        </button>
-                        <button type="button" class="ws-btn review-save" x-show="!versionId && !reviewedAt" @click="save({ reviewed: true })" :disabled="saving"
-                            title="{{ __('Save and mark the song as reviewed (its bars are right)') }}"><i class="fa-solid fa-check-double"></i> <span class="ws-label">{{ __('Save as reviewed') }}</span></button>
-                        <button type="button" class="ws-btn ws-btn-primary" @click="save()" :disabled="saving" title="{{ __('Save') }}">
-                            <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i><span class="ws-label">{{ __('Save') }}</span>
-                        </button>
-                        <button type="button" class="ws-btn" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" aria-label="{{ __('Options') }}" title="{{ __('Options') }}"><i class="fa-solid fa-gear"></i></button>
+                        {{-- The rest slides sideways when it does not fit (phones, tablets); undo, save and options stay at hand --}}
+                        <div class="tb-scroll" x-data="{ tbLeft: false, tbRight: false, tbCheck() { const el = this.$root; this.tbLeft = el.scrollLeft > 2; this.tbRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 2; } }"
+                            x-init="tbCheck(); new ResizeObserver(() => tbCheck()).observe($el)" @scroll.passive="tbCheck()" :class="{ 'fade-left': tbLeft, 'fade-right': tbRight }">
+                            <span class="ws-seg" role="group" aria-label="{{ __('Mode') }}">
+                                <button type="button" :class="{ 'is-active': mode === 'play' }" @click="setMode('play')" title="{{ __('Clicking a beat plays from it') }}"><i class="fa-solid fa-headphones"></i><span class="ws-label"> {{ __('Play') }}</span></button>
+                                <button type="button" :class="{ 'is-active': mode === 'edit' }" @click="setMode('edit')" title="{{ __('Clicking a beat edits its chord') }}"><i class="fa-solid fa-pen"></i><span class="ws-label"> {{ __('Edit') }}</span></button>
+                            </span>
+                            <select class="version-select" :value="versionId ?? ''" @change="selectVersion($event.target.value ? Number($event.target.value) : null); $event.target.value = versionId ?? ''"
+                                title="{{ __('Version: the base or the map of an instrument') }}" aria-label="{{ __('Version') }}">
+                                <option value="">{{ __('Base') }}</option>
+                                <template x-for="version in versions" :key="version.id">
+                                    <option :value="version.id" x-text="version.instrument" :selected="version.id === versionId"></option>
+                                </template>
+                            </select>
+                            <button type="button" class="ws-btn" @click="openVersionMenu($event.currentTarget)" title="{{ __('New version for an instrument') }}" aria-label="{{ __('New version for an instrument') }}"><i class="fa-solid fa-plus"></i></button>
+                            <button type="button" class="ws-btn" x-show="versionId" @click="deleteVersion()" title="{{ __('Delete this version') }}" aria-label="{{ __('Delete this version') }}"><i class="fa-solid fa-trash"></i></button>
+                            {{-- Accordion: only the blocks' heads, one block open at a time --}}
+                            <button type="button" class="ws-btn" :class="{ 'is-active': accordion }" @click="toggleAccordion()" aria-label="{{ __('Collapse the blocks') }}"
+                                :title="accordion ? @js(__('Blocks collapsed: one open at a time (the one playing opens). Click to show every block')) : @js(__('Collapse every block: only their names, one open at a time'))"><i class="fa-solid fa-down-left-and-up-right-to-center"></i></button>
+                            <button type="button" class="ws-btn" x-show="canPlay" :class="{ 'is-active': loop }" @click="toggleLoop()"
+                                :title="loop ? @js(__('Stop repeating')) : @js(__('Repeat the marked bars (or the current bar)'))" aria-label="{{ __('Repeat') }}"><i class="fa-solid fa-repeat"></i></button>
+                            <button type="button" class="ws-btn" x-show="canPlay && !clickOnly" :class="{ 'is-active': metronome }" @click="metronome = !metronome"
+                                title="{{ __('Metronome') }}" aria-label="{{ __('Metronome') }}"><i class="fa-solid fa-stopwatch"></i></button>
+                            {{-- Count-in: a bar of drumsticks before playing --}}
+                            <button type="button" class="ws-btn" x-show="canPlay && bpm > 0" :class="{ 'is-active': countIn }" @click="toggleCountIn()"
+                                :title="countIn ? @js(__('Count-in on: a bar of drumsticks at the BPM before playing. Click to turn it off')) : @js(__('Count-in off. Click for a bar of drumsticks at the BPM before playing'))"
+                                aria-label="{{ __('Count-in') }}"><i class="fa-solid fa-drum"></i><span class="ws-label"> {{ __('Count-in') }}</span><span x-show="counting" x-text="` ${countBeat || ''}`"></span></button>
+                            <span class="ws-spacer"></span>
+                            {{-- Tapping "BPM" in the rhythm of the song sets it; the number can be typed too --}}
+                            <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId">
+                                <button type="button" @click="tapTempo()" title="{{ __('Tap the beat to set the tempo') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;">BPM <i class="fa-solid fa-hand-pointer"></i></button>
+                                <input type="number" class="bpm-input" min="30" max="300" step="0.1" :value="bpm" @change="setBpm($event.target.value)" aria-label="BPM" style="border: 0; min-height: 0;">
+                            </span>
+                            {{-- The music on, or only the BPM click (the bars play on their own clock) --}}
+                            <button type="button" class="ws-btn" x-show="hasMusic && bpm > 0" :class="{ 'is-active': !musicOff }" @click="toggleMusic()"
+                                :title="musicOff ? @js(__('Playing only with the BPM: click to play with the music')) : @js(__('Playing with the music: click to play only with the BPM'))"><i class="fa-solid" :class="musicOff ? 'fa-volume-xmark' : 'fa-music'"></i><span class="ws-label"> {{ __('Song sound') }}</span></button>
+                            {{-- Click on every beat, or doubled (also on each "and") for the drummer: only the sound changes --}}
+                            <button type="button" class="ws-btn" x-show="!versionId && (clickOnly || metronome)" :class="{ 'is-active': clickDouble }" @click="clickDouble = !clickDouble; markDirty(); clickUntil = null"
+                                :title="clickDouble ? @js(__('Doubled click: it also sounds on each "and" (the bars keep the BPM). Click for one click per beat')) : @js(__('One click per beat. Click to double it (the drummer\'s tempo); the bars keep the BPM'))"><i class="fa-solid fa-stopwatch"></i> 2×</button>
+                            {{-- Where bar 1 starts in the recording (seconds): typed, or marked on the beat while it plays --}}
+                            <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId && !clickOnly">
+                                <button type="button" @click="markStartNow()" :disabled="!canPlay" title="{{ __('Click on the first beat of bar 1 while the song plays') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;" aria-label="{{ __('Start') }}"><span class="ws-label">{{ __('Start') }} </span><i class="fa-solid fa-flag"></i></button>
+                                <input type="number" class="bpm-input" min="0" step="0.1" :value="songStart" @change="setSongStart($event.target.value)" aria-label="{{ __('Start of bar 1 (seconds)') }}" title="{{ __('Start of bar 1 (seconds)') }}" style="border: 0; min-height: 0;">
+                            </span>
+                            {{-- Free timing: each block starts where it was marked (songs whose tempo changes), or every block on the BPM --}}
+                            <button type="button" class="ws-btn" x-show="!versionId" :class="{ 'is-active': freeTiming }" @click="toggleFreeTiming()"
+                                :title="freeTiming ? @js(__('Free timing: each block starts where it was marked with its clock. Click to follow the bars (BPM) again')) : @js(__('Following the bars: every block starts where the BPM puts it. Click for free timing (mark where each block starts)'))">
+                                <i class="fa-regular fa-clock"></i> <span class="ws-label">{{ __('Free timing') }}</span></button>
+                            {{-- Time signature: only the bar lines move, every chord stays on its beat --}}
+                            <select class="ws-btn" x-show="!versionId" :value="perBar" @change="setMeter(Number($event.target.value))" title="{{ __('Time signature (the chords keep their beats)') }}" aria-label="{{ __('Time signature') }}" style="padding-right: 1.8rem;">
+                                @foreach (\App\Modules\Music\Services\CreateSongBarsService::METERS as $label => $beats)
+                                    <option value="{{ $beats }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" class="ws-btn" x-show="!versionId" :class="{ 'is-active': keyOpen }" @click="keyOpen = !keyOpen" title="{{ __('Key') }}">
+                                <i class="fa-solid fa-music"></i> <strong x-text="keyLabel(key)"></strong>
+                            </button>
+                            {{-- Review: once the bars are right, saved as reviewed (a decision of whoever reviews); undone from the badge --}}
+                            <button type="button" class="ws-btn review-done" x-show="!versionId && reviewedAt" @click="unmarkReviewed()" :disabled="saving"
+                                :title="@js(__('Saved as reviewed on :date. Click to undo the review.')).replace(':date', formatDay(reviewedAt))">
+                                <i class="fa-solid fa-circle-check"></i> <span x-text="formatDay(reviewedAt)"></span>
+                            </button>
+                            <button type="button" class="ws-btn review-save" x-show="!versionId && !reviewedAt" @click="save({ reviewed: true })" :disabled="saving"
+                                title="{{ __('Save and mark the song as reviewed (its bars are right)') }}"><i class="fa-solid fa-check-double"></i> <span class="ws-label">{{ __('Save as reviewed') }}</span></button>
+                        </div>
+                        <div class="tb-end">
+                            <button type="button" class="ws-btn" @click="undo()" :disabled="!history.length" title="{{ __('Undo') }}" aria-label="{{ __('Undo') }}"><i class="fa-solid fa-rotate-left"></i></button>
+                            <button type="button" class="ws-btn ws-btn-primary" @click="save()" :disabled="saving" title="{{ __('Save') }}">
+                                <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i><span class="ws-label">{{ __('Save') }}</span>
+                            </button>
+                            <button type="button" class="ws-btn" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" aria-label="{{ __('Options') }}" title="{{ __('Options') }}"><i class="fa-solid fa-gear"></i></button>
+                        </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 mt-1">
                         <span class="save-state" :class="{ 'is-dirty': dirty, 'is-error': saveError }" x-text="saveState"></span>
