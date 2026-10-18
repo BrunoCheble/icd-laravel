@@ -607,6 +607,12 @@
                             <p class="ws-panel-help mt-2">{{ __('One line per bar: the block that starts in it and the chord of each beat ("/" or empty: the chord goes on; "G D": G on the beat and D on the "and"). Importing needs the same number of bars and is not saved until you save; in a version only the chords are imported.') }}</p>
                             <p class="ws-panel-help mt-2" x-show="csvMessage" x-text="csvMessage" :style="csvError ? 'color: #dc2626' : ''"></p>
                         </div>
+                        {{-- Fast songs (a chord over two bars): every chord twice as long; the extra bars are then removed by hand --}}
+                        <div class="ws-panel-section" x-show="!versionId">
+                            <div class="ws-panel-label"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> {{ __('Double the bars') }}</div>
+                            <button type="button" class="ws-btn" @click="doubleBars(); optionsOpen = false" :disabled="!ticks.length"><i class="fa-solid fa-clone"></i> {{ __('Double every bar') }}</button>
+                            <p class="ws-panel-help mt-2">{{ __('Every chord lasts twice as long (one bar becomes two), for fast songs where a chord takes two bars. The BPM and the empty beats before the first chord stay; remove the extra bars afterwards. Undo goes back; nothing is kept until you save.') }}</p>
+                        </div>
                         {{-- Wrong chord sheet: the chords out, to write them by ear (blocks and bars stay) --}}
                         <div class="ws-panel-section" x-show="!versionId">
                             <div class="ws-panel-label"><i class="fa-solid fa-eraser"></i> {{ __('Clear chords') }}</div>
@@ -2988,6 +2994,23 @@
                     this.originalTicks = [];
                 },
                 // A bar of the chord sounding there, at `at` (in the block before it when `after`, else in the one there).
+                // Every chord twice as long (the map in half beats: each one after the empty beats of bar 1 doubled); the
+                // blocks and the chords that repeat keep their places in the longer map. The BPM stays.
+                doubleBars() {
+                    if (this.versionId || !this.ticks.length) return;
+                    const lead = this.leadTicks;
+                    const place = (tick) => (tick <= lead ? tick : lead + (tick - lead) * 2);
+                    this.remember();
+                    this.ticks = this.ticks.flatMap((chord, tick) => (tick < lead ? [chord] : [chord, chord]));
+                    this.splits = this.splits.map(place);
+                    this.blocks = this.blocks.map(block => ({ ...block, startTick: place(block.startTick) }));
+                    this.originalTicks = [];
+                    this.selection = { anchor: null, from: null, to: null };
+                    this.loop = null;
+                    this.currentTick = this.currentTick < 0 ? this.currentTick : place(this.currentTick);
+                    this.revision++;
+                    this.notice = @js(__('Every bar doubled: remove the extra ones (right click on a bar). Undo goes back.'));
+                },
                 insertTicks(at, after) {
                     const size = this.perBar * 2;
                     const chord = after ? this.ticks[at - 1] : this.ticks[at];

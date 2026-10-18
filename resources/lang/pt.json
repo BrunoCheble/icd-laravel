@@ -825,5 +825,9 @@
     "Hide songs": "Esconder as músicas",
     "Open the song": "Abrir a música",
     "Tempo set for the band in this setlist": "Andamento definido para a banda neste repertório",
-    "Today": "Hoje"
+    "Today": "Hoje",
+    "Double the bars": "Dobrar os compassos",
+    "Double every bar": "Dobrar todos os compassos",
+    "Every chord lasts twice as long (one bar becomes two), for fast songs where a chord takes two bars. The BPM and the empty beats before the first chord stay; remove the extra bars afterwards. Undo goes back; nothing is kept until you save.": "Cada acorde passa a durar o dobro (um compasso vira dois), para músicas rápidas em que um acorde ocupa dois compassos. O BPM e os tempos vazios antes do primeiro acorde ficam iguais; depois remova os compassos a mais. O desfazer volta atrás; nada fica gravado até guardar.",
+    "Every bar doubled: remove the extra ones (right click on a bar). Undo goes back.": "Todos os compassos dobrados: remova os que estão a mais (botão direito num compasso). O desfazer volta atrás."
 }
