@@ -76,4 +76,40 @@ class SongAdminPagesTest extends MusicTestCase
         $this->assertSame(['?', '?', '?'], $structure[1]['chords']);
         $this->assertSame([4, 4, 4], $structure[1]['durations']);
     }
+
+    public function test_saving_the_bars_does_not_move_the_chord_sheet_lyrics(): void
+    {
+        $song = $this->song();
+        $sheet = $song->chord_sheet;
+        // Blocks moved and a chord added on the grid: the chord sheet stays as it was.
+        $blocks = [
+            ['section' => 'CHORUS', 'chords' => ['C', 'G', 'Em'], 'durations' => [4, 4, 4], 'beats_per_bar' => 4, 'start' => '0:02'],
+            ['section' => 'INTRO', 'chords' => ['G', 'D'], 'durations' => [4, 4], 'beats_per_bar' => 4],
+        ];
+
+        $this->actingAs($this->admin())
+            ->putJson("/songs/{$song->id}/bars", ['blocks' => $blocks, 'updated_at' => $song->updated_at->toIso8601String()])
+            ->assertOk()
+            ->assertJsonPath('sheet_updated', false);
+
+        $this->assertSame($sheet, $song->fresh()->chord_sheet);
+    }
+
+    public function test_the_chord_sheet_sent_with_the_bars_is_saved(): void
+    {
+        $song = $this->song();
+        // A chord renamed on the grid: the page sends the chord sheet with the new name, lyrics in place.
+        $blocks = [
+            ['section' => 'INTRO', 'chords' => ['G', 'D'], 'durations' => [4, 4], 'beats_per_bar' => 4, 'start' => '0:02'],
+            ['section' => 'CHORUS', 'chords' => ['Am', 'G'], 'durations' => [4, 4], 'beats_per_bar' => 4],
+        ];
+        $sections = [['section' => 'INTRO', 'label' => 'INTRO', 'lines' => ['[G] [D]']], ['section' => 'CHORUS', 'label' => 'CHORUS', 'lines' => ['[Am]Santo [G]santo']]];
+
+        $this->actingAs($this->admin())
+            ->putJson("/songs/{$song->id}/bars", ['blocks' => $blocks, 'updated_at' => $song->updated_at->toIso8601String(), 'chord_sheet' => $sections])
+            ->assertOk()
+            ->assertJsonPath('sheet_updated', true);
+
+        $this->assertSame('[Am]Santo [G]santo', $song->fresh()->chord_sheet['sections'][1]['lines'][0]);
+    }
 }

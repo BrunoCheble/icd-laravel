@@ -55,20 +55,23 @@ class SongLayoutController extends Controller
     }
 
     /**
-     * Saves the grid of bars (JSON from the layout page): same rules as the study app, the chord sheet following
-     * the chord changes.
+     * Saves the grid of bars (JSON from the layout page): same rules as the study app; the chord sheet only changes
+     * as sent by the page (renamed chords, chords moved along the lyrics).
      */
     public function updateBars(StudySongMapRequest $request, Song $song, SaveStudySongMapService $service, SyncChordSheetWithStructureService $syncSheet, MarkSongReviewedService $review): JsonResponse
     {
         $bpm = $request->validated('bpm');
+        // The chord sheet as shown on the page (chords renamed on the grid or moved along the lyrics). Without it the
+        // stored chord sheet is kept as it is: editing blocks and bars never moves its lyrics.
+        $sheetSections = $request->validated('chord_sheet');
         $sheetUpdated = $service->execute(
             $song,
             $request->validated('blocks'),
             $request->validated('updated_at'),
             $bpm === null ? null : (float) $bpm,
             $request->validated('musical_key'),
-            // The chord sheet as shown on the page, when chords were moved on it.
-            $request->validated('chord_sheet'),
+            $sheetSections,
+            keepSheet: $sheetSections === null,
         );
         $song->refresh();
         // "Save as reviewed" (or its review undone).

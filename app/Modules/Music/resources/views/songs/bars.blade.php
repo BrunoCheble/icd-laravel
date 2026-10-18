@@ -856,36 +856,6 @@
                 units.push({ chord, text: text.slice(last), from: plain, ordinal: chord === null ? undefined : ordinal });
                 return { units };
             };
-            // How a list of chords became another (same rule as the server, UpdateChordSheetChordsService): for each
-            // old chord, what takes its place (none: removed), and the chords added after it (-1: before the first).
-            // With the half beat where each chord starts (`oldAt`, `nowAt`), of the ways with the fewest changes the
-            // one keeping chords nearest their place is taken: a G added right before another G is the added one.
-            const chordChanges = (old, now, oldAt = null, nowAt = null) => {
-                const n = old.length, m = now.length;
-                const CHANGE = 1e7;
-                const distance = (i, j) => (oldAt && nowAt ? Math.min(CHANGE - 1, Math.abs(oldAt[i] - nowAt[j])) : 0);
-                const cost = Array.from({ length: n + 1 }, (_, i) => Array.from({ length: m + 1 }, (_, j) => (i === n || j === m ? ((n - i) + (m - j)) * CHANGE : 0)));
-                for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) {
-                    const skip = Math.min(cost[i + 1][j], cost[i][j + 1]) + CHANGE;
-                    cost[i][j] = old[i] === now[j] ? Math.min(cost[i + 1][j + 1] + distance(i, j), skip) : skip;
-                }
-                const replace = {}, after = {};
-                let removed = [], added = [], previous = -1;
-                const flush = () => {
-                    removed.forEach((i, k) => { replace[i] = k < added.length ? [added[k]] : []; previous = i; });
-                    added.slice(removed.length).forEach(chord => (after[previous] ||= []).push(chord));
-                    removed = [];
-                    added = [];
-                };
-                let i = 0, j = 0;
-                while (i < n || j < m) {
-                    if (i < n && j < m && old[i] === now[j] && cost[i][j] === cost[i + 1][j + 1] + distance(i, j)) { flush(); replace[i] = [old[i]]; previous = i; i++; j++; }
-                    else if (j >= m || (i < n && cost[i][j] === cost[i + 1][j] + CHANGE)) removed.push(i++);
-                    else added.push(now[j++]);
-                }
-                flush();
-                return { replace, after };
-            };
             // A parsed line back to its text ("[G]Digno é o [D]Cordeiro").
             const lineText = (units) => units.map(unit => (unit.chord !== null ? `[${unit.chord}]` : '') + unit.text).join('');
             // Each chord of the sheet gets its number ("n"), counted from the start of the sheet.
@@ -1661,23 +1631,11 @@
                         return { block, ticks: this.ticks.slice(block.startTick, end), splits: this.splits.filter(tick => tick >= block.startTick && tick < end).map(tick => tick - block.startTick) };
                     });
                 },
-                // The chord sheet as shown, one section per block (when it follows the map block by block), as text.
-                sheetSections() {
-                    const view = this.dirty ? this.previewSheet.view : this.sheetView;
-                    if (!this.sheetLinked || view.length !== this.blocks.length) return null;
-                    const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
-                    if (view.some((section, i) => !!section.marker !== this.isMarker(list[i]))) return null;
-                    return view.map(section => ({
-                        section: section.section, label: section.label, ...(section.marker ? { jump: 'start' } : {}),
-                        lines: section.lines.map(line => (line.units ? lineText(line.units) : line.raw ?? '')),
-                    }));
-                },
-                // Blocks and sheet sections reshaped by `change(list)` (the same change for both lists). From the first
+                // Blocks reshaped by `change(list)` (the chord sheet stays as it is). From the first
                 // block that changed on, the blocks follow one another at the tempo (the recording's times no longer
                 // apply there); that first one starts where the block at its place used to start.
                 reshapeBlocks(change) {
                     const items = this.blockItems();
-                    const sections = this.sheetSections();
                     const before = items.map(item => item.block.id);
                     const slotStarts = items.map(item => (this.isMarker(item.block) ? null : this.blockStart(item.block)));
                     this.remember();
@@ -1702,13 +1660,7 @@
                     });
                     this.ticks = ticks;
                     this.splits = splits;
-                    if (sections) {
-                        this.sheetBase = { sections: change(sections), chords: this.timedBlocks().flatMap(block => this.blockChords(block)) };
-                        this.sheetMoves = {};
-                    } else if (this.sheet.length) {
-                        this.notice = @js(__('The chord sheet does not follow the map block by block: only the bars changed.'));
-                    }
-                    this.sheetBaseRevision++;
+                    // The chord sheet is not changed: its lyrics stay in their sections.
                     this.revision++;
                 },
                 // Index of a block among all blocks in order (markers too).
@@ -1980,55 +1932,28 @@
                     const saved = this.sheetBase ? this.sheetBase.chords : chordsOnly(this.baseStructure.flatMap(block => (Array.isArray(block?.chords) ? block.chords.map(String) : [])));
                     const now = this.timedBlocks().flatMap(block => this.blockChords(block));
                     let value = { view: sheetView, changed: false };
-                    if (this.sheetLinked && JSON.stringify(saved) !== JSON.stringify(now)) {
-                        // Where each chord starts, as saved and now (unknown after chords were moved on the sheet): its
-                        // block and its place in it, so a chord is only taken for the same one inside the same block (a bar
-                        // duplicated in one block moves the next blocks, but their chords stay theirs).
-                        const BLOCK = 1e6;
-                        let savedAt = null;
+                    // Edits on the grid never move the lyrics: only a chord renamed goes to the sheet, while the blocks are
+                    // the saved ones (same order, names and number of chords); otherwise the sheet stays as it is.
+                    if (this.sheetLinked && JSON.stringify(saved) !== JSON.stringify(now) && saved.length === now.length) {
                         const timedNow = this.timedBlocks();
                         const timedSaved = this.baseStructure.filter(block => block && !isMarkerData(block));
-                        if (!this.sheetBase && timedSaved.length === timedNow.length) {
-                            savedAt = [];
-                            timedSaved.forEach((block, b) => {
-                                let tick = b === 0 ? Math.round((Number(block.lead_beats) || 0) * 2) : 0;
-                                const chords = chordsOnly(Array.isArray(block.chords) ? block.chords.map(String) : []);
-                                chords.forEach((chord, i) => { savedAt.push(b * BLOCK + tick); tick += Math.round((block.durations?.[i] ?? this.perBar) * 2); });
-                            });
+                        const sameBlocks = timedSaved.length === timedNow.length && timedSaved.every((block, b) =>
+                            String(block.section ?? '') === String(timedNow[b].data.section ?? '')
+                            && chordsOnly(Array.isArray(block.chords) ? block.chords.map(String) : []).length === this.blockChords(timedNow[b]).length);
+                        if (sameBlocks) {
+                            const view = sheetView.map(section => ({ ...section, lines: section.lines.map(line => (!line.units ? line : {
+                                ...line,
+                                units: line.units.map(unit => (unit.chord === null || unit.n === undefined || now[unit.n] === undefined || now[unit.n] === unit.chord
+                                    ? unit : { ...unit, chord: now[unit.n], changed: true })),
+                            })) }));
+                            view.chordCount = sheetView.chordCount;
+                            value = { view, changed: true };
                         }
-                        const nowAt = timedNow.flatMap((block, b) => this.blockChordTicks(block).map(tick => b * BLOCK + tick - (b === 0 ? 0 : block.startTick)));
-                        const { replace, after } = savedAt && savedAt.length === saved.length && nowAt.length === now.length
-                            ? chordChanges(saved, now, savedAt, nowAt) : chordChanges(saved, now);
-                        const added = (chords, text) => chords.map((chord, k) => ({ chord, text: k === chords.length - 1 ? text : '', added: true }));
-                        const view = sheetView.map(section => ({ ...section, lines: section.lines.map(line => {
-                            if (!line.units) return line;
-                            const units = [];
-                            line.units.forEach(unit => {
-                                if (unit.chord === null) return units.push(unit);
-                                const n = unit.n;
-                                const before = n === 0 ? (after[-1] || []) : [];
-                                if (before.length) units.push(...added(before, ''));
-                                const place = replace[n] || [];
-                                const extra = after[n] || [];
-                                const own = place.length === 0 ? { ...unit, chord: null }
-                                    : { ...unit, chord: place[0], changed: place[0] !== unit.chord };
-                                if (!extra.length) return units.push(own);
-                                units.push({ ...own, text: '' }, ...added(extra, unit.text));
-                            });
-                            return { ...line, units };
-                        }) }));
-                        // Chords counted again: in each line (for moving them) and in the whole sheet (to light the chord of
-                        // the selected or playing beat, the n-th chord of the map as it is now).
-                        let n = 0;
-                        view.forEach(section => section.lines.forEach(line => {
-                            let k = 0;
-                            if (line.units) line.units = line.units.map(unit => (unit.chord !== null ? { ...unit, ordinal: k++, n: n++ } : { ...unit, ordinal: undefined }));
-                        }));
-                        view.chordCount = n;
-                        value = { view, changed: true };
                     }
-                    // Split like the blocks of the grid as they are now (a block created, renamed, joined…).
-                    if (this.sheetLinked) value = { view: this.sheetByBlocks(value.view), changed: value.changed };
+                    // Split like the blocks of the grid as they are now (a block created, renamed, joined…), only while the
+                    // sheet has the grid's chords in the same order (blocks moved or copied would put lyrics in other blocks).
+                    const inSheet = value.view.flatMap(section => section.lines.flatMap(line => (line.units || []).filter(unit => unit.chord !== null).map(unit => unit.chord)));
+                    if (this.sheetLinked && JSON.stringify(inSheet) === JSON.stringify(now)) value = { view: this.sheetByBlocks(value.view), changed: value.changed };
                     // Chords moved by hand along the lyrics (kept while the line has the same chords).
                     if (Object.keys(this.sheetMoves).length) {
                         const chordsOf = (units) => units.filter(unit => unit.chord !== null).map(unit => unit.chord).join(' ');
