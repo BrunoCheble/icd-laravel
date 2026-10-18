@@ -1536,9 +1536,11 @@
                     this.remember();
                     const reshaped = change([...items]);
                     const first = reshaped.findIndex((item, i) => item.block.id !== before[i]);
-                    let tick = 0;
-                    const ticks = [];
-                    const splits = [];
+                    // The empty beats before the first chord (the song's lead) stay at the start, before whichever block is first.
+                    const lead = this.timedBlocks()[0]?.startTick ?? 0;
+                    let tick = lead;
+                    const ticks = this.ticks.slice(0, lead);
+                    const splits = this.splits.filter(split => split < lead);
                     this.blocks = reshaped.map((item, i) => {
                         const block = { ...item.block, startTick: tick, data: { ...item.block.data } };
                         if (first >= 0 && i >= first && !this.isMarker(block)) {
