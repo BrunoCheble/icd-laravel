@@ -35,7 +35,9 @@
         .add-block-form label { display: inline-flex; align-items: center; gap: .35rem; font-size: .85rem; color: #4b5563; }
         .add-block-form input[type=number] { width: 4.5rem; padding: .35rem .4rem; border: 1px solid #d1d5db; border-radius: .4rem; text-align: center; font-weight: 700; }
         .bar-group-head .group-grip { color: #9ca3af; cursor: grab; padding: .1rem .15rem; touch-action: none; }
-        .bar-group-head .group-remove { margin-left: auto; border: 0; background: none; padding: .15rem .35rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
+        .bar-group-head .group-action { border: 0; background: none; padding: .15rem .35rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
+        .bar-group-head .group-duplicate { margin-left: auto; }
+        .bar-group-head .group-duplicate:hover { background: #eef2ff; color: #4f46e5; }
         .bar-group-head .group-remove:hover { background: #fef2f2; color: #dc2626; }
         .bar-group-head .group-remove:disabled { opacity: .3; cursor: default; }
         /* Moving a block: the bars fold away and only the heads show */
@@ -299,7 +301,11 @@
                                                     :title="`${@js(__('Mark the start of this block now'))} (${formatClock(blockStart(bar.group))})`" :aria-label="@js(__('Mark the start of this block now'))"><i class="fa-regular fa-clock"></i></button>
                                             </template>
                                             <template x-if="!versionId">
-                                                <button type="button" class="group-remove" @click.stop="removeBlock(bar.group)" :disabled="timedBlocks().length < 2"
+                                                <button type="button" class="group-action group-duplicate" @click.stop="duplicateBlock(bar.group)"
+                                                    :title="@js(__('Duplicate the block right after it'))" :aria-label="@js(__('Duplicate'))"><i class="fa-solid fa-clone"></i></button>
+                                            </template>
+                                            <template x-if="!versionId">
+                                                <button type="button" class="group-action group-remove" @click.stop="removeBlock(bar.group)" :disabled="timedBlocks().length < 2"
                                                     :title="@js(__('Remove block'))" :aria-label="@js(__('Remove block'))"><i class="fa-solid fa-trash"></i></button>
                                             </template>
                                         </div>
@@ -547,8 +553,8 @@
                         </div>
                     </div>
 
-                    {{-- The menu of a block (its "..." next to its name): name, repetitions, duplicate (it is moved by dragging its
-                         head and removed with the bin on its right) --}}
+                    {{-- The menu of a block (its "..." next to its name): name, bars, repetitions (it is moved by dragging its head,
+                         duplicated and removed with the buttons on its right) --}}
                     <div class="popover" x-show="blockMenu" x-cloak x-ref="blockMenu" @click.outside="blockMenu = null" @keydown.escape.stop="blockMenu = null">
                         <template x-if="blockMenu && menuBlock()">
                             <div x-data="{ name: menuBlockInfo().name }">
@@ -570,7 +576,6 @@
                                         {{ __('Repetitions') }}
                                         <input type="number" class="repeat-input" min="1" max="50" :value="menuBlockInfo().repeats" @change="setRepeats(menuBlock(), $event.target.value); blockMenu = null">
                                     </label>
-                                    <button type="button" class="ws-btn" @click="duplicateBlock(menuBlock()); blockMenu = null" title="{{ __('Duplicate the block right after it') }}"><i class="fa-solid fa-clone"></i> {{ __('Duplicate') }}</button>
                                 </div>
                             </div>
                         </template>
