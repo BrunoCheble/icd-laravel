@@ -2049,7 +2049,8 @@
                 },
                 // The chord sheet (parsed) split into the blocks of the grid as they are now, the same rule as the server
                 // (SyncChordSheetWithStructureService): each line goes to the block of its first chord, a note with the
-                // chord after it, lyrics without chords with the chord before them; "back to the start" marks between.
+                // chord after it, lyrics without chords with the chord before them (before the first chord of their
+                // section, with the chord after them); "back to the start" marks between.
                 // Unchanged when the sheet does not have the grid's number of chords.
                 sheetByBlocks(view) {
                     const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
@@ -2067,12 +2068,16 @@
                     let last = 0;
                     view.forEach(section => {
                         if (section.marker) return;
+                        // Lyrics before the first chord of a section that has chords stay with it (a line whose chord was
+                        // taken out does not go to the block before).
+                        const hasChords = section.lines.some(line => line.units && line.units.some(unit => unit.chord !== null));
+                        let chordSeen = false;
                         section.lines.forEach(line => {
                             let ref = n;
                             if (line.units) {
                                 const count = line.units.filter(unit => unit.chord !== null).length;
-                                ref = count ? n : last;
-                                if (count) last = n + count - 1;
+                                ref = count || (hasChords && !chordSeen) ? n : last;
+                                if (count) { last = n + count - 1; chordSeen = true; }
                                 n += count;
                             }
                             const block = blockOf(ref);

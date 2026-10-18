@@ -8,7 +8,7 @@ use App\Modules\Music\Models\Song;
  * Splits the chord sheet into the blocks of the chord map (structure) when both have the same chords, so a block
  * split, joined or renamed on the layout page shows the same way in the chord sheet (and gets its section time).
  * Each line goes to the block of its first chord; notes ("{c: ...}") go with the chord after them and lyrics without
- * chords with the chord before them. A section that did not change keeps its name in the chord sheet.
+ * chords with the chord before them (or, before the first chord of their section, with the chord after them). A section that did not change keeps its name in the chord sheet.
  * "Back to the start" markers of the map show as sections without lines, after the blocks before them.
  * Same rules as the layout page (resources/views/songs/layout.blade.php, sheetByBlocks).
  */
@@ -49,15 +49,26 @@ class SyncChordSheetWithStructureService
         $chordNumber = 0;
         $lastChord = 0;
         foreach ($sections as $section) {
+            // Lyrics before the first chord of a section that has chords stay with that section (with the chord after
+            // them): a line whose chord was taken out on the grid does not go to the block before.
+            $hasChords = false;
+            foreach ($section['lines'] ?? [] as $line) {
+                if (! str_starts_with(ltrim((string) $line), '{') && preg_match('/\[[^\]]+\]/u', (string) $line)) {
+                    $hasChords = true;
+                    break;
+                }
+            }
+            $chordSeen = false;
             foreach (array_values($section['lines'] ?? []) as $i => $line) {
                 $text = (string) $line;
                 if (str_starts_with(ltrim($text), '{')) {
                     $ref = $chordNumber;
                 } else {
                     $count = preg_match_all('/\[[^\]]+\]/u', $text);
-                    $ref = $count ? $chordNumber : $lastChord;
+                    $ref = $count || ($hasChords && ! $chordSeen) ? $chordNumber : $lastChord;
                     if ($count) {
                         $lastChord = $chordNumber + $count - 1;
+                        $chordSeen = true;
                     }
                     $chordNumber += $count;
                 }
