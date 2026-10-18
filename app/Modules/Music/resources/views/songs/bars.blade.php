@@ -27,6 +27,8 @@
         .bar-group-head .group-name i { font-size: .65rem; }
         .bar-group-head .group-repeat { font-size: .7rem; font-weight: 700; color: #9ca3af; }
         .bar-group-head .group-bars { font-size: .7rem; color: #9ca3af; }
+        .bar-group-head.is-accordion { cursor: pointer; }
+        .bar-group-head.is-accordion:hover { background: #f8fafc; }
         .bar-group-head .group-repeat.is-grouped { padding: .05rem .4rem; border-radius: 999px; background: var(--type-color, #4f46e5); color: #fff; }
         .bar-group-head .group-toggle { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #6b7280; font-size: .7rem; font-weight: 600; text-decoration: underline; cursor: pointer; }
         .bar-group-head .group-toggle:hover { color: #4f46e5; }
@@ -321,10 +323,10 @@
                                     <div style="display: contents">
                                     {{-- A new block: its name over its rows of bars --}}
                                     <template x-if="bar.group">
-                                        <div class="bar-group-head" x-show="!isHiddenRepeat(bar.group)" :style="typeStyle(blockName(bar.group))" :data-group-block="bar.group.id"
-                                            :class="{ 'is-dragging': groupDrag?.moved && groupDrag.id === bar.group.id, 'drop-before': groupDrag?.moved && groupDrag.target === bar.group.id && groupDrag.before, 'drop-after': groupDrag?.moved && groupDrag.target === bar.group.id && !groupDrag.before }">
-                                            <span class="group-grip" x-show="!versionId" @pointerdown="startGroupDrag($event, bar.group)" title="{{ __('Drag to move the block') }}"><i class="fa-solid fa-grip-vertical"></i></span>
-                                            <button type="button" class="group-name" @click="accordion ? toggleOpenBlock(bar.group) : playFromTick(bar.group.startTick)"
+                                        <div class="bar-group-head" x-show="!isHiddenRepeat(bar.group)" :style="typeStyle(blockName(bar.group))" :data-group-block="bar.group.id" @click="accordion && toggleOpenBlock(bar.group)"
+                                            :class="{ 'is-accordion': accordion, 'is-dragging': groupDrag?.moved && groupDrag.id === bar.group.id, 'drop-before': groupDrag?.moved && groupDrag.target === bar.group.id && groupDrag.before, 'drop-after': groupDrag?.moved && groupDrag.target === bar.group.id && !groupDrag.before }">
+                                            <span class="group-grip" x-show="!versionId" @click.stop @pointerdown="startGroupDrag($event, bar.group)" title="{{ __('Drag to move the block') }}"><i class="fa-solid fa-grip-vertical"></i></span>
+                                            <button type="button" class="group-name" @click.stop="accordion ? toggleOpenBlock(bar.group) : playFromTick(bar.group.startTick)"
                                                 :title="accordion ? (isOpenBlock(bar.group) ? @js(__('Close the block')) : @js(__('Open the block'))) : (canPlay ? @js(__('Play from here')) : '')" :aria-expanded="accordion ? String(isOpenBlock(bar.group)) : null">
                                                 <i class="fa-solid" :class="accordion ? (isOpenBlock(bar.group) ? 'fa-chevron-down' : 'fa-chevron-right') : 'fa-play'" x-show="accordion || canPlay"></i> <span x-text="blockName(bar.group)"></span>
                                             </button>
