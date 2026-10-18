@@ -323,7 +323,7 @@
                                     <div style="display: contents">
                                     {{-- A new block: its name over its rows of bars --}}
                                     <template x-if="bar.group">
-                                        <div class="bar-group-head" x-show="!isHiddenRepeat(bar.group)" :style="typeStyle(blockName(bar.group))" :data-group-block="bar.group.id" @click="accordion && toggleOpenBlock(bar.group)"
+                                        <div class="bar-group-head" x-show="!isHiddenRepeat(bar.group)" :style="typeVars(blockName(bar.group))" :data-group-block="bar.group.id" @click="accordion && toggleOpenBlock(bar.group)"
                                             :class="{ 'is-accordion': accordion, 'is-dragging': groupDrag?.moved && groupDrag.id === bar.group.id, 'drop-before': groupDrag?.moved && groupDrag.target === bar.group.id && groupDrag.before, 'drop-after': groupDrag?.moved && groupDrag.target === bar.group.id && !groupDrag.before }">
                                             <span class="group-grip" x-show="!versionId" @click.stop @pointerdown="startGroupDrag($event, bar.group)" title="{{ __('Drag to move the block') }}"><i class="fa-solid fa-grip-vertical"></i></span>
                                             <button type="button" class="group-name" @click.stop="accordion ? toggleOpenBlock(bar.group) : playFromTick(bar.group.startTick)"
@@ -356,7 +356,7 @@
                                         </div>
                                     </template>
                                     <div class="bar" x-show="!isHiddenBar(bar)" :class="{ 'is-group-start': !!bar.group, 'is-current': b === shownBar, 'has-block': bar.blocks.some(block => !isMarker(block)), 'is-selected': isSelected(b), 'is-looped': loop && b >= loop.from && b <= loop.to }"
-                                        :style="bar.blocks.length ? typeStyle(blockName(bar.blocks[0])) : ''" :data-bar="b"
+                                        :style="bar.blocks.length ? typeVars(blockName(bar.blocks[0])) : {}" :data-bar="b"
                                         @click="clickBar(b, $event)" @contextmenu.prevent="openBarMenu(b, $event.currentTarget)"
                                         @pointerdown="startPress(b, $event)" @pointerup="endPress()" @pointerleave="endPress()" @pointercancel="endPress()">
                                         <span class="number" x-text="b + 1"></span>
@@ -489,7 +489,7 @@
                     </div>
 
                     {{-- Chord of a beat (double click, or a tap on touch screens): one of the song's chords, one of the key, or typed --}}
-                    <div class="popover chord-picker" x-show="editor" x-cloak x-ref="editor" @click.outside="editor = null" @keydown.escape.stop="editor = null" :style="editor ? typeStyle(editorBlockName()) : ''">
+                    <div class="popover chord-picker" x-show="editor" x-cloak x-ref="editor" @click.outside="editor = null" @keydown.escape.stop="editor = null" :style="editor ? typeVars(editorBlockName()) : {}">
                         <div class="block-menu-head">
                             <div>
                                 <p class="block-menu-name" x-text="editorBlockName()"></p>
@@ -1084,6 +1084,8 @@
                 isMarker(block) { return isMarkerData(block.data); },
                 blockName(block) { return String(block.data.section || '').replaceAll('_', ' '); },
                 typeStyle(name) { return `--type-color: var(--type-${blockType(name)})`; },
+                // The same as an object: on an element with x-show, a style string would replace its display: none.
+                typeVars(name) { return { '--type-color': `var(--type-${blockType(name)})` }; },
                 timedBlocks() { return this.blocks.filter(block => !this.isMarker(block)).sort((a, b) => a.startTick - b.startTick); },
                 blockOfTick(tick) { return this.timedBlocks().filter(block => block.startTick <= tick).at(-1) ?? null; },
                 // The block that starts in a bar (on its first beat or later in it, e.g. on the "and" of beat 4).
