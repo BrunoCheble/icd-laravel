@@ -1,148 +1,37 @@
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
-    <!-- Primary Navigation Menu -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="app-nav-row flex justify-between h-16">
-            <div class="flex">
-                <!-- Logo -->
-                <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}">
+{{-- Side menu: one section per module (see App\Support\Menu); on phones it opens as a drawer --}}
+<aside class="app-sidebar" :class="{ 'is-open': menuOpen }" aria-label="{{ __('Menu') }}">
+    <div class="app-sidebar-brand">
+        <a href="{{ route('dashboard') }}" class="app-brand-link">
+            <x-application-logo class="app-logo" />
+            <span class="app-brand-name">{{ config('app.name') }}</span>
+        </a>
+        <button type="button" class="app-sidebar-close" @click="menuOpen = false" aria-label="{{ __('Close menu') }}"><i class="fa-solid fa-xmark"></i></button>
+    </div>
 
-                        <x-application-logo class="app-logo block h-9 w-auto fill-current text-gray-800" />
+    <nav class="app-sidebar-nav">
+        @foreach ($menu as $section)
+            <div class="app-nav-section">
+                @if ($section['label'])
+                    <p class="app-nav-title">{{ __($section['label']) }}</p>
+                @endif
+                @foreach ($section['items'] as $item)
+                    <a href="{{ $item['url'] }}" @class(['app-nav-item', 'is-active' => $item['active']]) title="{{ __($item['label']) }}"
+                        @if ($item['active']) aria-current="page" @endif>
+                        <i class="{{ $item['icon'] }} fa-fw"></i>
+                        <span class="app-nav-label">{{ __($item['label']) }}</span>
+                        @if ($item['badge'] > 0)
+                            <span class="app-nav-badge">{{ $item['badge'] }}</span>
+                        @endif
                     </a>
-                </div>
-
-                <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('members.index')" :active="request()->routeIs('members.index')">
-                        {{ __('Members') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('visitors.index')" :active="request()->routeIs('visitors.index')">
-                        {{ __('Visitors') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('announcements.index')" :active="request()->routeIs('announcements.index')">
-                        {{ __('Announcements') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('prayers.index')" :active="request()->routeIs('prayers.index')">
-                        {{ __('Prayer Requests') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('songs.index')" :active="request()->routeIs('songs.*')">
-                        {{ __('Songs') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('setlists.index')" :active="request()->routeIs('setlists.*')">
-                        {{ __('Setlists') }}
-                    </x-nav-link>
-                    @php $pendingSuggestions = \App\Modules\Music\Models\SongSuggestion::where('status', 'pending')->count(); @endphp
-                    @if ($pendingSuggestions)
-                        <x-nav-link :href="route('song-suggestions.index')" :active="request()->routeIs('song-suggestions.*')">
-                            {{ __('Suggestions') }} <span class="ms-1 rounded-full bg-indigo-600 px-1.5 text-xs font-bold text-white">{{ $pendingSuggestions }}</span>
-                        </x-nav-link>
-                    @endif
-                    <x-nav-link style="display: none" :href="route('report.anniversaries.index')" :active="request()->routeIs('report.anniversaries.index')">
-                        {{ __('Anniversaries') }}
-                    </x-nav-link>
-                    <x-nav-link style="display: none" :href="route('ministries.index')" :active="request()->routeIs('ministry.index')">
-                        {{ __('Ministries') }}
-                    </x-nav-link>
-                </div>
+                @endforeach
             </div>
+        @endforeach
+    </nav>
 
-            <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
-                            <div>{{ Auth::user()->name }}</div>
-
-                            <div class="ms-1">
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                        </button>
-                    </x-slot>
-
-                    <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Profile') }}
-                        </x-dropdown-link>
-
-                        <!-- Authentication -->
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-
-                            <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault();
-                                                this.closest('form').submit();">
-                                {{ __('Log Out') }}
-                            </x-dropdown-link>
-                        </form>
-                    </x-slot>
-                </x-dropdown>
-            </div>
-
-            <!-- Hamburger -->
-            <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                        <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Responsive Navigation Menu -->
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
-        <div class="pt-2 pb-3 space-y-1">
-@if (($pendingSuggestions ?? 0) > 0)
-                <x-responsive-nav-link :href="route('song-suggestions.index')" :active="request()->routeIs('song-suggestions.*')">
-                    {{ __('Suggestions') }} ({{ $pendingSuggestions }})
-                </x-responsive-nav-link>
-            @endif
-                        <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('members.index')" :active="request()->routeIs('members')">
-                {{ __('Members') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('visitors.index')" :active="request()->routeIs('visitors')">
-                {{ __('Visitors') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('report.anniversaries.index')" :active="request()->routeIs('report.anniversaries.index')">
-                {{ __('Anniversaries') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('ministries.index')" :active="request()->routeIs('ministries')">
-                {{ __('Ministries') }}
-            </x-responsive-nav-link>
-        </div>
-
-        <!-- Responsive Settings Options -->
-        <div class="pt-4 pb-1 border-t border-gray-200">
-            <div class="px-4">
-                <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
-                <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
-            </div>
-
-            <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">
-                    {{ __('Profile') }}
-                </x-responsive-nav-link>
-
-                <!-- Authentication -->
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-
-                    <x-responsive-nav-link :href="route('logout')"
-                            onclick="event.preventDefault();
-                                        this.closest('form').submit();">
-                        {{ __('Log Out') }}
-                    </x-responsive-nav-link>
-                </form>
-            </div>
-        </div>
-    </div>
-</nav>
+    <button type="button" class="app-sidebar-collapse" @click="toggleCollapsed()"
+        :title="collapsed ? @js(__('Expand menu')) : @js(__('Collapse menu'))" :aria-label="collapsed ? @js(__('Expand menu')) : @js(__('Collapse menu'))">
+        <i class="fa-solid" :class="collapsed ? 'fa-angles-right' : 'fa-angles-left'"></i>
+        <span class="app-nav-label">{{ __('Collapse menu') }}</span>
+    </button>
+</aside>
+<div class="app-sidebar-backdrop" x-show="menuOpen" x-cloak x-transition.opacity @click="menuOpen = false"></div>

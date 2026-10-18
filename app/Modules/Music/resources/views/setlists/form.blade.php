@@ -68,7 +68,7 @@
         <div class="relative mt-3">
             <input type="search" x-ref="search" x-model="term" @input.debounce.300ms="search()" @focus="openSearch()"
                 @keydown.escape="open = false" placeholder="{{ __('Search song...') }}" autocomplete="off"
-                class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm block w-full" />
+                class="border-gray-300 focus:border-primary-500 focus:ring-primary-500 rounded-md shadow-sm block w-full" />
 
             <div x-show="open" class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg overflow-auto" style="display: none; max-height: 16rem;">
                 <template x-for="song in results" :key="song.id">
@@ -104,7 +104,7 @@
                         <div class="sm:col-span-2">
                             <label class="block font-medium text-sm text-gray-700" :for="`songs_${index}_minister_name`">{{ __('Minister') }}</label>
                             <input type="text" :id="`songs_${index}_minister_name`" :name="`songs[${index}][minister_name]`" x-model="song.minister_name" maxlength="255"
-                                class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm mt-1 block w-full" />
+                                class="border-gray-300 focus:border-primary-500 focus:ring-primary-500 rounded-md shadow-sm mt-1 block w-full" />
                             <p class="text-sm text-red-600 mt-2" x-show="error(index, 'minister_name')" x-text="error(index, 'minister_name')"></p>
                         </div>
                         <div class="mt-3 sm:mt-0">

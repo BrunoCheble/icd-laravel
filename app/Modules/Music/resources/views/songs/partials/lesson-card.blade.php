@@ -90,7 +90,7 @@
 
 @once
     <style>
-        .lesson-card { --lc-surface: var(--surface, #fff); --lc-surface-2: var(--surface-2, #f3f4f6); --lc-border: var(--border, #e5e7eb); --lc-text: var(--text, #111827); --lc-muted: var(--muted, #6b7280); --lc-accent: var(--accent, #4f46e5);
+        .lesson-card { --lc-surface: var(--surface, #fff); --lc-surface-2: var(--surface-2, #f3f4f6); --lc-border: var(--border, #e5e7eb); --lc-text: var(--text, #111827); --lc-muted: var(--muted, #6b7280); --lc-accent: var(--accent, var(--brand));
             padding: .75rem; border: 1px solid var(--lc-border); border-radius: .6rem; background: var(--lc-surface); color: var(--lc-text); }
         .lesson-head { display: flex; align-items: center; gap: .5rem; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
         .lesson-badge { display: inline-flex; align-items: center; gap: .25rem; padding: .05rem .5rem; border-radius: 999px; background: var(--lc-surface-2); color: var(--lc-muted); font-size: .72rem; font-weight: 700; white-space: nowrap; }

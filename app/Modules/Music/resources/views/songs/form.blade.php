@@ -34,7 +34,7 @@
             @endforeach
         </select>
         <x-input-error class="mt-2" :messages="$errors->get('musical_key')" />
-        <p id="key-transpose-notice" class="mt-2 text-sm" style="display: none; color: #4338ca;"></p>
+        <p id="key-transpose-notice" class="mt-2 text-sm" style="display: none; color: var(--brand-strong);"></p>
     </div>
 
     {{-- Tempo: the live mode of the setlist app counts the bars with it --}}
@@ -54,7 +54,7 @@
             @endforeach
         </select>
         <p class="mt-1 text-sm text-gray-500">{{ __('Blocks without bars get them when the song is saved: the chords of each block, one bar each, to be adjusted on the grid.') }} {{ __('Changing it moves only the bar lines: every chord stays on its beat.') }}</p>
-        <p class="mt-1 text-sm" style="color: #4338ca;" x-show="meter === '6/8'" x-cloak>{{ __('In 6/8 the bars count the eighth notes: the BPM is of the eighths (a song felt at 60 is 180).') }}</p>
+        <p class="mt-1 text-sm" style="color: var(--brand-strong);" x-show="meter === '6/8'" x-cloak>{{ __('In 6/8 the bars count the eighth notes: the BPM is of the eighths (a song felt at 60 is 180).') }}</p>
         <x-input-error class="mt-2" :messages="$errors->get('meter')" />
     </div>
 
@@ -74,12 +74,12 @@
             </div>
             <p class="mt-1 text-sm" style="color: #dc2626;" x-show="remove" x-cloak>
                 {{ __('The audio will be removed when you save.') }}
-                <button type="button" class="font-semibold text-indigo-600" @click="remove = false">{{ __('Undo') }}</button>
+                <button type="button" class="font-semibold text-primary-700" @click="remove = false">{{ __('Undo') }}</button>
             </p>
             <input type="hidden" name="remove_audio" :value="remove ? 1 : 0">
         @endif
         <input id="audio" name="audio" type="file" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" class="mt-2 block w-full text-sm" @change="convert($event.target)" :disabled="converting">
-        <p class="mt-1 text-sm font-semibold" style="color: #4338ca;" x-show="status" x-text="status" x-cloak></p>
+        <p class="mt-1 text-sm font-semibold" style="color: var(--brand-strong);" x-show="status" x-text="status" x-cloak></p>
         <p class="mt-1 text-sm text-gray-500">{{ __('Up to :size MB. When the song has an audio file, the setlist app plays it instead of the YouTube video, also offline.', ['size' => \App\Modules\Music\Services\SaveSongAudioService::maxUploadMegabytes()]) }}</p>
         <x-input-error class="mt-2" :messages="$errors->get('audio')" />
     </div>
@@ -299,7 +299,7 @@
                 if (outdated) notice.style.borderColor = '#dc2626';
                 if (data.replace) {
                     notice.textContent = @js(__('Replacing the chord sheet of this song with the one imported from :source: the chord map (structure) does not change. Review and save (the current version stays in the history).')).replace(':source', data.source || '');
-                    notice.style.borderColor = '#4f46e5';
+                    notice.style.borderColor = 'var(--brand)';
                 } else {
                     offerReplace(notice);
                 }
@@ -326,7 +326,7 @@
             // A song already here without a chord sheet (pre-registered): filled right away, then its layout opens.
             if (existing.pending && existing.import && data.sheet) {
                 notice.textContent = @js(__('Saving the chord sheet, the chord map and the bars of ":title"…')).replace(':title', existing.title);
-                notice.style.borderColor = '#4f46e5';
+                notice.style.borderColor = 'var(--brand)';
                 fetch(existing.import, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
@@ -342,7 +342,7 @@
                 return;
             }
             const box = document.createElement('div');
-            box.style.cssText = 'margin-top: .6rem; padding: .6rem .7rem; border-radius: .4rem; background: #eef2ff; color: #3730a3;';
+            box.style.cssText = 'margin-top: .6rem; padding: .6rem .7rem; border-radius: .4rem; background: var(--brand-soft); color: var(--brand-strong);';
             box.append(@js(__('This song is already here:')) + ' "' + existing.title + '". ');
             const replace = document.createElement('a');
             replace.href = existing.edit + '#icd-import=' + encodeURIComponent(JSON.stringify({ ...data, replace: true }));

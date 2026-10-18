@@ -12,9 +12,9 @@
         .revision-date { font-weight: 700; font-variant-numeric: tabular-nums; }
         .revision-source { font-size: .85rem; color: #4b5563; }
         .revision-tags { display: flex; flex-wrap: wrap; gap: .25rem; }
-        .revision-tag { padding: .05rem .5rem; border-radius: 999px; background: #eef2ff; color: #4338ca; font-size: .72rem; font-weight: 700; }
+        .revision-tag { padding: .05rem .5rem; border-radius: 999px; background: var(--brand-soft); color: var(--brand-strong); font-size: .72rem; font-weight: 700; }
         .revision-summary { font-size: .8rem; color: #6b7280; }
-        .revision details summary { cursor: pointer; font-size: .85rem; font-weight: 600; color: #4f46e5; margin-top: .35rem; }
+        .revision details summary { cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--brand-text); margin-top: .35rem; }
         .revision-preview { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; margin-top: .5rem; }
         @media (min-width: 1024px) { .revision-preview { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
         .revision-preview h4 { margin: 0 0 .3rem; font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }

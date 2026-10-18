@@ -30,7 +30,7 @@ class SongPracticeController extends Controller
         $song ??= $setlist->songs()->first();
 
         if (! $song) {
-            return Redirect::route('setlists.show', $setlist)->with('error', __('No songs in this setlist yet.'));
+            return Redirect::route('setlists.index', ['open' => $setlist->id])->with('error', __('No songs in this setlist yet.'));
         }
 
         $data = $service->execute($song, $setlist);

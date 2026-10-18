@@ -19,23 +19,66 @@
         .bars-col { container-type: inline-size; }
         @media (min-width: 1024px) { .pane-tabs { display: none !important; } }
         .bars-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem; }
+        /* Each block on its own rows, under its name (as the map on the public page) */
+        .bar-group-head { grid-column: 1 / -1; display: flex; align-items: center; gap: .35rem; margin-top: .55rem; padding: 0 .1rem .15rem; border-bottom: 2px solid var(--type-color, var(--brand)); }
+        .bars-grid > div:first-child > .bar-group-head { margin-top: 0; }
+        .bar-group-head .group-name { display: inline-flex; align-items: center; gap: .3rem; padding: .1rem .2rem; border: 0; border-radius: .3rem; background: none; color: var(--type-color, var(--brand-text)); font-size: .78rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; }
+        .bar-group-head .group-name:hover { background: var(--brand-soft); }
+        .bar-group-head .group-name i { font-size: .65rem; }
+        .bar-group-head .group-repeat { font-size: .7rem; font-weight: 700; color: #9ca3af; }
+        .bar-group-head .group-bars { font-size: .7rem; color: #9ca3af; }
+        .bar-group-head.is-accordion { cursor: pointer; }
+        .bar-group-head.is-accordion:hover { background: #f8fafc; }
+        .bar-group-head .group-repeat.is-grouped { padding: .05rem .4rem; border-radius: 999px; background: var(--type-color, var(--brand)); color: #fff; }
+        .bar-group-head .group-toggle { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #6b7280; font-size: .7rem; font-weight: 600; text-decoration: underline; cursor: pointer; }
+        .bar-group-head .group-toggle:hover { color: var(--brand-text); }
+        .bar.is-group-start { grid-column-start: 1; }
+        .add-block { margin-top: .9rem; }
+        .add-block-open { width: 100%; padding: .7rem; border: 2px dashed #d1d5db; border-radius: .6rem; background: none; color: #6b7280; font-weight: 700; cursor: pointer; }
+        .add-block-open:hover { border-color: var(--brand); color: var(--brand-text); }
+        .add-block-form { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .6rem; border: 1px solid var(--brand-200); border-radius: .6rem; background: #f8fafc; }
+        .add-block-form input[type=text] { flex: 1 1 12rem; min-width: 0; padding: .4rem .55rem; border: 1px solid #d1d5db; border-radius: .4rem; font-weight: 700; }
+        .add-block-form label { display: inline-flex; align-items: center; gap: .35rem; font-size: .85rem; color: #4b5563; }
+        .add-block-form input[type=number] { width: 4.5rem; padding: .35rem .4rem; border: 1px solid #d1d5db; border-radius: .4rem; text-align: center; font-weight: 700; }
+        .bar-group-head .group-grip { color: #9ca3af; cursor: grab; padding: .1rem .15rem; touch-action: none; }
+        .bar-group-head .group-action { border: 0; background: none; padding: .15rem .35rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
+        .bar-group-head .group-duplicate { margin-left: auto; }
+        .bar-group-head .group-duplicate:hover { background: var(--brand-soft); color: var(--brand-text); }
+        .bar-group-head .group-remove:hover { background: #fef2f2; color: #dc2626; }
+        .bar-group-head .group-remove:disabled { opacity: .3; cursor: default; }
+        /* Moving a block: the blocks look as they are; a line shows where it goes */
+        .bars-page.is-moving-block, .bars-page.is-moving-block * { cursor: grabbing !important; user-select: none; }
+        /* A bar or block brought into view stays clear of the sticky bars above it */
+        .bars-grid .bar, .bar-group-head { scroll-margin-top: calc(var(--app-sticky-top, 0px) + 4rem); }
+        /* Toolbar on one line: play on the left, undo / save / options on the right, the rest slides in between */
+        .bars-toolbar, .bars-toolbar.ws-toolbar { flex-wrap: nowrap; }
+        .bars-toolbar .tb-scroll { flex: 1; min-width: 0; display: flex; align-items: center; gap: .35rem; overflow-x: auto; scrollbar-width: none; padding: 2px 1px; }
+        .bars-toolbar .tb-scroll::-webkit-scrollbar { display: none; }
+        .bars-toolbar .tb-scroll.fade-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+        .bars-toolbar .tb-scroll.fade-left { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px); mask-image: linear-gradient(to right, transparent, #000 28px); }
+        .bars-toolbar .tb-scroll.fade-left.fade-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
+        .bars-toolbar .tb-end { display: flex; align-items: center; gap: .35rem; flex: none; }
+        @media (max-width: 639px) { .bars-toolbar .tb-scroll, .bars-toolbar .tb-end { gap: .25rem; } }
+        .bar-group-head.is-dragging { opacity: .45; }
+        .bar-group-head.drop-before { box-shadow: 0 -3px 0 0 var(--brand); }
+        .bar-group-head.drop-after { box-shadow: 0 3px 0 0 var(--brand); }
         @container (min-width: 34rem) { .bars-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
         @container (min-width: 46rem) { .bars-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
         .bar { position: relative; min-width: 0; padding: .3rem .4rem .45rem; border: 1px solid #e5e7eb; border-radius: .5rem; background: #fff; cursor: pointer; user-select: none; -webkit-touch-callout: none; }
-        .bar:hover { border-color: #c7d2fe; }
+        .bar:hover { border-color: var(--brand-200); }
         .bar.is-current { border-color: #f59e0b; box-shadow: 0 0 0 2px #f59e0b inset; background: #fffbeb; }
-        .bar.has-block { border-top: 3px solid var(--type-color, #4f46e5); }
+        .bar.has-block { border-top: 3px solid var(--type-color, var(--brand)); }
         .bar .number { position: absolute; top: .15rem; right: .35rem; font-size: .62rem; color: #9ca3af; }
         .review-done { color: #15803d; border-color: #86efac; background: #f0fdf4; }
         .review-save { color: #15803d; border-color: #86efac; }
         .bar-tools { position: absolute; top: .05rem; right: 1.35rem; display: flex; gap: .1rem; }
         .bar-tools button { border: 0; background: none; padding: .1rem .2rem; font-size: .68rem; color: #c7cbd3; cursor: pointer; line-height: 1; }
-        .bar-tools button:hover { color: #4f46e5; }
+        .bar-tools button:hover { color: var(--brand-text); }
         .bar-tools button:last-child:hover { color: #dc2626; }
         .bar-tools button:disabled { opacity: .3; cursor: default; }
         .bar-blocks { display: flex; flex-wrap: wrap; gap: .25rem; min-height: 1.1rem; margin-right: 1.3rem; }
-        .block-chip { display: inline-flex; align-items: center; gap: .2rem; max-width: 100%; padding: 0 .3rem; border-radius: .3rem; font-size: .68rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--type-color, #4f46e5); background: #f9fafb; border: 0; cursor: pointer; }
+        .block-chip { display: inline-flex; align-items: center; gap: .2rem; max-width: 100%; padding: 0 .3rem; border-radius: .3rem; font-size: .68rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--type-color, var(--brand-text)); background: #f9fafb; border: 0; cursor: pointer; }
         .block-chip .play { color: #6b7280; }
         .block-chip.is-marker { color: #6b7280; }
         .bar-beats { display: grid; gap: .15rem; margin-top: .25rem; }
@@ -61,54 +104,58 @@
         .passage-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: .4rem; font-size: .8rem; color: #4b5563; }
         .passage-bar .ws-btn { min-height: 32px; padding: 0 .55rem; font-size: .8rem; }
         .block-mark { display: inline-flex; align-items: center; gap: .25rem; padding: .05rem .3rem; border: 1px dashed #9ca3af; border-radius: .3rem; background: #fff; color: #6b7280; font-size: .68rem; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
-        .block-mark.is-marked { border-style: solid; border-color: #4f46e5; color: #4f46e5; background: #eef2ff; }
+        .block-mark.is-marked { border-style: solid; border-color: var(--brand); color: var(--brand-text); background: var(--brand-soft); }
         .popover .help { margin: .35rem 0 0; font-size: .75rem; color: #6b7280; }
         /* Toolbar: icons only (each one says what it does in its title); numbers stay */
         .ws-toolbar .ws-label { display: none; }
         .ws-toolbar .bpm-input { width: 3.6rem; }
         @media (max-width: 640px) { .ws-toolbar .ws-spacer { display: none; } .ws-toolbar .bpm-input { width: 3rem; } }
         .popover hr { margin: .5rem 0 .1rem; border: 0; border-top: 1px solid #e5e7eb; }
-        /* Lines view: the map's chords in lines as on the public page; clicking a chord breaks the line there or
-           marks it as a passing chord (the bars do not change) */
-        .lines-view { display: grid; gap: .6rem; }
-        .line-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-        .line-block { padding: .45rem .6rem; border: 1px solid #e5e7eb; border-left: 3px solid var(--type-color, #4f46e5); border-radius: .5rem; background: #fff; }
-        .line-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-        .line-name { font-size: .75rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, #4f46e5); }
-        .line-state { font-size: .72rem; color: #9ca3af; }
-        .line-head .ws-btn { min-height: 28px; padding: 0 .5rem; font-size: .75rem; }
-        .line-row { display: flex; flex-wrap: wrap; column-gap: 1rem; margin-top: .25rem; }
-        .line-step { white-space: nowrap; }
-        .line-chord { border: 0; background: none; padding: .05rem .15rem; border-radius: .3rem; font-weight: 800; font-size: 1.05rem; color: #111827; cursor: pointer; }
-        .line-chord:hover { background: #eef2ff; color: #4f46e5; }
-        .line-chord.is-passing { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .22em; }
-        .line-chord.is-playing, .line-chord.is-playing:hover { background: #f59e0b; color: #fff; }
-        .line-block.is-current { background: #fffbeb; }
+        /* Passing chords (marked in the bar menu): underlined, as on the public page */
+        .chord.is-passing { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .2em; }
+        /* The menu of a block, next to its name in the bars */
+        .block-more { border: 0; background: none; padding: 0 .25rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
+        .block-more:hover { background: var(--brand-soft); color: var(--brand-text); }
+        .menu-chords { display: flex; flex-wrap: wrap; gap: .3rem; }
+        .menu-chords button { padding: .2rem .55rem; border: 1px solid #d1d5db; border-radius: 999px; background: #fff; font-weight: 700; font-size: .85rem; cursor: pointer; }
+        .menu-chords button.is-on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-text); text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .2em; }
+        /* The menu of a block: its name and place on top, then name, bars, repetitions and start time */
+        .block-menu-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; margin: -.65rem -.65rem .55rem; padding: .55rem .65rem .5rem; border-bottom: 3px solid var(--type-color, var(--brand)); border-radius: .6rem .6rem 0 0; background: #f8fafc; }
+        .block-menu-name { margin: 0; color: var(--type-color, var(--brand-text)); font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+        .block-menu-place { margin: .1rem 0 0; font-size: .72rem; color: #6b7280; }
+        .block-menu-close { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #9ca3af; cursor: pointer; }
+        .block-menu-close:hover { background: #e5e7eb; color: #374151; }
+        .block-menu-field { margin-top: .55rem; }
+        .block-menu-label { display: block; margin-bottom: .2rem; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
+        .block-menu-name-row { display: flex; gap: .35rem; }
+        .block-menu-name-row input { flex: 1; min-width: 0; }
+        .block-menu-name-row .ws-btn { flex: none; min-width: 2.6rem; justify-content: center; }
+        .block-menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+        .stepper { display: flex; align-items: stretch; border: 1px solid #d1d5db; border-radius: .45rem; overflow: hidden; }
+        .stepper button { flex: none; width: 2.1rem; border: 0; background: #f3f4f6; color: #374151; font-size: .75rem; cursor: pointer; }
+        .stepper button:hover:not(:disabled) { background: var(--brand-100); color: var(--brand-text); }
+        .stepper button:disabled { opacity: .4; cursor: default; }
+        .stepper input { flex: 1; min-width: 0; width: 100%; border: 0; padding: .35rem 0; text-align: center; font-weight: 700; -moz-appearance: textfield; }
+        .stepper input::-webkit-inner-spin-button, .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .block-menu-time { display: flex; gap: .3rem; }
+        .block-menu-time input { flex: 1; min-width: 0; padding: .35rem .4rem; border: 1px solid #d1d5db; border-radius: .45rem; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .block-menu-time .nudge { flex: none; padding: 0 .45rem; border: 1px solid #d1d5db; border-radius: .45rem; background: #fff; color: #4b5563; font-size: .72rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        .block-menu-time .nudge:hover { border-color: var(--brand); color: var(--brand-text); }
+        .block-menu-time .now { color: var(--brand-text); }
+        .link-btn { margin-top: .3rem; padding: 0; border: 0; background: none; color: var(--brand-text); font-size: .75rem; text-decoration: underline; cursor: pointer; }
+        .chord-picker .block-menu-field:first-of-type { margin-top: .45rem; }
+        .menu-chords button.is-current { border-color: var(--type-color, var(--brand)); background: var(--type-color, var(--brand)); color: #fff; }
+        .menu-chords.is-key button { border-style: dashed; color: #4b5563; }
+        .menu-chords button:hover { border-color: var(--brand); color: var(--brand-text); }
+        .menu-chords button.is-current:hover { color: #fff; }
+        .repeat-input { width: 3.6rem; padding: .15rem .35rem; border: 1px solid #d1d5db; border-radius: .35rem; font-weight: 700; text-align: center; }
         .beat.is-on { background: #f59e0b; }
         .beat.is-on .chord, .beat.is-on .count { color: #fff; }
         .bars-page.is-editing .beat { cursor: text; }
-        .block-actions { display: inline-flex; gap: .25rem; margin-left: auto; }
-        .line-rename-btn { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
-        .line-rename-btn:hover { color: #4f46e5; }
-        .line-rename { width: 11rem; padding: .15rem .4rem; border: 1px solid #4f46e5; border-radius: .35rem; font-size: .8rem; font-weight: 800; letter-spacing: .04em; }
-        .repeat-ctl { display: inline-flex; align-items: center; gap: .4rem; font-size: .75rem; color: #6b7280; }
-        .repeat-badge { padding: .05rem .45rem; border-radius: 999px; background: var(--type-color, #4f46e5); color: #fff; font-weight: 800; font-size: .75rem; }
-        .repeat-badge.is-copy { background: #e5e7eb; color: #4b5563; }
-        .repeat-input { width: 3.4rem; margin-left: .25rem; padding: .1rem .3rem; border: 1px solid #d1d5db; border-radius: .35rem; font-weight: 700; text-align: center; }
-        .block-grip { color: #9ca3af; cursor: grab; padding: .15rem .2rem; touch-action: none; }
-        .line-head { cursor: grab; }
-        .line-head button { cursor: pointer; }
-        .line-block.is-dragging { opacity: .45; }
-        .line-block.drop-before { box-shadow: 0 -3px 0 0 #4f46e5; }
-        .line-block.drop-after { box-shadow: 0 3px 0 0 #4f46e5; }
-        .bars-page.is-moving-block, .bars-page.is-moving-block * { cursor: grabbing !important; user-select: none; }
-        /* Moving a block: every block shows only its head, so the order is easy to see */
-        .bars-page.is-moving-block .line-block > :not(.line-head) { display: none; }
-        .block-actions .ws-btn { padding: .15rem .45rem; }
-        .inline-chord { width: 100%; min-width: 0; padding: 0 .2rem; border: 1px solid #4f46e5; border-radius: .25rem; font: inherit; font-weight: 800; font-size: .95rem; background: #fff; outline: none; }
+        .inline-chord { width: 100%; min-width: 0; padding: 0 .2rem; border: 1px solid var(--brand); border-radius: .25rem; font: inherit; font-weight: 800; font-size: .95rem; background: #fff; outline: none; }
         .inline-chord.is-invalid { border-color: #dc2626; background: #fef2f2; }
         .bars-page.is-editing .chord.can-drag { cursor: grab; touch-action: none; border-radius: .2rem; }
-        .bars-page.is-editing .chord.can-drag:hover { outline: 1px dashed #4f46e5; }
+        .bars-page.is-editing .chord.can-drag:hover { outline: 1px dashed var(--brand); }
         .bars-page.is-dragging, .bars-page.is-dragging * { cursor: grabbing !important; user-select: none; }
         .bars-page.is-editing .beat:hover { outline: 1px dashed #f59e0b; }
 
@@ -121,13 +168,13 @@
         .sheet-label { font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, #6b7280); cursor: pointer; }
         .sheet-line { display: flex; flex-wrap: wrap; margin-top: .15rem; font-size: .92rem; line-height: 1.15; }
         .sheet-seg { display: inline-flex; flex-direction: column; }
-        .sheet-seg .c { min-height: 1.05em; font-size: .82rem; font-weight: 800; color: #4f46e5; padding-right: .3rem; }
-        .sheet-seg .c.is-playing > span { padding: 0 .2rem; margin: 0 -.2rem; border-radius: .25rem; background: #4f46e5; color: #fff; }
+        .sheet-seg .c { min-height: 1.05em; font-size: .82rem; font-weight: 800; color: var(--brand-text); padding-right: .3rem; }
+        .sheet-seg .c.is-playing > span { padding: 0 .2rem; margin: 0 -.2rem; border-radius: .25rem; background: var(--brand); color: #fff; }
         .sheet-seg .t { white-space: pre; }
         .sheet-seg .c.can-move { cursor: grab; touch-action: none; }
         .sheet-seg .c.is-added > span { color: #16a34a; text-decoration: underline; text-underline-offset: .15em; }
         .sheet-preview-note { margin: 0 0 .4rem; font-size: .75rem; color: #b45309; }
-        .sheet-seg .c.can-move:hover > span { outline: 1px dashed #4f46e5; border-radius: .2rem; }
+        .sheet-seg .c.can-move:hover > span { outline: 1px dashed var(--brand); border-radius: .2rem; }
         .sheet-seg .c.is-moving > span { padding: 0 .2rem; margin: 0 -.2rem; border-radius: .25rem; background: #f59e0b; color: #fff; }
         .chord-move { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; margin: .3rem 0 .4rem; font-size: .78rem; }
         .chord-move .ws-btn { padding: .15rem .5rem; }
@@ -135,8 +182,8 @@
         .sheet-comment { margin-top: .15rem; font-size: .82rem; font-style: italic; color: #6b7280; }
         .sheet-head { display: flex; align-items: center; gap: .35rem; }
         .sheet-edit-btn { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
-        .sheet-edit-btn:hover { color: #4f46e5; background: #eef2ff; }
-        .sheet-editor textarea { width: 100%; margin-top: .3rem; padding: .4rem .5rem; border: 1px solid #c7d2fe; border-radius: .4rem; font: .85rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
+        .sheet-edit-btn:hover { color: var(--brand-text); background: var(--brand-soft); }
+        .sheet-editor textarea { width: 100%; margin-top: .3rem; padding: .4rem .5rem; border: 1px solid var(--brand-200); border-radius: .4rem; font: .85rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
         .sheet-editor .row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .3rem; }
         .sheet-editor .help { font-size: .75rem; color: #6b7280; }
         .sheet-editor .error { font-size: .78rem; color: #dc2626; }
@@ -145,13 +192,15 @@
         .popover input[type=text] { width: 100%; padding: .4rem .55rem; border: 1px solid #d1d5db; border-radius: .4rem; font-weight: 700; font-size: 1.05rem; }
         .popover .row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
         .popover .row .ws-btn { flex: 1; }
+        /* Long labels wrap inside their button instead of running over the next one */
+        .popover .row .ws-btn { min-width: 0; white-space: normal; line-height: 1.2; text-align: center; padding-top: .35rem; padding-bottom: .35rem; }
         .popover .title { margin: 0 0 .4rem; font-size: .8rem; color: #6b7280; }
         .key-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; }
         .key-chip { min-height: 38px; border: 1px solid #d1d5db; border-radius: .5rem; background: #fff; font-weight: 700; cursor: pointer; }
-        .key-chip.is-active { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+        .key-chip.is-active { background: var(--brand); border-color: var(--brand); color: #fff; }
         .bpm-input { width: 4.5rem; min-height: 38px; padding: 0 .4rem; border: 1px solid #d1d5db; border-radius: .5rem; text-align: center; font-weight: 700; }
-        .version-select { min-height: 38px; padding: 0 2rem 0 .6rem; border: 1px solid #c7d2fe; border-radius: .5rem; font-weight: 700; color: #4f46e5; }
-        .version-note { padding: .35rem .6rem; margin-top: .4rem; border-radius: .4rem; background: #eef2ff; color: #3730a3; font-size: .8rem; }
+        .version-select { min-height: 38px; padding: 0 2rem 0 .6rem; border: 1px solid var(--brand-200); border-radius: .5rem; font-weight: 700; color: var(--brand-text); }
+        .version-note { padding: .35rem .6rem; margin-top: .4rem; border-radius: .4rem; background: var(--brand-soft); color: var(--brand-strong); font-size: .8rem; }
         .save-state { font-size: .8rem; color: #6b7280; }
         .save-state.is-dirty { color: #b45309; }
         .save-state.is-error { color: #dc2626; }
@@ -165,7 +214,7 @@
                 @include('music::songs.partials.tabs', ['song' => $song, 'current' => 'layout'])
                 @include('layouts.alert')
 
-                <div class="bars-page" x-cloak :class="{ 'is-editing': mode === 'edit', 'is-dragging': drag && drag.moved, 'is-moving-block': blockDrag?.moved }" x-data="songBars(@js([
+                <div class="bars-page" x-cloak :class="{ 'is-editing': mode === 'edit', 'is-dragging': drag && drag.moved, 'is-moving-block': groupDrag?.moved }" x-data="songBars(@js([
                     'structure' => $blocks,
                     'sheet' => $sheet,
                     'key' => $song->musical_key,
@@ -183,76 +232,84 @@
                 ]))" @keydown.window="onKey($event)">
 
                     {{-- Toolbar: player, play / edit, undo, tempo, key, save, options --}}
-                    <div class="ws-toolbar">
+                    <div class="ws-toolbar bars-toolbar">
                         @include('music::songs.partials.play-button', ['toggle' => 'togglePlay()', 'time' => 'formatTime(clock)', 'show' => 'canPlay'])
-                        <span class="ws-seg" role="group" aria-label="{{ __('Mode') }}">
-                            <button type="button" :class="{ 'is-active': mode === 'play' }" @click="setMode('play')" title="{{ __('Clicking a beat plays from it') }}"><i class="fa-solid fa-headphones"></i><span class="ws-label"> {{ __('Play') }}</span></button>
-                            <button type="button" :class="{ 'is-active': mode === 'edit' }" @click="setMode('edit')" title="{{ __('Clicking a beat edits its chord') }}"><i class="fa-solid fa-pen"></i><span class="ws-label"> {{ __('Edit') }}</span></button>
-                            <button type="button" :class="{ 'is-active': mode === 'lines' }" @click="setMode('lines')" title="{{ __('Lines of the map and passing chords, without changing the bars') }}"><i class="fa-solid fa-bars-staggered"></i><span class="ws-label"> {{ __('Lines') }}</span></button>
-                        </span>
-                        <select class="version-select" :value="versionId ?? ''" @change="selectVersion($event.target.value ? Number($event.target.value) : null); $event.target.value = versionId ?? ''"
-                            title="{{ __('Version: the base or the map of an instrument') }}" aria-label="{{ __('Version') }}">
-                            <option value="">{{ __('Base') }}</option>
-                            <template x-for="version in versions" :key="version.id">
-                                <option :value="version.id" x-text="version.instrument" :selected="version.id === versionId"></option>
-                            </template>
-                        </select>
-                        <button type="button" class="ws-btn" @click="openVersionMenu($event.currentTarget)" title="{{ __('New version for an instrument') }}" aria-label="{{ __('New version for an instrument') }}"><i class="fa-solid fa-plus"></i></button>
-                        <button type="button" class="ws-btn" x-show="versionId" @click="deleteVersion()" title="{{ __('Delete this version') }}" aria-label="{{ __('Delete this version') }}"><i class="fa-solid fa-trash"></i></button>
-                        <button type="button" class="ws-btn" @click="undo()" :disabled="!history.length" title="{{ __('Undo') }}" aria-label="{{ __('Undo') }}"><i class="fa-solid fa-rotate-left"></i></button>
-                        <button type="button" class="ws-btn" x-show="canPlay" :class="{ 'is-active': loop }" @click="toggleLoop()"
-                            :title="loop ? @js(__('Stop repeating')) : @js(__('Repeat the marked bars (or the current bar)'))" aria-label="{{ __('Repeat') }}"><i class="fa-solid fa-repeat"></i></button>
-                        <button type="button" class="ws-btn" x-show="canPlay && !clickOnly" :class="{ 'is-active': metronome }" @click="metronome = !metronome"
-                            title="{{ __('Metronome') }}" aria-label="{{ __('Metronome') }}"><i class="fa-solid fa-stopwatch"></i></button>
-                        {{-- Count-in: a bar of drumsticks before playing --}}
-                        <button type="button" class="ws-btn" x-show="canPlay && bpm > 0" :class="{ 'is-active': countIn }" @click="toggleCountIn()"
-                            :title="countIn ? @js(__('Count-in on: a bar of drumsticks at the BPM before playing. Click to turn it off')) : @js(__('Count-in off. Click for a bar of drumsticks at the BPM before playing'))"
-                            aria-label="{{ __('Count-in') }}"><i class="fa-solid fa-drum"></i><span class="ws-label"> {{ __('Count-in') }}</span><span x-show="counting" x-text="` ${countBeat || ''}`"></span></button>
-                        <span class="ws-spacer"></span>
-                        {{-- Tapping "BPM" in the rhythm of the song sets it; the number can be typed too --}}
-                        <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId">
-                            <button type="button" @click="tapTempo()" title="{{ __('Tap the beat to set the tempo') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;">BPM <i class="fa-solid fa-hand-pointer"></i></button>
-                            <input type="number" class="bpm-input" min="30" max="300" step="0.1" :value="bpm" @change="setBpm($event.target.value)" aria-label="BPM" style="border: 0; min-height: 0;">
-                        </span>
-                        {{-- The music on, or only the BPM click (the bars play on their own clock) --}}
-                        <button type="button" class="ws-btn" x-show="hasMusic && bpm > 0" :class="{ 'is-active': !musicOff }" @click="toggleMusic()"
-                            :title="musicOff ? @js(__('Playing only with the BPM: click to play with the music')) : @js(__('Playing with the music: click to play only with the BPM'))"><i class="fa-solid" :class="musicOff ? 'fa-volume-xmark' : 'fa-music'"></i><span class="ws-label"> {{ __('Song sound') }}</span></button>
-                        {{-- Click on every beat, or doubled (also on each "and") for the drummer: only the sound changes --}}
-                        <button type="button" class="ws-btn" x-show="!versionId && (clickOnly || metronome)" :class="{ 'is-active': clickDouble }" @click="clickDouble = !clickDouble; markDirty(); clickUntil = null"
-                            :title="clickDouble ? @js(__('Doubled click: it also sounds on each "and" (the bars keep the BPM). Click for one click per beat')) : @js(__('One click per beat. Click to double it (the drummer\'s tempo); the bars keep the BPM'))"><i class="fa-solid fa-stopwatch"></i> 2×</button>
-                        {{-- Where bar 1 starts in the recording (seconds): typed, or marked on the beat while it plays --}}
-                        <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId && !clickOnly">
-                            <button type="button" @click="markStartNow()" :disabled="!canPlay" title="{{ __('Click on the first beat of bar 1 while the song plays') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;" aria-label="{{ __('Start') }}"><span class="ws-label">{{ __('Start') }} </span><i class="fa-solid fa-flag"></i></button>
-                            <input type="number" class="bpm-input" min="0" step="0.1" :value="songStart" @change="setSongStart($event.target.value)" aria-label="{{ __('Start of bar 1 (seconds)') }}" title="{{ __('Start of bar 1 (seconds)') }}" style="border: 0; min-height: 0;">
-                        </span>
-                        {{-- Free timing: each block starts where it was marked (songs whose tempo changes), or every block on the BPM --}}
-                        <button type="button" class="ws-btn" x-show="!versionId" :class="{ 'is-active': freeTiming }" @click="toggleFreeTiming()"
-                            :title="freeTiming ? @js(__('Free timing: each block starts where it was marked with its clock. Click to follow the bars (BPM) again')) : @js(__('Following the bars: every block starts where the BPM puts it. Click for free timing (mark where each block starts)'))">
-                            <i class="fa-regular fa-clock"></i> <span class="ws-label">{{ __('Free timing') }}</span></button>
-                        {{-- Time signature: only the bar lines move, every chord stays on its beat --}}
-                        <select class="ws-btn" x-show="!versionId" :value="perBar" @change="setMeter(Number($event.target.value))" title="{{ __('Time signature (the chords keep their beats)') }}" aria-label="{{ __('Time signature') }}" style="padding-right: 1.8rem;">
-                            @foreach (\App\Modules\Music\Services\CreateSongBarsService::METERS as $label => $beats)
-                                <option value="{{ $beats }}">{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        <button type="button" class="ws-btn" x-show="!versionId" :class="{ 'is-active': keyOpen }" @click="keyOpen = !keyOpen" title="{{ __('Key') }}">
-                            <i class="fa-solid fa-music"></i> <strong x-text="keyLabel(key)"></strong>
-                        </button>
-                        {{-- Review: once the bars are right, saved as reviewed (a decision of whoever reviews); undone from the badge --}}
-                        <button type="button" class="ws-btn review-done" x-show="!versionId && reviewedAt" @click="unmarkReviewed()" :disabled="saving"
-                            :title="@js(__('Saved as reviewed on :date. Click to undo the review.')).replace(':date', formatDay(reviewedAt))">
-                            <i class="fa-solid fa-circle-check"></i> <span x-text="formatDay(reviewedAt)"></span>
-                        </button>
-                        <button type="button" class="ws-btn review-save" x-show="!versionId && !reviewedAt" @click="save({ reviewed: true })" :disabled="saving"
-                            title="{{ __('Save and mark the song as reviewed (its bars are right)') }}"><i class="fa-solid fa-check-double"></i> <span class="ws-label">{{ __('Save as reviewed') }}</span></button>
-                        <button type="button" class="ws-btn ws-btn-primary" @click="save()" :disabled="saving" title="{{ __('Save') }}">
-                            <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i><span class="ws-label">{{ __('Save') }}</span>
-                        </button>
-                        <button type="button" class="ws-btn" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" aria-label="{{ __('Options') }}" title="{{ __('Options') }}"><i class="fa-solid fa-gear"></i></button>
+                        {{-- The rest slides sideways when it does not fit (phones, tablets); undo, save and options stay at hand --}}
+                        <div class="tb-scroll" x-data="{ tbLeft: false, tbRight: false, tbCheck() { const el = this.$root; this.tbLeft = el.scrollLeft > 2; this.tbRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 2; } }"
+                            x-init="tbCheck(); new ResizeObserver(() => tbCheck()).observe($el)" @scroll.passive="tbCheck()" :class="{ 'fade-left': tbLeft, 'fade-right': tbRight }">
+                            <span class="ws-seg" role="group" aria-label="{{ __('Mode') }}">
+                                <button type="button" :class="{ 'is-active': mode === 'play' }" @click="setMode('play')" title="{{ __('Clicking a beat plays from it') }}"><i class="fa-solid fa-headphones"></i><span class="ws-label"> {{ __('Play') }}</span></button>
+                                <button type="button" :class="{ 'is-active': mode === 'edit' }" @click="setMode('edit')" title="{{ __('Clicking a beat edits its chord') }}"><i class="fa-solid fa-pen"></i><span class="ws-label"> {{ __('Edit') }}</span></button>
+                            </span>
+                            <select class="version-select" :value="versionId ?? ''" @change="selectVersion($event.target.value ? Number($event.target.value) : null); $event.target.value = versionId ?? ''"
+                                title="{{ __('Version: the base or the map of an instrument') }}" aria-label="{{ __('Version') }}">
+                                <option value="">{{ __('Base') }}</option>
+                                <template x-for="version in versions" :key="version.id">
+                                    <option :value="version.id" x-text="version.instrument" :selected="version.id === versionId"></option>
+                                </template>
+                            </select>
+                            <button type="button" class="ws-btn" @click="openVersionMenu($event.currentTarget)" title="{{ __('New version for an instrument') }}" aria-label="{{ __('New version for an instrument') }}"><i class="fa-solid fa-plus"></i></button>
+                            <button type="button" class="ws-btn" x-show="versionId" @click="deleteVersion()" title="{{ __('Delete this version') }}" aria-label="{{ __('Delete this version') }}"><i class="fa-solid fa-trash"></i></button>
+                            {{-- Accordion: only the blocks' heads, one block open at a time --}}
+                            <button type="button" class="ws-btn" :class="{ 'is-active': accordion }" @click="toggleAccordion()" aria-label="{{ __('Collapse the blocks') }}"
+                                :title="accordion ? @js(__('Blocks collapsed: one open at a time (the one playing opens). Click to show every block')) : @js(__('Collapse every block: only their names, one open at a time'))"><i class="fa-solid fa-down-left-and-up-right-to-center"></i></button>
+                            <button type="button" class="ws-btn" x-show="canPlay" :class="{ 'is-active': loop }" @click="toggleLoop()"
+                                :title="loop ? @js(__('Stop repeating')) : @js(__('Repeat the marked bars (or the current bar)'))" aria-label="{{ __('Repeat') }}"><i class="fa-solid fa-repeat"></i></button>
+                            <button type="button" class="ws-btn" x-show="canPlay && !clickOnly" :class="{ 'is-active': metronome }" @click="metronome = !metronome"
+                                title="{{ __('Metronome') }}" aria-label="{{ __('Metronome') }}"><i class="fa-solid fa-stopwatch"></i></button>
+                            {{-- Count-in: a bar of drumsticks before playing --}}
+                            <button type="button" class="ws-btn" x-show="canPlay && bpm > 0" :class="{ 'is-active': countIn }" @click="toggleCountIn()"
+                                :title="countIn ? @js(__('Count-in on: a bar of drumsticks at the BPM before playing. Click to turn it off')) : @js(__('Count-in off. Click for a bar of drumsticks at the BPM before playing'))"
+                                aria-label="{{ __('Count-in') }}"><i class="fa-solid fa-drum"></i><span class="ws-label"> {{ __('Count-in') }}</span><span x-show="counting" x-text="` ${countBeat || ''}`"></span></button>
+                            <span class="ws-spacer"></span>
+                            {{-- Tapping "BPM" in the rhythm of the song sets it; the number can be typed too --}}
+                            <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId">
+                                <button type="button" @click="tapTempo()" title="{{ __('Tap the beat to set the tempo') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;">BPM <i class="fa-solid fa-hand-pointer"></i></button>
+                                <input type="number" class="bpm-input" min="30" max="300" step="0.1" :value="bpm" @change="setBpm($event.target.value)" aria-label="BPM" style="border: 0; min-height: 0;">
+                            </span>
+                            {{-- The music on, or only the BPM click (the bars play on their own clock) --}}
+                            <button type="button" class="ws-btn" x-show="hasMusic && bpm > 0" :class="{ 'is-active': !musicOff }" @click="toggleMusic()"
+                                :title="musicOff ? @js(__('Playing only with the BPM: click to play with the music')) : @js(__('Playing with the music: click to play only with the BPM'))"><i class="fa-solid" :class="musicOff ? 'fa-volume-xmark' : 'fa-music'"></i><span class="ws-label"> {{ __('Song sound') }}</span></button>
+                            {{-- Click on every beat, or doubled (also on each "and") for the drummer: only the sound changes --}}
+                            <button type="button" class="ws-btn" x-show="!versionId && (clickOnly || metronome)" :class="{ 'is-active': clickDouble }" @click="clickDouble = !clickDouble; markDirty(); clickUntil = null"
+                                :title="clickDouble ? @js(__('Doubled click: it also sounds on each "and" (the bars keep the BPM). Click for one click per beat')) : @js(__('One click per beat. Click to double it (the drummer\'s tempo); the bars keep the BPM'))"><i class="fa-solid fa-stopwatch"></i> 2×</button>
+                            {{-- Where bar 1 starts in the recording (seconds): typed, or marked on the beat while it plays --}}
+                            <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId && !clickOnly">
+                                <button type="button" @click="markStartNow()" :disabled="!canPlay" title="{{ __('Click on the first beat of bar 1 while the song plays') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;" aria-label="{{ __('Start') }}"><span class="ws-label">{{ __('Start') }} </span><i class="fa-solid fa-flag"></i></button>
+                                <input type="number" class="bpm-input" min="0" step="0.1" :value="songStart" @change="setSongStart($event.target.value)" aria-label="{{ __('Start of bar 1 (seconds)') }}" title="{{ __('Start of bar 1 (seconds)') }}" style="border: 0; min-height: 0;">
+                            </span>
+                            {{-- Free timing: each block starts where it was marked (songs whose tempo changes), or every block on the BPM --}}
+                            <button type="button" class="ws-btn" x-show="!versionId" :class="{ 'is-active': freeTiming }" @click="toggleFreeTiming()"
+                                :title="freeTiming ? @js(__('Free timing: each block starts where it was marked with its clock. Click to follow the bars (BPM) again')) : @js(__('Following the bars: every block starts where the BPM puts it. Click for free timing (mark where each block starts)'))">
+                                <i class="fa-regular fa-clock"></i> <span class="ws-label">{{ __('Free timing') }}</span></button>
+                            {{-- Time signature: only the bar lines move, every chord stays on its beat --}}
+                            <select class="ws-btn" x-show="!versionId" :value="perBar" @change="setMeter(Number($event.target.value))" title="{{ __('Time signature (the chords keep their beats)') }}" aria-label="{{ __('Time signature') }}" style="padding-right: 1.8rem;">
+                                @foreach (\App\Modules\Music\Services\CreateSongBarsService::METERS as $label => $beats)
+                                    <option value="{{ $beats }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" class="ws-btn" x-show="!versionId" :class="{ 'is-active': keyOpen }" @click="keyOpen = !keyOpen" title="{{ __('Key') }}">
+                                <i class="fa-solid fa-music"></i> <strong x-text="keyLabel(key)"></strong>
+                            </button>
+                            {{-- Review: once the bars are right, saved as reviewed (a decision of whoever reviews); undone from the badge --}}
+                            <button type="button" class="ws-btn review-done" x-show="!versionId && reviewedAt" @click="unmarkReviewed()" :disabled="saving"
+                                :title="@js(__('Saved as reviewed on :date. Click to undo the review.')).replace(':date', formatDay(reviewedAt))">
+                                <i class="fa-solid fa-circle-check"></i> <span x-text="formatDay(reviewedAt)"></span>
+                            </button>
+                            <button type="button" class="ws-btn review-save" x-show="!versionId && !reviewedAt" @click="save({ reviewed: true })" :disabled="saving"
+                                title="{{ __('Save and mark the song as reviewed (its bars are right)') }}"><i class="fa-solid fa-check-double"></i> <span class="ws-label">{{ __('Save as reviewed') }}</span></button>
+                        </div>
+                        <div class="tb-end">
+                            <button type="button" class="ws-btn" @click="undo()" :disabled="!history.length" title="{{ __('Undo') }}" aria-label="{{ __('Undo') }}"><i class="fa-solid fa-rotate-left"></i></button>
+                            <button type="button" class="ws-btn ws-btn-primary" @click="save()" :disabled="saving" title="{{ __('Save') }}">
+                                <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i><span class="ws-label">{{ __('Save') }}</span>
+                            </button>
+                            <button type="button" class="ws-btn" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" aria-label="{{ __('Options') }}" title="{{ __('Options') }}"><i class="fa-solid fa-gear"></i></button>
+                        </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 mt-1">
                         <span class="save-state" :class="{ 'is-dirty': dirty, 'is-error': saveError }" x-text="saveState"></span>
-                        <span class="ws-note ws-desktop" x-text="mode === 'edit' ? @js(__('Click a beat to change its chord; right click a bar for its block.')) : @js(__('Click a beat to play from it; right click a bar for its block.'))"></span>
+                        <span class="ws-note ws-desktop" x-text="mode === 'edit' ? @js(__('Double click a beat to choose its chord; right click a bar for its block.')) : @js(__('Click a beat to play from it; right click a bar for its block.'))"></span>
                     </div>
                     <p class="version-note" x-show="versionId" x-cloak x-text="@js(__('Editing the version for :instrument: only its chords change (the blocks, times, tempo, key and lyrics are the base\'s). It is a copy: later changes to the base do not reach it.')).replace(':instrument', currentVersion?.instrument ?? '')"></p>
                     {{-- Marked bars, copied chords and what happened to them --}}
@@ -276,69 +333,45 @@
                     <div class="bars-layout" :class="`pane-${pane}`">
                         {{-- Bars: the chord of each beat ("/" while it goes on, a change on the "and" splits the beat) --}}
                         <div class="bars-col">
-                            {{-- Lines of the map (as on the public page), set by clicking the chords --}}
-                            <template x-if="mode === 'lines'">
-                                <div class="lines-view">
-                                    <div class="line-tools">
-                                        <span class="ws-seg" role="group">
-                                            <button type="button" :class="{ 'is-active': lineTool === 'play' }" @click="lineTool = 'play'"><i class="fa-solid fa-play"></i> {{ __('Play') }}</button>
-                                            <button type="button" :class="{ 'is-active': lineTool === 'break' }" @click="lineTool = 'break'">{{ __('Break line') }}</button>
-                                            <button type="button" :class="{ 'is-active': lineTool === 'passing' }" @click="lineTool = 'passing'">{{ __('Passing chord') }}</button>
-                                        </span>
-                                        <span class="ws-note" style="white-space: normal;" x-text="lineTool === 'play' ? @js(__('Click a chord to play the song from it.')) : lineTool === 'break' ? @js(__('Click a chord to start a new line on it; click the first chord of a line to join it to the line above.')) : @js(__('Click a chord to mark it as a passing chord (underlined); click it again to unmark it. Passing chords do not count when looking for repetitions.'))"></span>
-                                    </div>
-                                    <template x-for="item in lineBlocks" :key="`${revision}-${item.block.id}`">
-                                        <div class="line-block" x-show="!isHiddenRepeat(item.block)" :class="{ 'is-current': playingLine?.id === item.block.id, 'is-dragging': blockDrag?.moved && blockDrag.id === item.block.id, 'drop-before': blockDrag?.moved && blockDrag.target === item.block.id && blockDrag.before, 'drop-after': blockDrag?.moved && blockDrag.target === item.block.id && !blockDrag.before }"
-                                            :style="typeStyle(item.name)" :data-line-block="item.block.id">
-                                            <div class="line-head" @pointerdown="!versionId && startBlockDrag($event, item.block)">
-                                                <span class="block-grip" x-show="!versionId" title="{{ __('Drag to move the block') }}"><i class="fa-solid fa-grip-vertical"></i></span>
-                                                <template x-if="lineRename !== item.block.id">
-                                                    <span style="display: inline-flex; align-items: center; gap: .15rem;">
-                                                        <button type="button" class="line-name block-chip" @click="canPlay && playFromTick(item.block.startTick)" :title="canPlay ? @js(__('Play from here')) : ''"><i class="fa-solid fa-play play" x-show="canPlay"></i> <span x-text="item.name"></span></button>
-                                                        <button type="button" class="line-rename-btn" x-show="!versionId" @click="lineRename = item.block.id" @pointerdown.stop title="{{ __('Rename the block') }}" aria-label="{{ __('Rename the block') }}"><i class="fa-solid fa-pen"></i></button>
-                                                    </span>
-                                                </template>
-                                                {{-- The name typed right there: Enter keeps it (for every repetition of a grouped card), Esc leaves it --}}
-                                                <template x-if="lineRename === item.block.id">
-                                                    <input type="text" class="line-rename" list="block-names" :value="item.name" autocomplete="off" spellcheck="false" style="text-transform: uppercase"
-                                                        x-init="$nextTick(() => { $el.focus(); $el.select(); })" @pointerdown.stop
-                                                        @keydown.enter.prevent="renameLineBlock(item.block, $event.target.value)" @keydown.escape.stop.prevent="lineRename = null"
-                                                        @blur="renameLineBlock(item.block, $event.target.value)">
-                                                </template>
-                                                {{-- Equal blocks one after the other: one card "×N" (the number of times can be changed) --}}
-                                                <template x-if="isRepeatHead(item.block)">
-                                                    <span class="repeat-ctl">
-                                                        <span class="repeat-badge" x-show="groupOf(item.block).length > 1" x-text="`×${groupOf(item.block).length}`"></span>
-                                                        <label x-show="!versionId" :title="@js(__('How many times this block is played, one after the other'))">{{ __('Repetitions') }}
-                                                            <input type="number" class="repeat-input" min="1" max="50" :value="groupOf(item.block).length" @change="setRepeats(item.block, $event.target.value)" @pointerdown.stop>
-                                                        </label>
-                                                        <button type="button" class="ws-btn" x-show="groupOf(item.block).length > 1" @click="toggleGroup(item.block)"
-                                                            x-text="expandedGroups[item.block.id] ? @js(__('Group them')) : @js(__('Show each one'))"></button>
-                                                    </span>
-                                                </template>
-                                                <span class="repeat-badge is-copy" x-show="!isRepeatHead(item.block)" x-text="`${groupOf(item.block).indexOf(item.block.id) + 1}/${groupOf(item.block).length}`"></span>
-                                                <span class="line-state" x-text="item.manual ? @js(__('Lines set by hand')) : @js(__('Automatic lines'))"></span>
-                                                <button type="button" class="ws-btn" x-show="item.manual" @click="forGroup(item.block, block => automaticLines(block, false))">{{ __('Back to automatic') }}</button>
-                                                <span class="block-actions" x-show="!versionId">
-                                                    <button type="button" class="ws-btn" @click="isCollapsed(item.block) ? setRepeats(item.block, groupOf(item.block).length + 1) : duplicateBlock(item.block)" title="{{ __('Duplicate') }}" aria-label="{{ __('Duplicate') }}"><i class="fa-solid fa-clone"></i></button>
-                                                    <button type="button" class="ws-btn" @click="isCollapsed(item.block) ? removeGroup(item.block) : removeBlock(item.block)" :disabled="lineBlocks.length < 2" title="{{ __('Remove') }}" aria-label="{{ __('Remove') }}"><i class="fa-solid fa-trash"></i></button>
-                                                </span>
-                                            </div>
-                                            <template x-for="(line, l) in item.lines" :key="l">
-                                                <div class="line-row">
-                                                    <template x-for="(step, i) in line" :key="i">
-                                                        <span class="line-step"><template x-for="chord in step" :key="chord.position"><button type="button" class="line-chord" :class="{ 'is-passing': chord.passing, 'is-playing': playingLine?.id === item.block.id && playingLine?.position === chord.position }" :data-line-chord="`${item.block.id}-${chord.position}`" @click="lineTool === 'play' ? playLineChord(item.block, chord.position) : forGroup(item.block, block => clickLineChord(block, chord.position, false))" x-text="transposeName(chord.name)"></button></template></span>
-                                                    </template>
-                                                </div>
+                            <div class="bars-grid">
+                                <template x-for="(bar, b) in bars" :key="bar.key">
+                                    <div style="display: contents">
+                                    {{-- A new block: its name over its rows of bars --}}
+                                    <template x-if="bar.group">
+                                        <div class="bar-group-head" x-show="!isHiddenRepeat(bar.group)" :style="typeVars(blockName(bar.group))" :data-group-block="bar.group.id" @click="accordion && toggleOpenBlock(bar.group)"
+                                            :class="{ 'is-accordion': accordion, 'is-dragging': groupDrag?.moved && groupDrag.id === bar.group.id, 'drop-before': groupDrag?.moved && groupDrag.target === bar.group.id && groupDrag.before, 'drop-after': groupDrag?.moved && groupDrag.target === bar.group.id && !groupDrag.before }">
+                                            <span class="group-grip" x-show="!versionId" @click.stop @pointerdown="startGroupDrag($event, bar.group)" title="{{ __('Drag to move the block') }}"><i class="fa-solid fa-grip-vertical"></i></span>
+                                            <button type="button" class="group-name" @click.stop="accordion ? toggleOpenBlock(bar.group) : playFromTick(bar.group.startTick)"
+                                                :title="accordion ? (isOpenBlock(bar.group) ? @js(__('Close the block')) : @js(__('Open the block'))) : (canPlay ? @js(__('Play from here')) : '')" :aria-expanded="accordion ? String(isOpenBlock(bar.group)) : null">
+                                                <i class="fa-solid" :class="accordion ? (isOpenBlock(bar.group) ? 'fa-chevron-down' : 'fa-chevron-right') : 'fa-play'" x-show="accordion || canPlay"></i> <span x-text="blockName(bar.group)"></span>
+                                            </button>
+                                            <span class="group-bars" x-show="accordion && !isOpenBlock(bar.group)" x-text="`${blockBarCount(bar.group)} ${blockBarCount(bar.group) === 1 ? @js(__('bar')) : @js(__('bars'))}`"></span>
+                                            <span class="group-repeat" x-show="groupOf(bar.group).length > 1" :class="{ 'is-grouped': isCollapsed(bar.group) }"
+                                                x-text="isCollapsed(bar.group) ? `×${groupOf(bar.group).length}` : `${groupOf(bar.group).indexOf(bar.group.id) + 1}/${groupOf(bar.group).length}`"></span>
+                                            <template x-if="groupOf(bar.group).length > 1 && groupOf(bar.group)[0] === bar.group.id">
+                                                <button type="button" class="group-toggle" @click.stop="toggleGroup(bar.group)"
+                                                    x-text="isCollapsed(bar.group) ? @js(__('Show each block')) : @js(__('Group them'))"></button>
+                                            </template>
+                                            <template x-if="!versionId">
+                                                <button type="button" class="block-more" @click.stop="openBlockMenu(bar.group, $event.currentTarget)"
+                                                    :title="@js(__('Block menu'))" :aria-label="@js(__('Block menu'))"><i class="fa-solid fa-ellipsis"></i></button>
+                                            </template>
+                                            <template x-if="freeTiming && !versionId">
+                                                <button type="button" class="block-mark" :class="{ 'is-marked': isMarked(bar.group) }" @click.stop="openMark(bar.group, $event)"
+                                                    :title="`${@js(__('Mark the start of this block now'))} (${formatClock(blockStart(bar.group))})`" :aria-label="@js(__('Mark the start of this block now'))"><i class="fa-regular fa-clock"></i></button>
+                                            </template>
+                                            <template x-if="!versionId">
+                                                <button type="button" class="group-action group-duplicate" @click.stop="isCollapsed(bar.group) ? setRepeats(bar.group, groupOf(bar.group).length + 1) : duplicateBlock(bar.group)"
+                                                    :title="isCollapsed(bar.group) ? @js(__('Play it once more')) : @js(__('Duplicate the block right after it'))" :aria-label="@js(__('Duplicate'))"><i class="fa-solid fa-clone"></i></button>
+                                            </template>
+                                            <template x-if="!versionId">
+                                                <button type="button" class="group-action group-remove" @click.stop="isCollapsed(bar.group) ? removeRun(bar.group) : removeBlock(bar.group)" :disabled="timedBlocks().length <= (isCollapsed(bar.group) ? groupOf(bar.group).length : 1)"
+                                                    :title="@js(__('Remove block'))" :aria-label="@js(__('Remove block'))"><i class="fa-solid fa-trash"></i></button>
                                             </template>
                                         </div>
                                     </template>
-                                </div>
-                            </template>
-                            <div class="bars-grid" x-show="mode !== 'lines'">
-                                <template x-for="(bar, b) in bars" :key="bar.key">
-                                    <div class="bar" :class="{ 'is-current': b === currentBar, 'has-block': bar.blocks.some(block => !isMarker(block)), 'is-selected': isSelected(b), 'is-looped': loop && b >= loop.from && b <= loop.to }"
-                                        :style="bar.blocks.length ? typeStyle(blockName(bar.blocks[0])) : ''" :data-bar="b"
+                                    <div class="bar" x-show="!isHiddenBar(bar)" :class="{ 'is-group-start': !!bar.group, 'is-current': b === shownBar, 'has-block': bar.blocks.some(block => !isMarker(block)), 'is-selected': isSelected(b), 'is-looped': loop && b >= loop.from && b <= loop.to }"
+                                        :style="bar.blocks.length ? typeVars(blockName(bar.blocks[0])) : {}" :data-bar="b"
                                         @click="clickBar(b, $event)" @contextmenu.prevent="openBarMenu(b, $event.currentTarget)"
                                         @pointerdown="startPress(b, $event)" @pointerup="endPress()" @pointerleave="endPress()" @pointercancel="endPress()">
                                         <span class="number" x-text="b + 1"></span>
@@ -348,14 +381,18 @@
                                             <button type="button" @click="removeBar(b)" :disabled="ticks.length <= perBar * 2" :title="isSelected(b) && selection.to > selection.from ? @js(__('Remove the marked bars')) : @js(__('Remove this bar'))" aria-label="{{ __('Remove this bar') }}"><i class="fa-solid fa-trash"></i></button>
                                         </span>
                                         <div class="bar-blocks">
-                                            <template x-for="block in bar.blocks" :key="block.id">
+                                            <template x-for="block in bar.chips" :key="block.id">
                                                 <span style="display: contents">
                                                     <button type="button" class="block-chip" :class="{ 'is-marker': isMarker(block) }" :style="typeStyle(blockName(block))"
-                                                        @click.stop="isMarker(block) ? null : playFromTick(block.startTick)" @contextmenu.stop.prevent="openBarMenu(b, $event.currentTarget.closest('.bar'))"
+                                                        @click.stop="isMarker(block) ? null : playFromTick(block.startTick)" @contextmenu.stop.prevent="isMarker(block) ? openBarMenu(b, $event.currentTarget.closest('.bar')) : openBlockMenu(block, $event.currentTarget)"
                                                         :title="isMarker(block) ? '' : @js(__('Play from here'))">
                                                         <i class="fa-solid fa-play play" x-show="!isMarker(block) && canPlay"></i>
                                                         <span x-text="isMarker(block) ? '↺ ' + @js(__('Back to the start')) : blockName(block)"></span>
                                                     </button>
+                                                    <template x-if="!versionId">
+                                                        <button type="button" class="block-more" @click.stop="openBlockMenu(block, $event.currentTarget)" @pointerdown.stop
+                                                            :title="@js(__('Block menu'))" :aria-label="@js(__('Block menu'))"><i class="fa-solid fa-ellipsis"></i></button>
+                                                    </template>
                                                     <template x-if="freeTiming && !versionId && !isMarker(block)">
                                                         <button type="button" class="block-mark" :class="{ 'is-marked': isMarked(block) }" @click.stop="openMark(block, $event)" @pointerdown.stop
                                                             :title="`${@js(__('Mark the start of this block now'))} (${formatClock(blockStart(block))})`" :aria-label="@js(__('Mark the start of this block now'))"><i class="fa-regular fa-clock"></i></button>
@@ -365,20 +402,20 @@
                                         </div>
                                         <div class="bar-beats" :style="`grid-template-columns: repeat(${bar.beats.length}, minmax(0, 1fr))`">
                                             <template x-for="(beat, i) in bar.beats" :key="i">
-                                                <span class="beat" :class="{ 'is-on': b === currentBar && i === currentBeat }" :data-beat="i" @click.stop="clickBeat(b, i, $event.currentTarget, $event)" @dblclick.stop="mode === 'edit' && editBeat(b, i, $event)"
+                                                <span class="beat" :class="{ 'is-on': b === shownBar && i === currentBeat }" :data-beat="i" @click.stop="clickBeat(b, i, $event.currentTarget, $event)" @dblclick.stop="mode === 'edit' && editBeat(b, i, $event)"
                                                     :title="`${@js(__('Beat'))} ${i + 1}: ${beat.chord || '–'}${beat.and !== null ? ' → ' + (beat.and || '–') + ' (e)' : ''}`">
                                                     <template x-if="inline && Math.floor(inline.tick / 2) === b * perBar + i">
                                                         <input type="text" class="inline-chord" :class="{ 'is-invalid': inline?.invalid }" :value="inline?.text ?? ''" autocomplete="off" spellcheck="false"
                                                             x-init="$nextTick(() => { $el.focus(); inline?.select ? $el.select() : $el.setSelectionRange($el.value.length, $el.value.length); })"
-                                                            @click.stop @dblclick.stop @pointerdown.stop
+                                                            @click.stop @pointerdown.stop
                                                             @input="if (inline) { inline.text = $event.target.value; inline.invalid = false; }"
                                                             @keydown.enter.prevent="commitInline()" @keydown.escape.stop.prevent="inline = null" @keydown.tab.prevent="commitInline()"
                                                             @blur="commitInline(true)">
                                                     </template>
                                                     <span class="halves" x-show="!(inline && Math.floor(inline.tick / 2) === b * perBar + i)">
-                                                        <span class="chord" :class="{ 'is-repeat': beat.repeat, 'is-long': !beat.repeat && beat.chord.length > 4, 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2) }" x-text="beat.repeat ? '/' : (beat.chord || '–')"
+                                                        <span class="chord" :class="{ 'is-repeat': beat.repeat, 'is-long': !beat.repeat && beat.chord.length > 4, 'is-passing': !beat.repeat && passingTicks.has((b * perBar + i) * 2), 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2) }" x-text="beat.repeat ? '/' : (beat.chord || '–')"
                                                             @pointerdown="startDrag($event, b, i, 0)"></span>
-                                                        <template x-if="beat.and !== null"><span class="chord is-and" :class="{ 'is-long': beat.and.length > 4, 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2 + 1) }" x-text="beat.and || '–'"
+                                                        <template x-if="beat.and !== null"><span class="chord is-and" :class="{ 'is-long': beat.and.length > 4, 'is-passing': passingTicks.has((b * perBar + i) * 2 + 1), 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2 + 1) }" x-text="beat.and || '–'"
                                                             @pointerdown="startDrag($event, b, i, 1)"></span></template>
                                                     </span>
                                                     <span class="count" x-text="i + 1"></span>
@@ -386,7 +423,21 @@
                                             </template>
                                         </div>
                                     </div>
+                                    </div>
                                 </template>
+                            </div>
+                            {{-- A new block at the end: its name and how many bars (each with a "?" to be written by ear) --}}
+                            <div class="add-block" x-show="!versionId" x-data="{ open: false, name: '', count: 4 }">
+                                <button type="button" class="add-block-open" x-show="!open" @click="open = true; $nextTick(() => $refs.newBlockName.focus())">
+                                    <i class="fa-solid fa-plus"></i> {{ __('New block') }}
+                                </button>
+                                <form class="add-block-form" x-show="open" x-cloak @submit.prevent="if (addBlockAtEnd(name, count)) { open = false; name = ''; count = 4; }" @keydown.escape.stop="open = false">
+                                    <input type="text" x-ref="newBlockName" x-model="name" list="block-names" required autocomplete="off" spellcheck="false" style="text-transform: uppercase"
+                                        placeholder="{{ __('E.g. CHORUS') }}" aria-label="{{ __('Name of the block') }}">
+                                    <label>{{ __('Bars') }} <input type="number" x-model.number="count" min="1" max="64" required></label>
+                                    <button type="submit" class="ws-btn ws-btn-primary"><i class="fa-solid fa-plus"></i> {{ __('Add') }}</button>
+                                    <button type="button" class="ws-btn" @click="open = false">{{ __('Cancel') }}</button>
+                                </form>
                             </div>
                         </div>
 
@@ -452,19 +503,51 @@
                         </div>
                     </div>
 
-                    {{-- Chord of a beat, on touch screens (with a mouse the chord is typed right in the cell) --}}
-                    <div class="popover" x-show="editor" x-cloak x-ref="editor" @click.outside="editor = null" @keydown.escape.stop="editor = null">
-                        <p class="title" x-text="editor ? `${@js(__('Bar'))} ${editor.bar + 1}, ${@js(__('beat'))} ${editor.beat + 1}${editor.half ? ' (e)' : ''}` : ''"></p>
-                        <input type="text" x-ref="editorChord" autocomplete="off" spellcheck="false" placeholder="G, Am7, C/E, D4" @keydown.enter.prevent="applyChord()">
-                        <div class="row">
-                            <button type="button" class="ws-btn" :class="{ 'is-active': editor?.half === 0 }" @click="editor.half = 0; fillEditor()">{{ __('On the beat') }}</button>
-                            <button type="button" class="ws-btn" :class="{ 'is-active': editor?.half === 1 }" @click="editor.half = 1; fillEditor()">{{ __('On the "and"') }}</button>
+                    {{-- Chord of a beat (double click, or a tap on touch screens): one of the song's chords, one of the key, or typed --}}
+                    <div class="popover chord-picker" x-show="editor" x-cloak x-ref="editor" @click.outside="editor = null" @keydown.escape.stop="editor = null" :style="editor ? typeVars(editorBlockName()) : {}">
+                        <div class="block-menu-head">
+                            <div>
+                                <p class="block-menu-name" x-text="editorBlockName()"></p>
+                                <p class="block-menu-place" x-text="editor ? `${@js(__('Bar'))} ${editor.bar + 1}, ${@js(__('beat'))} ${editor.beat + 1}${editor.half ? ' (e)' : ''}` : ''"></p>
+                            </div>
+                            <button type="button" class="block-menu-close" @click="editor = null" :aria-label="@js(__('Close'))"><i class="fa-solid fa-xmark"></i></button>
                         </div>
-                        <div class="row">
-                            <button type="button" class="ws-btn ws-btn-primary" @click="applyChord()">{{ __('Apply') }}</button>
-                            <button type="button" class="ws-btn" @click="removeChange()" :disabled="!canRemoveChange()" title="{{ __('The chord before goes on from here') }}">{{ __('Remove change') }}</button>
+                        <div class="block-menu-name-row">
+                            <input type="text" x-ref="editorChord" autocomplete="off" spellcheck="false" placeholder="G, Am7, C/E, D4"
+                                @input="if (editor) { editor.text = $event.target.value; editorError = ''; }" @keydown.enter.prevent="applyChord()">
+                            <button type="button" class="ws-btn ws-btn-primary" @click="applyChord()" :title="@js(__('Apply'))" :aria-label="@js(__('Apply'))"><i class="fa-solid fa-check"></i></button>
                         </div>
-                        <p class="title mt-2" x-show="editorError" x-text="editorError" style="color: #dc2626;"></p>
+                        <p class="help" x-show="editorError" x-text="editorError" style="color: #dc2626;"></p>
+                        <template x-if="editor">
+                            <div>
+                                <div class="block-menu-field" x-show="pickerChords('song').length">
+                                    <span class="block-menu-label">{{ __('In the song') }}</span>
+                                    <div class="menu-chords">
+                                        <template x-for="chord in pickerChords('song')" :key="chord">
+                                            <button type="button" :class="{ 'is-current': chord === editorChordNow() }" @click="pickChord(chord)" x-text="chord"></button>
+                                        </template>
+                                    </div>
+                                </div>
+                                <div class="block-menu-field" x-show="pickerChords('key').length">
+                                    <span class="block-menu-label" x-text="`${@js(__('In the key of'))} ${key}`"></span>
+                                    <div class="menu-chords is-key">
+                                        <template x-for="chord in pickerChords('key')" :key="chord">
+                                            <button type="button" @click="pickChord(chord)" x-text="chord"></button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <div class="block-menu-field">
+                            <span class="block-menu-label">{{ __('Where it starts') }}</span>
+                            <div class="row" style="margin-top: 0;">
+                                <button type="button" class="ws-btn" :class="{ 'is-active': editor?.half === 0 }" @click="editor.half = 0; fillEditor()">{{ __('On the beat') }}</button>
+                                <button type="button" class="ws-btn" :class="{ 'is-active': editor?.half === 1 }" @click="editor.half = 1; fillEditor()">{{ __('On the "and"') }}</button>
+                            </div>
+                        </div>
+                        <div class="row" x-show="canRemoveChange()">
+                            <button type="button" class="ws-btn" @click="removeChange()" title="{{ __('The chord before goes on from here') }}"><i class="fa-solid fa-eraser"></i> {{ __('Remove change') }}</button>
+                        </div>
                     </div>
 
                     {{-- After a chord change in a block that has equal copies: the same change there too? --}}
@@ -511,33 +594,40 @@
                     {{-- Block of a bar: new, rename, join; play from the bar --}}
                     <div class="popover" x-show="barMenu" x-cloak x-ref="barMenu" @click.outside="barMenu = null" @keydown.escape.stop="barMenu = null">
                         <p class="title" x-text="barMenuTitle()"></p>
-                        <input type="text" x-ref="blockName" list="block-names" x-show="!versionId" autocomplete="off" spellcheck="false" placeholder="{{ __('E.g. CHORUS') }}" style="text-transform: uppercase" @keydown.enter.prevent="saveBlockName()">
+                        {{-- A new block from this bar (renaming a block is in its own menu) --}}
+                        <input type="text" x-ref="blockName" list="block-names" x-show="!versionId && barMenu && !blockAtBar(barMenu.bar)" autocomplete="off" spellcheck="false" placeholder="{{ __('E.g. CHORUS') }}" style="text-transform: uppercase" @keydown.enter.prevent="saveBlockName()">
                         <datalist id="block-names">
                             <template x-for="name in commonNames" :key="name"><option :value="name"></option></template>
                         </datalist>
-                        <div class="row" x-show="!versionId">
-                            <button type="button" class="ws-btn ws-btn-primary" @click="saveBlockName()" x-text="barMenu && blockAtBar(barMenu.bar) ? @js(__('Rename')) : @js(__('New block here'))"></button>
-                        </div>
-                        <div class="row" x-show="!versionId && barMenu && blockAtBar(barMenu.bar)">
-                            <button type="button" class="ws-btn" @click="joinPrevious()" :disabled="!barMenu || !previousBlock(barMenu.bar)">{{ __('Join to the block above') }}</button>
-                            <button type="button" class="ws-btn" @click="joinNext()" :disabled="!barMenu || !nextBlock(barMenu.bar)">{{ __('Join with the next') }}</button>
+                        <div class="row" x-show="!versionId && barMenu && !blockAtBar(barMenu.bar)">
+                            <button type="button" class="ws-btn ws-btn-primary" @click="saveBlockName()">{{ __('New block here') }}</button>
                         </div>
                         <div class="row" x-show="!versionId && barMenu && blockOffset(barMenu.bar)">
                             <button type="button" class="ws-btn" @click="alignBlock(false)">{{ __('Start on beat 1 of this bar') }}</button>
                             <button type="button" class="ws-btn" @click="alignBlock(true)">{{ __('Start on the next bar') }}</button>
                         </div>
-                                <div class="row" x-show="canPlay">
-                            <button type="button" class="ws-btn" @click="playFromTick(barMenu.bar * perBar * 2); barMenu = null"><i class="fa-solid fa-play"></i> {{ __('Play from here') }}</button>
-                        </div>
+                        {{-- Passing chords of the bar: underlined in the bars and on the public page --}}
+                        <template x-if="!versionId && barMenu && barChords(barMenu.bar).length">
+                            <div>
+                                <hr>
+                                <p class="title">{{ __('Passing chords') }}</p>
+                                <div class="menu-chords">
+                                    <template x-for="chord in barChords(barMenu.bar)" :key="chord.tick">
+                                        <button type="button" :class="{ 'is-on': chord.passing }" @click="togglePassing(chord.tick)" :aria-pressed="chord.passing" x-text="transposeName(chord.name)"
+                                            :title="chord.passing ? @js(__('Passing chord: click to unmark it')) : @js(__('Click to mark it as a passing chord'))"></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
                         {{-- Bars added (the chord sounding there goes on one bar longer) or removed --}}
                         <template x-if="!versionId">
                             <div>
                                 <hr>
                                 <p class="title">{{ __('Bar') }}</p>
                                 <div class="row" style="margin-top: 0;">
-                                    <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, false); barMenu = null" title="{{ __('Insert a bar before: the chord at the start of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('Before') }}</button>
-                                    <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, true); barMenu = null" title="{{ __('Insert a bar after: the chord at the end of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('After') }}</button>
-                                    <button type="button" class="ws-btn" @click="removeBar(barMenu.bar); barMenu = null" :disabled="bars.length < 2" :title="@js(__('Remove')) + ': ' + menuBarsLabel()"><i class="fa-solid fa-trash"></i> <span x-text="barMenu && isSelected(barMenu.bar) && selection.to > selection.from ? `${@js(__('Remove'))} (${selection.to - selection.from + 1})` : @js(__('Remove'))"></span></button>
+                                    <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, false)" title="{{ __('Insert a bar before: the chord at the start of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('Before') }}</button>
+                                    <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, true)" title="{{ __('Insert a bar after: the chord at the end of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('After') }}</button>
+                                    <button type="button" class="ws-btn" @click="removeBar(barMenu.bar); if (barMenu && barMenu.bar >= bars.length) barMenu = null" :disabled="bars.length < 2" :title="@js(__('Remove')) + ': ' + menuBarsLabel()"><i class="fa-solid fa-trash"></i> <span x-text="barMenu && isSelected(barMenu.bar) && selection.to > selection.from ? `${@js(__('Remove'))} (${selection.to - selection.from + 1})` : @js(__('Remove'))"></span></button>
                                 </div>
                             </div>
                         </template>
@@ -545,17 +635,72 @@
                         <p class="title" x-text="barMenu ? menuBarsLabel() : ''"></p>
                         <div class="row">
                             <button type="button" class="ws-btn" @click="copyBars(barMenu.bar); barMenu = null"><i class="fa-solid fa-copy"></i> {{ __('Copy') }}</button>
-                            <button type="button" class="ws-btn" @click="copyBlock(barMenu.bar); barMenu = null">{{ __('Copy the block') }}</button>
                         </div>
                         <div class="row" x-show="clipboard">
                             <button type="button" class="ws-btn" @click="paste(barMenu.bar, false); barMenu = null" :title="@js(__('Only the chord names: the changes here stay where they are'))"><i class="fa-solid fa-paste"></i> {{ __('Paste here') }}</button>
                             <button type="button" class="ws-btn" @click="paste(barMenu.bar, true); barMenu = null" :title="@js(__('Where each chord changes comes along too'))">{{ __('Paste with the rhythm') }}</button>
                         </div>
-                        <div class="row">
-                            <button type="button" class="ws-btn" @click="restoreBars(barMenu.bar); barMenu = null" title="{{ __('Back as they were when the page was opened (or last saved)') }}"><i class="fa-solid fa-clock-rotate-left"></i> {{ __('Restore') }}</button>
-                            <button type="button" class="ws-btn" x-show="hasSelection && !isSelected(barMenu?.bar)" @click="selectTo(barMenu.bar); barMenu = null">{{ __('Mark up to here') }}</button>
-                            <button type="button" class="ws-btn" x-show="canPlay" @click="toggleLoop(barMenu.bar); barMenu = null"><i class="fa-solid fa-repeat"></i> <span x-text="loop ? @js(__('Stop repeating')) : @js(__('Repeat'))"></span></button>
+                        <div class="row" x-show="hasSelection && !isSelected(barMenu?.bar)">
+                            <button type="button" class="ws-btn" @click="selectTo(barMenu.bar); barMenu = null">{{ __('Mark up to here') }}</button>
                         </div>
+                    </div>
+
+                    {{-- The menu of a block (its "..." next to its name): name, bars, repetitions (it is moved by dragging its head,
+                         duplicated and removed with the buttons on its right) --}}
+                    <div class="popover" x-show="blockMenu" x-cloak x-ref="blockMenu" @click.outside="blockMenu = null" @keydown.escape.stop="blockMenu = null">
+                        <template x-if="blockMenu && menuBlock()">
+                            <div x-data="{ name: menuBlockInfo().name }" class="block-menu" :style="typeStyle(menuBlockInfo().name)">
+                                <div class="block-menu-head">
+                                    <div>
+                                        <p class="block-menu-name" x-text="menuBlockInfo().name"></p>
+                                        <p class="block-menu-place" x-text="@js(__('Bars :from–:to · block :n of :total')).replace(':from', menuBlockInfo().from).replace(':to', menuBlockInfo().to).replace(':n', menuBlockInfo().number).replace(':total', menuBlockInfo().total)"></p>
+                                    </div>
+                                    <button type="button" class="block-menu-close" @click="blockMenu = null" :aria-label="@js(__('Close'))"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                                <div class="block-menu-field">
+                                    <span class="block-menu-label">{{ __('Name') }}</span>
+                                    <div class="block-menu-name-row">
+                                        <input type="text" list="block-names" x-model="name" autocomplete="off" spellcheck="false" style="text-transform: uppercase"
+                                            :aria-label="@js(__('Name of the block'))" @keydown.enter.prevent="renameMenuBlock(name)">
+                                        <button type="button" class="ws-btn ws-btn-primary" @click="renameMenuBlock(name)" :disabled="!name.trim() || name.trim().toUpperCase() === menuBlockInfo().name"
+                                            :title="@js(__('Rename'))" :aria-label="@js(__('Rename'))"><i class="fa-solid fa-check"></i></button>
+                                    </div>
+                                </div>
+                                <div class="block-menu-grid">
+                                    <div class="block-menu-field" :title="@js(__('More bars are added at the end of the block (with a "?" each); fewer take its last bars out'))">
+                                        <span class="block-menu-label">{{ __('Bars') }}</span>
+                                        <div class="stepper">
+                                            <button type="button" @click="setBlockBars(menuBlock(), menuBlockInfo().bars - 1)" :disabled="menuBlockInfo().bars <= 1" :aria-label="@js(__('Fewer bars'))"><i class="fa-solid fa-minus"></i></button>
+                                            <input type="number" min="1" max="128" :value="menuBlockInfo().bars" @change="setBlockBars(menuBlock(), $event.target.value)" :aria-label="@js(__('Bars'))">
+                                            <button type="button" @click="setBlockBars(menuBlock(), menuBlockInfo().bars + 1)" :aria-label="@js(__('More bars'))"><i class="fa-solid fa-plus"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="block-menu-field" :title="@js(__('How many times this block is played, one after the other'))">
+                                        <span class="block-menu-label">{{ __('Repetitions') }}</span>
+                                        <div class="stepper">
+                                            <button type="button" @click="setRepeats(menuBlock(), menuBlockInfo().repeats - 1)" :disabled="menuBlockInfo().repeats <= 1" :aria-label="@js(__('Fewer repetitions'))"><i class="fa-solid fa-minus"></i></button>
+                                            <input type="number" min="1" max="50" :value="menuBlockInfo().repeats" @change="setRepeats(menuBlock(), $event.target.value)" :aria-label="@js(__('Repetitions'))">
+                                            <button type="button" @click="setRepeats(menuBlock(), menuBlockInfo().repeats + 1)" :aria-label="@js(__('More repetitions'))"><i class="fa-solid fa-plus"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {{-- Start time: where the block starts in the recording --}}
+                                <div class="block-menu-field">
+                                    <span class="block-menu-label">{{ __('Starts at') }}</span>
+                                    <div class="block-menu-time">
+                                        <button type="button" class="nudge" @click="setBlockTime(menuBlock(), blockStart(menuBlock()) - 0.1)" title="{{ __('0.1 s earlier') }}">−0,1</button>
+                                        <input type="text" inputmode="decimal" :value="formatClock(blockStart(menuBlock()))" @change="setBlockTime(menuBlock(), $event.target.value); $event.target.value = formatClock(blockStart(menuBlock()))"
+                                            @keydown.enter.prevent="$event.target.blur()" :aria-label="@js(__('Starts at'))" placeholder="0:00.00">
+                                        <button type="button" class="nudge" @click="setBlockTime(menuBlock(), blockStart(menuBlock()) + 0.1)" title="{{ __('0.1 s later') }}">+0,1</button>
+                                        <button type="button" class="nudge now" x-show="hasMusic && !clickOnly" @click="const block = menuBlock(); blockMenu = null; openMark(block, $event)"
+                                            title="{{ __('Mark the start of this block now') }}"><i class="fa-regular fa-clock"></i> {{ __('Now') }}</button>
+                                    </div>
+                                    <p class="help" x-text="menuTimeHelp()"></p>
+                                    <button type="button" class="link-btn" x-show="menuBlockInfo().index > 0 && freeTiming && menuBlock()?.data.free_start !== undefined"
+                                        @click="setBlockTime(menuBlock(), null)">{{ __('Back to right after the block before') }}</button>
+                                </div>
+                            </div>
+                        </template>
                     </div>
 
                     {{-- New version for an instrument: a copy of the base map --}}
@@ -606,6 +751,12 @@
                             </div>
                             <p class="ws-panel-help mt-2">{{ __('One line per bar: the block that starts in it and the chord of each beat ("/" or empty: the chord goes on; "G D": G on the beat and D on the "and"). Importing needs the same number of bars and is not saved until you save; in a version only the chords are imported.') }}</p>
                             <p class="ws-panel-help mt-2" x-show="csvMessage" x-text="csvMessage" :style="csvError ? 'color: #dc2626' : ''"></p>
+                        </div>
+                        {{-- Fast songs (a chord over two bars): every chord twice as long; the extra bars are then removed by hand --}}
+                        <div class="ws-panel-section" x-show="!versionId">
+                            <div class="ws-panel-label"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> {{ __('Double the bars') }}</div>
+                            <button type="button" class="ws-btn" @click="doubleBars(); optionsOpen = false" :disabled="!ticks.length"><i class="fa-solid fa-clone"></i> {{ __('Double every bar') }}</button>
+                            <p class="ws-panel-help mt-2">{{ __('Every chord lasts twice as long (one bar becomes two), for fast songs where a chord takes two bars. The BPM and the empty beats before the first chord stay; remove the extra bars afterwards. Undo goes back; nothing is kept until you save.') }}</p>
                         </div>
                         {{-- Wrong chord sheet: the chords out, to write them by ear (blocks and bars stay) --}}
                         <div class="ws-panel-section" x-show="!versionId">
@@ -813,7 +964,6 @@
                 barMenu: null,
                 clock: 0,
                 playingSheetChord: -1,
-                playingLine: null,
                 currentTick: -1,
                 // Bars marked (click, then Shift + click): { anchor, from, to }; from / to null when none.
                 selection: { anchor: null, from: null, to: null },
@@ -830,7 +980,6 @@
                 metronome: false,
                 audioSpeed: 1,
                 // Lines view: what a click on a chord does ('break' or 'passing').
-                lineTool: 'play',
                 commonNames: ['INTRO', 'PRIMEIRA PARTE', 'SEGUNDA PARTE', 'PRÉ-REFRÃO', 'REFRÃO', 'PONTE', 'INTERLÚDIO', 'SOLO', 'RIFF', 'FINAL',
                     'VERSE', 'PRE CHORUS', 'CHORUS', 'BRIDGE', 'INTERLUDE', 'TAG', 'OUTRO'],
 
@@ -849,7 +998,7 @@
                         sessionStorage.removeItem(this.placeKey);
                     } catch (error) {}
                     if (!place || Date.now() - place.at > 60000) return;
-                    if (['play', 'edit', 'lines'].includes(place.mode)) this.mode = place.mode;
+                    if (['play', 'edit'].includes(place.mode)) this.mode = place.mode;
                     if (place.pane) this.pane = place.pane;
                     this.$nextTick(() => requestAnimationFrame(() => window.scrollTo(0, place.y)));
                 },
@@ -866,17 +1015,16 @@
                     }
                     // The last pointer used: a finger opens the chord editor, a mouse types right in the cell.
                     window.addEventListener('pointerdown', event => { this.touch = event.pointerType === 'touch' || event.pointerType === 'pen'; }, true);
-                    window.addEventListener('pointermove', event => { this.onDragMove(event); this.onSheetDragMove(event); this.onBlockDragMove(event); });
-                    window.addEventListener('pointerup', () => { this.onDragEnd(); this.onSheetDragEnd(); this.onBlockDragEnd(); });
-                    window.addEventListener('pointercancel', () => { this.onDragEnd(); this.onSheetDragEnd(); this.blockDrag = null; });
+                    window.addEventListener('pointermove', event => { this.onDragMove(event); this.onSheetDragMove(event); this.onGroupDragMove(event); });
+                    window.addEventListener('pointerup', () => { this.onDragEnd(); this.onSheetDragEnd(); this.onGroupDragEnd(); });
+                    window.addEventListener('pointercancel', () => { this.onDragEnd(); this.onSheetDragEnd(); this.groupDrag = null; });
                     window.addEventListener('beforeunload', event => {
                         if (this.dirty && !this.saving) event.preventDefault();
                     });
-                    // What is being played in the sheet and in the lines, worked out once per change (not once per
-                    // chord shown), so following the music stays light.
+                    // What is being played in the sheet, worked out once per change (not once per chord shown), so
+                    // following the music stays light.
                     Alpine.effect(() => {
                         this.playingSheetChord = this.currentSheetChord;
-                        this.playingLine = this.mode === 'lines' ? this.linePlaying : null;
                     });
                     const follow = () => {
                         this.clock = this.now();
@@ -888,12 +1036,10 @@
                             const before = this.currentBar;
                             const chordBefore = this.currentSheetChord;
                             this.currentTick = tick;
-                            if (this.isPlaying() && this.mode === 'lines') {
-                                const position = this.linePlaying;
-                                if (JSON.stringify(position) !== this.lastLinePlaying) { this.lastLinePlaying = JSON.stringify(position); this.scrollToLineChord(); }
-                            } else if (this.isPlaying() && this.currentBar !== before) this.scrollToBar(this.currentBar);
+                            if (this.isPlaying() && this.currentBar !== before) { this.followAccordion(); this.scrollToBar(this.shownBar); }
                             const chord = this.currentSheetChord;
-                            if (this.isPlaying() && chord >= 0 && chord !== chordBefore) this.scrollToSheetChord(chord);
+                            // A new block goes to the top of the chord sheet; within a block, the lit chord is kept in view.
+                            if (this.isPlaying() && !this.followSheet() && chord >= 0 && chord !== chordBefore) this.scrollToSheetChord(chord);
                         }
                         requestAnimationFrame(follow);
                     };
@@ -904,6 +1050,8 @@
                 get bars() {
                     const size = this.perBar * 2;
                     const bars = [];
+                    const timed = this.timedBlocks();
+                    let previousOwner = null;
                     // Drawn again only when what a bar shows changes, not when it moves (equal bars told apart by their count).
                     const seen = {};
                     for (let start = 0; start < this.ticks.length; start += size) {
@@ -919,19 +1067,40 @@
                             });
                         }
                         const blocks = this.blocks.filter(block => block.startTick >= start && block.startTick < start + size);
+                        // The block of the bar: the one playing on its first beat (bar 1 belongs to the first block even
+                        // when its first beats are empty). A bar of another block than the one before starts a new row.
+                        const owner = this.blockOfTick(start) ?? timed[0] ?? null;
+                        const groupStart = !!owner && owner !== previousOwner;
+                        previousOwner = owner;
+                        // Names shown in the bar: the "back to the start" markers and the blocks starting after its first
+                        // beat (the block of a new row is named in its head; so is the first block in bar 1).
+                        const chips = blocks.filter(block => this.isMarker(block) || !(groupStart && block === owner && (block.startTick === start || start === 0)));
                         // Drawn again only when what it shows changes (not on every change elsewhere in the song).
                         const content = [this.key, part.join(','), this.splits.filter(tick => tick >= start && tick < start + size).map(tick => tick - start).join(','),
-                            blocks.map(block => `${block.id}:${block.startTick - start}:${block.data.section}:${block.data.jump ?? ''}`).join(',')].join('|');
+                            blocks.map(block => `${block.id}:${block.startTick - start}:${block.data.section}:${block.data.jump ?? ''}`).join(','),
+                            groupStart ? `head:${owner.id}:${owner.data.section}` : ''].join('|');
                         seen[content] = (seen[content] ?? 0) + 1;
-                        bars.push({ beats, blocks, key: `${content}#${seen[content]}` });
+                        bars.push({ beats, blocks, chips, group: groupStart ? owner : null, owner: owner?.id ?? null, key: `${content}#${seen[content]}` });
                     }
                     return bars;
                 },
                 get currentBar() { return this.currentTick < 0 ? -1 : Math.floor(this.currentTick / (this.perBar * 2)); },
+                // The bar lit while playing: in a grouped run, the bar of the block in view played now by a hidden repetition.
+                get shownBar() {
+                    const bar = this.currentBar;
+                    if (bar < 0) return bar;
+                    const size = this.perBar * 2;
+                    const owner = this.blockOfTick(bar * size);
+                    if (!owner || !this.isHiddenRepeat(owner)) return bar;
+                    const head = this.blocks.find(block => block.id === this.groupOf(owner)[0]);
+                    return head ? Math.floor(head.startTick / size) + bar - Math.floor(owner.startTick / size) : bar;
+                },
                 get currentBeat() { return this.currentTick < 0 ? -1 : Math.floor((this.currentTick % (this.perBar * 2)) / 2); },
                 isMarker(block) { return isMarkerData(block.data); },
                 blockName(block) { return String(block.data.section || '').replaceAll('_', ' '); },
                 typeStyle(name) { return `--type-color: var(--type-${blockType(name)})`; },
+                // The same as an object: on an element with x-show, a style string would replace its display: none.
+                typeVars(name) { return { '--type-color': `var(--type-${blockType(name)})` }; },
                 timedBlocks() { return this.blocks.filter(block => !this.isMarker(block)).sort((a, b) => a.startTick - b.startTick); },
                 blockOfTick(tick) { return this.timedBlocks().filter(block => block.startTick <= tick).at(-1) ?? null; },
                 // The block that starts in a bar (on its first beat or later in it, e.g. on the "and" of beat 4).
@@ -961,8 +1130,6 @@
                     block.data = { ...block.data, start: formatStart(start) };
                     this.revision++;
                 },
-                previousBlock(bar) { const list = this.timedBlocks(); return list[list.indexOf(this.blockAtBar(bar)) - 1] ?? null; },
-                nextBlock(bar) { const list = this.timedBlocks(); const block = this.blockAtBar(bar); return block ? list[list.indexOf(block) + 1] ?? null : null; },
                 scrollToBar(bar) {
                     this.$nextTick(() => document.querySelector(`[data-bar="${bar}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
                 },
@@ -1141,6 +1308,7 @@
                     else if (this.clickOnly) this.clickOffset = time;
                     else if (this.playerReady) this.seekVideo(time, false);
                     this.scrollToBar(this.currentBar);
+                    this.followSheet(true);
                 },
                 get canPlay() { return !!audio || !!this.videoId || this.clickOnly; },
                 get hasMusic() { return !!audio || !!this.videoId; },
@@ -1282,6 +1450,7 @@
                 playFromTickNow(tick) {
                     const time = Math.max(0, this.timeOfTick(tick));
                     this.currentTick = tick;
+                    this.followSheet(true);
                     if (audio) {
                         audio.currentTime = time;
                         audio.play();
@@ -1337,7 +1506,40 @@
                     }
                     return n;
                 },
-                // Keeps the lit chord in view while playing (in the sheet's own scroll on large screens).
+                // The section of the block that starts playing at the top of the chord sheet (in its own scroll on large
+                // screens; on small ones the page scrolls, below the toolbar).
+                scrollToSheetSection(s) {
+                    this.$nextTick(() => {
+                        const section = document.querySelector(`.sheet-box [data-sheet="${s}"]`);
+                        if (!section || !section.offsetParent) return;
+                        const box = section.closest('.sheet-box');
+                        if (box.scrollHeight > box.clientHeight + 4) {
+                            const top = section.getBoundingClientRect().top - box.getBoundingClientRect().top;
+                            box.scrollTo({ top: Math.max(0, box.scrollTop + top - 8), behavior: 'smooth' });
+                        } else if (this.pane === 'sheet') {
+                            section.style.scrollMarginTop = `${this.toolbarBottom() + 8}px`;
+                            section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+                        }
+                    });
+                },
+                // The block at the current place: its section at the top of the chord sheet when it is not the one
+                // brought there last (or always, `force`, after a jump to a bar). True when it scrolled.
+                sheetShownSection: -1,
+                followSheet(force = false) {
+                    const section = this.currentSheetSection;
+                    if (section < 0 || (!force && section === this.sheetShownSection)) return false;
+                    this.sheetShownSection = section;
+                    this.scrollToSheetSection(section);
+                    return true;
+                },
+                // Where the toolbar ends once it sticks to the top of the screen (what scrolled content must stay below).
+                toolbarBottom() {
+                    const bar = document.querySelector('.ws-toolbar');
+                    if (!bar) return 0;
+                    const style = getComputedStyle(bar);
+                    return (style.position === 'sticky' ? parseFloat(style.top) || 0 : 0) + bar.offsetHeight;
+                },
+                // Keeps the lit chord in view (in the sheet's own scroll on large screens).
                 scrollToSheetChord(n) {
                     this.$nextTick(() => {
                         const chord = document.querySelector(`.sheet-box [data-chord="${n}"]`);
@@ -1345,10 +1547,20 @@
                         const box = chord.closest('.sheet-box');
                         if (box.scrollHeight > box.clientHeight + 4) {
                             const top = chord.getBoundingClientRect().top - box.getBoundingClientRect().top;
-                            if (top < box.clientHeight * .15 || top > box.clientHeight * .7) {
-                                box.scrollTo({ top: box.scrollTop + top - box.clientHeight * .3, behavior: 'smooth' });
+                            // Only when it is out of sight, so the block that came to the top stays there (a chord written
+                            // at the end of the section before, above it, does not take the sheet back up).
+                            const section = box.querySelector(`[data-sheet="${this.currentSheetSection}"]`);
+                            const sectionShown = !!section && section.getBoundingClientRect().top >= box.getBoundingClientRect().top - 1;
+                            if ((top < 0 && !sectionShown) || top > box.clientHeight * .85) {
+                                box.scrollTo({ top: box.scrollTop + top - box.clientHeight * .15, behavior: 'smooth' });
                             }
                         } else if (this.pane === 'sheet') {
+                            // The same on small screens, where the page scrolls (below the toolbar).
+                            const below = this.toolbarBottom();
+                            const section = box.querySelector(`[data-sheet="${this.currentSheetSection}"]`);
+                            const top = chord.getBoundingClientRect().top;
+                            if (top < below && section && section.getBoundingClientRect().top >= below - 1) return;
+                            chord.style.scrollMarginTop = `${below + 8}px`;
                             chord.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
                         }
                     });
@@ -1486,9 +1698,11 @@
                     this.remember();
                     const reshaped = change([...items]);
                     const first = reshaped.findIndex((item, i) => item.block.id !== before[i]);
-                    let tick = 0;
-                    const ticks = [];
-                    const splits = [];
+                    // The empty beats before the first chord (the song's lead) stay at the start, before whichever block is first.
+                    const lead = this.timedBlocks()[0]?.startTick ?? 0;
+                    let tick = lead;
+                    const ticks = this.ticks.slice(0, lead);
+                    const splits = this.splits.filter(split => split < lead);
                     this.blocks = reshaped.map((item, i) => {
                         const block = { ...item.block, startTick: tick, data: { ...item.block.data } };
                         if (first >= 0 && i >= first && !this.isMarker(block)) {
@@ -1514,59 +1728,6 @@
                 },
                 // Index of a block among all blocks in order (markers too).
                 blockIndex(block) { return [...this.blocks].sort((a, b) => a.startTick - b.startTick).findIndex(item => item.id === block.id); },
-                // ---- Dragging a block to another place (Lines view): by its grip, or by its header with a mouse ----
-                blockDrag: null,
-                startBlockDrag(event, block) {
-                    if (event.target.closest('button')) return;
-                    if (event.pointerType === 'touch' && !event.target.closest('.block-grip')) return;
-                    event.preventDefault();
-                    this.blockDrag = { id: block.id, x: event.clientX, y: event.clientY, moved: false, target: null, before: true };
-                },
-                onBlockDragMove(event) {
-                    const drag = this.blockDrag;
-                    if (!drag) return;
-                    if (!drag.moved && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 6) return;
-                    if (!drag.moved) {
-                        // The blocks fold to their heads: the dragged one is brought back under the pointer.
-                        drag.moved = true;
-                        this.$nextTick(() => {
-                            const element = document.querySelector(`[data-line-block="${drag.id}"]`);
-                            if (element) window.scrollBy(0, element.getBoundingClientRect().top - (event.clientY - 16));
-                        });
-                        return;
-                    }
-                    // The block under the pointer, and which half of it: the dragged one goes before or after it.
-                    const boxes = [...document.querySelectorAll('[data-line-block]')].map(element => ({ id: Number(element.dataset.lineBlock), box: element.getBoundingClientRect() }));
-                    const over = boxes.find(item => event.clientY < item.box.bottom) ?? boxes[boxes.length - 1];
-                    if (over) {
-                        drag.target = over.id;
-                        drag.before = event.clientY < over.box.top + over.box.height / 2;
-                    }
-                    // Near the edges of the window, the page scrolls.
-                    if (event.clientY < 60) window.scrollBy(0, -12);
-                    else if (event.clientY > window.innerHeight - 60) window.scrollBy(0, 12);
-                },
-                onBlockDragEnd() {
-                    const drag = this.blockDrag;
-                    this.blockDrag = null;
-                    if (!drag?.moved || drag.target === null || drag.target === drag.id) return;
-                    const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
-                    const dragged = list.find(block => block.id === drag.id);
-                    const target = list.find(block => block.id === drag.target);
-                    // A grouped card moves its whole group; dropped after a grouped card, it goes after that group.
-                    const ids = dragged && this.isCollapsed(dragged) ? this.groupOf(dragged) : [drag.id];
-                    if (ids.includes(drag.target)) return;
-                    const targetIds = target && this.isCollapsed(target) ? this.groupOf(target) : [drag.target];
-                    const from = list.findIndex(block => block.id === ids[0]);
-                    let to = drag.before ? list.findIndex(block => block.id === targetIds[0]) : list.findIndex(block => block.id === targetIds[targetIds.length - 1]) + 1;
-                    if (from < to) to -= ids.length;
-                    if (from < 0 || to === from) return;
-                    this.reshapeBlocks(items => {
-                        const moved = items.splice(from, ids.length);
-                        items.splice(to, 0, ...moved);
-                        return items;
-                    });
-                },
                 // Ticks before the song's first chord (empty beats in bar 1).
                 get leadTicks() { return this.timedBlocks()[0]?.startTick ?? 0; },
                 // ---- Review: "Save as reviewed" once the bars are right ----
@@ -1575,18 +1736,7 @@
                 unmarkReviewed() {
                     if (confirm(@js(__('Undo the review of this song? It will no longer show as reviewed.')))) this.save({ reviewed: false });
                 },
-                // ---- Renaming a block in the Lines view (every repetition of a grouped card) ----
-                lineRename: null,
-                renameLineBlock(block, typed) {
-                    if (this.lineRename !== block.id) return;
-                    this.lineRename = null;
-                    const name = String(typed ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
-                    if (!name || name === this.blockName(block)) return;
-                    this.forGroup(block, target => { target.data = { ...target.data, section: name }; });
-                    this.revision++;
-                },
-                // ---- Equal blocks played one after the other (Lines view): shown as one card "×N" ----
-                expandedGroups: {},
+                // ---- Equal blocks played one after the other: a run of the same block "×N" ----
                 repeatCache: { key: null, value: null },
                 // For each block, the first of its run of equal blocks (same name, chords, durations), and each run's blocks.
                 get repeats() {
@@ -1612,14 +1762,57 @@
                     return this.repeatCache.value;
                 },
                 groupOf(block) { return this.repeats.members[this.repeats.head[block.id]] || [block.id]; },
-                isRepeatHead(block) { return (this.repeats.head[block.id] ?? block.id) === block.id; },
-                isCollapsed(block) { return this.isRepeatHead(block) && this.groupOf(block).length > 1 && !this.expandedGroups[block.id]; },
-                isHiddenRepeat(block) { const head = this.repeats.head[block.id]; return head !== undefined && head !== block.id && !this.expandedGroups[head]; },
-                toggleGroup(block) { this.expandedGroups = { ...this.expandedGroups, [block.id]: !this.expandedGroups[block.id] }; },
-                // A change on a grouped card goes to every block of the group (one step to undo).
+                // A run is shown grouped (one block "×N", its bars once) until "Show each block" is chosen on it.
+                expandedGroups: {},
+                isCollapsed(block) { const ids = this.groupOf(block); return ids.length > 1 && !this.expandedGroups[ids[0]]; },
+                isHiddenRepeat(block) { return this.isCollapsed(block) && this.groupOf(block)[0] !== block.id; },
+                isHiddenBar(bar) {
+                    const owner = bar.owner === null ? null : this.blocks.find(block => block.id === bar.owner);
+                    if (!owner) return false;
+                    return this.isHiddenRepeat(owner) || (this.accordion && !this.isOpenBlock(owner));
+                },
+                // ---- Accordion: every block collapsed to its head, one open at a time ----
+                accordion: (() => { try { return localStorage.getItem('bars-accordion') === '1'; } catch (error) { return false; } })(),
+                openBlockId: null,
+                toggleAccordion() {
+                    this.accordion = !this.accordion;
+                    try { localStorage.setItem('bars-accordion', this.accordion ? '1' : '0'); } catch (error) {}
+                    // The block being played (or the one of the selected bar) stays open.
+                    const block = this.blockOfTick(this.currentTick >= 0 ? this.currentTick : (this.selection.anchor ?? -1) * this.perBar * 2);
+                    this.openBlockId = this.accordion && block ? this.shownHead(block).id : null;
+                },
+                // A grouped run opens and closes as one block (its first one).
+                shownHead(block) { return this.isCollapsed(block) ? this.blocks.find(item => item.id === this.groupOf(block)[0]) ?? block : block; },
+                isOpenBlock(block) { return !!block && this.openBlockId === this.shownHead(block).id; },
+                toggleOpenBlock(block) {
+                    const id = this.shownHead(block).id;
+                    this.openBlockId = this.openBlockId === id ? null : id;
+                    if (this.openBlockId !== null) this.$nextTick(() => document.querySelector(`[data-group-block="${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+                },
+                // While playing, the block playing opens (the others close).
+                followAccordion() {
+                    if (!this.accordion) return;
+                    const block = this.blockOfTick(this.currentTick);
+                    if (block && !this.isOpenBlock(block)) this.openBlockId = this.shownHead(block).id;
+                },
+                toggleGroup(block) {
+                    const head = this.groupOf(block)[0];
+                    this.expandedGroups = { ...this.expandedGroups, [head]: !this.expandedGroups[head] };
+                },
+                // The whole run of a grouped block taken out.
+                removeRun(block) {
+                    const ids = this.groupOf(block);
+                    if (this.timedBlocks().length <= ids.length) return;
+                    // By place (the chord sheet's sections go the same way).
+                    const order = this.blockItems().map(item => item.block.id);
+                    const removed = order.map((id, i) => (ids.includes(id) ? i : -1)).filter(i => i >= 0);
+                    this.reshapeBlocks(items => items.filter((item, i) => !removed.includes(i)));
+                    this.notice = @js(__('Block removed (Undo brings it back).'));
+                },
+                // A change on a block of a run goes to every block of the run (one step to undo).
                 forGroup(block, change) {
                     this.remember();
-                    const ids = this.isCollapsed(block) ? this.groupOf(block) : [block.id];
+                    const ids = this.groupOf(block);
                     ids.forEach(id => { const target = this.blocks.find(item => item.id === id); if (target) change(target); });
                 },
                 // The block played `times` times one after the other: copies added after its run, or the last ones taken out.
@@ -1644,14 +1837,6 @@
                     }
                     this.notice = @js(__(':name is played :n times.')).replace(':name', this.blockName(block)).replace(':n', wanted);
                 },
-                removeGroup(block) {
-                    const ids = this.groupOf(block);
-                    if (this.timedBlocks().length <= ids.length) return;
-                    const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
-                    const first = list.findIndex(item => item.id === ids[0]);
-                    this.reshapeBlocks(items => { items.splice(first, ids.length); return items; });
-                    this.notice = @js(__('Block removed (Undo brings it back).'));
-                },
                 duplicateBlock(block) {
                     const at = this.blockIndex(block);
                     const id = nextId++;
@@ -1660,6 +1845,9 @@
                         items.splice(at + 1, 0, copy);
                         return items;
                     });
+                    // The copy shown on its own (not grouped "×N" with the block), to be moved or changed.
+                    const head = this.groupOf(this.blocks.find(item => item.id === id) ?? block)[0];
+                    this.expandedGroups = { ...this.expandedGroups, [head]: true };
                 },
                 removeBlock(block) {
                     if (this.timedBlocks().length < 2) return;
@@ -1882,7 +2070,8 @@
                 },
                 // The chord sheet (parsed) split into the blocks of the grid as they are now, the same rule as the server
                 // (SyncChordSheetWithStructureService): each line goes to the block of its first chord, a note with the
-                // chord after it, lyrics without chords with the chord before them; "back to the start" marks between.
+                // chord after it, lyrics without chords with the chord before them (before the first chord of their
+                // section, with the chord after them); "back to the start" marks between.
                 // Unchanged when the sheet does not have the grid's number of chords.
                 sheetByBlocks(view) {
                     const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
@@ -1900,12 +2089,16 @@
                     let last = 0;
                     view.forEach(section => {
                         if (section.marker) return;
+                        // Lyrics before the first chord of a section that has chords stay with it (a line whose chord was
+                        // taken out does not go to the block before).
+                        const hasChords = section.lines.some(line => line.units && line.units.some(unit => unit.chord !== null));
+                        let chordSeen = false;
                         section.lines.forEach(line => {
                             let ref = n;
                             if (line.units) {
                                 const count = line.units.filter(unit => unit.chord !== null).length;
-                                ref = count ? n : last;
-                                if (count) last = n + count - 1;
+                                ref = count || (hasChords && !chordSeen) ? n : last;
+                                if (count) { last = n + count - 1; chordSeen = true; }
                                 n += count;
                             }
                             const block = blockOf(ref);
@@ -2180,12 +2373,16 @@
                     const andStarts = this.ticks[onBeat + 1] !== undefined && this.startsChord(onBeat + 1);
                     const onAnd = andStarts && (!!event?.target?.closest?.('.is-and') || !(onBeat === 0 || this.startsChord(onBeat)));
                     const tick = onBeat + (onAnd ? 1 : 0);
-                    if (this.mode === 'play') return this.canPlay ? this.playFromTick(tick) : (this.currentTick = tick);
+                    if (this.mode === 'play') {
+                        if (this.canPlay) return this.playFromTick(tick);
+                        this.currentTick = tick;
+                        return this.followSheet(true);
+                    }
                     // Edit mode: a click selects the beat (Backspace removes its change); a double click edits its chord.
                     // On a beat where no chord starts, the chord can be typed right there. A tap opens the editor.
                     if (!this.isPlaying()) this.currentTick = tick;
                     this.barMenu = null;
-                    this.scrollToSheetChord(this.currentSheetChord);
+                    if (!this.followSheet()) this.scrollToSheetChord(this.currentSheetChord);
                     if (this.touch) return this.openBeatEditor(bar, beat, cell, onAnd ? 1 : (andStarts && !this.chordStartsAt(onBeat) ? 1 : 0));
                     if (!this.isPlaying() && !andStarts && !this.chordStartsAt(onBeat)) this.openInline(onBeat, '');
                 },
@@ -2195,6 +2392,8 @@
                     const onBeat = (bar * this.perBar + beat) * 2;
                     const andStarts = this.ticks[onBeat + 1] !== undefined && this.startsChord(onBeat + 1);
                     const onAnd = andStarts && (!!event?.target?.closest?.('.is-and') || !this.chordStartsAt(onBeat));
+                    const cell = event?.target?.closest?.('.beat');
+                    if (cell) return this.openBeatEditor(bar, beat, cell, onAnd ? 1 : 0);
                     this.editTick(onBeat + (onAnd ? 1 : 0));
                 },
                 editTick(tick) {
@@ -2504,7 +2703,7 @@
                     this.inline = null;
                     this.barMenu = null;
                     this.copyOffer = null;
-                    this.editor = { bar, beat, half: half ?? (this.ticks[tick + 1] !== this.ticks[tick] ? 1 : 0) };
+                    this.editor = { bar, beat, half: half ?? (this.ticks[tick + 1] !== this.ticks[tick] ? 1 : 0), text: '' };
                     this.place(this.ref('editor'), cell);
                     this.fillEditor();
                     this.$nextTick(() => { this.ref('editorChord').focus(); this.ref('editorChord').select(); });
@@ -2513,6 +2712,32 @@
                 fillEditor() {
                     this.editorError = '';
                     this.ref('editorChord').value = this.transposeName(this.ticks[this.editorTick()]) || '';
+                    // The chord shown at first is not a filter: every chord is offered until something is typed.
+                    if (this.editor) this.editor.text = '';
+                },
+                editorBlockName() { return this.editor ? this.blockName(this.blockOfTick(this.editorTick()) ?? { data: {} }) : ''; },
+                editorChordNow() { return this.editor ? this.transposeName(this.ticks[this.editorTick()]) || null : null; },
+                // The song's chords (in the order they first come, as shown in the current key), or the chords of the
+                // key that the song does not use yet; filtered by what is typed.
+                pickerChords(kind) {
+                    const song = [];
+                    this.ticks.forEach(chord => {
+                        const name = chord && chord !== '?' ? this.transposeName(chord) : null;
+                        if (name && !song.includes(name)) song.push(name);
+                    });
+                    let list = song;
+                    if (kind === 'key') {
+                        if (!this.key || typeof ChordTransposer === 'undefined') return [];
+                        const minor = /m$/.test(this.key);
+                        const base = minor ? ['Am', 'C', 'Dm', 'Em', 'E', 'F', 'G'] : ['C', 'Dm', 'Em', 'F', 'G', 'Am'];
+                        list = base.map(chord => ChordTransposer.transposeChord(chord, minor ? 'Am' : 'C', this.key)).filter(chord => !song.includes(chord));
+                    }
+                    const typed = (this.editor?.text || '').trim().toLowerCase();
+                    return typed ? list.filter(chord => chord.toLowerCase().startsWith(typed)) : list;
+                },
+                pickChord(chord) {
+                    this.ref('editorChord').value = chord;
+                    this.applyChord();
                 },
                 canRemoveChange() { return !!this.editor && this.isChangeAt(this.editorTick()); },
                 // As typed in the cell: a chord that starts there is renamed, otherwise a new one starts.
@@ -2790,81 +3015,258 @@
                     }
                     return ticks;
                 },
-                // Lines view, "Play" tool: the song from that chord, as a click on its beat in the bars.
-                playLineChord(block, position) {
-                    const tick = this.blockChordTicks(block)[position];
-                    if (tick === undefined) return;
-                    if (this.canPlay) this.playFromTick(tick); else this.currentTick = tick;
-                },
                 // Line breaks and passing chords of a block, valid while it has the chords they were set for.
                 lineState(block) {
                     const chords = this.blockChords(block);
                     const valid = JSON.stringify(chords) === JSON.stringify(block.data.lineChords || null);
                     return { chords, valid, breaks: valid ? (block.data.breaks || []) : [], passing: valid ? (block.data.passing || []) : [] };
                 },
+                // The line breaks set before (kept as they were when the block's chords did not change).
                 withBreaks(chords, breaks) { return chords.flatMap((chord, i) => (breaks.includes(i) && i > 0 ? ['|', chord] : [chord])); },
-                get lineBlocks() {
-                    const timed = this.timedBlocks();
-                    const states = timed.map(block => this.lineState(block));
-                    const cycles = songCyclesOf(states.map(state => this.withBreaks(state.chords, state.breaks)), states.map(state => state.passing));
-                    return timed.map((block, index) => {
-                        const state = states[index];
-                        const lines = chordSegments(this.withBreaks(state.chords, state.breaks), cycles, state.passing)
-                            .map(line => line.map(step => step.chords.map((name, i) => ({ name, position: step.positions[i], passing: state.passing.includes(step.positions[i]) }))));
-                        return { block, index, name: this.blockName(block), manual: state.breaks.length > 0, lines, cycles };
-                    });
-                },
-                // Chord being played in the lines view: its block and position (chord index in the block).
-                get linePlaying() {
-                    if (this.currentTick < 0) return null;
-                    const block = this.blockOfTick(this.currentTick);
-                    if (!block) return null;
-                    const position = this.blockChordTicks(block).filter(tick => tick <= this.currentTick).length - 1;
-                    return position < 0 ? null : { id: block.id, position };
-                },
-                // Keeps the chord being played in view in the lines view.
-                scrollToLineChord() {
-                    const playing = this.linePlaying;
-                    if (!playing) return;
-                    this.$nextTick(() => {
-                        const element = document.querySelector(`[data-line-chord="${playing.id}-${playing.position}"]`);
-                        if (!element) return;
-                        const box = element.getBoundingClientRect();
-                        if (box.top < window.innerHeight * .2 || box.bottom > window.innerHeight * .8) {
-                            window.scrollBy({ top: box.top - window.innerHeight * .35, behavior: 'smooth' });
-                        }
-                    });
-                },
-                // Starts editing the lines of a block whose chords changed: none set yet.
+                // Starts marking the passing chords of a block whose chords changed: none set yet.
                 linesFor(block) {
                     const state = this.lineState(block);
                     if (!state.valid) block.data = { ...block.data, lineChords: state.chords, breaks: [], passing: [] };
                     return state;
                 },
-                clickLineChord(block, position, remember = true) {
-                    const item = this.lineBlocks.find(entry => entry.block === block);
-                    if (remember) this.remember();
-                    this.linesFor(block);
-                    if (this.lineTool === 'passing') {
-                        const passing = block.data.passing || [];
-                        block.data = { ...block.data, passing: passing.includes(position) ? passing.filter(p => p !== position) : [...passing, position].sort((a, b) => a - b) };
-                    } else {
-                        // Automatic lines become the starting point of the lines set by hand.
-                        let breaks = block.data.breaks || [];
-                        if (!breaks.length && item) breaks = item.lines.slice(1).map(line => line[0]?.[0]?.position).filter(p => p > 0);
-                        if (position > 0) breaks = breaks.includes(position) ? breaks.filter(p => p !== position) : [...breaks, position].sort((a, b) => a - b);
-                        block.data = { ...block.data, breaks };
-                    }
-                    this.revision++;
+                // ---- Passing chords: marked in the bar menu, underlined in the bars and on the public page ----
+                passingCache: { key: null, value: new Set() },
+                // Ticks where a passing chord starts.
+                get passingTicks() {
+                    const key = `${this.revision}:${this.ticks.length}:${this.splits.join(',')}:${this.blocks.map(block => `${block.id}@${block.startTick}:${(block.data.passing || []).join('.')}`).join(',')}`;
+                    if (this.passingCache.key === key) return this.passingCache.value;
+                    const ticks = new Set();
+                    this.timedBlocks().forEach(block => {
+                        const state = this.lineState(block);
+                        if (!state.passing.length) return;
+                        const starts = this.blockChordTicks(block);
+                        state.passing.forEach(position => { if (starts[position] !== undefined) ticks.add(starts[position]); });
+                    });
+                    this.passingCache = { key, value: ticks };
+                    return ticks;
                 },
-                automaticLines(block, remember = true) {
-                    if (remember) this.remember();
-                    this.linesFor(block);
-                    block.data = { ...block.data, breaks: [] };
+                // The chords starting in a bar, for its menu.
+                barChords(bar) {
+                    const size = this.perBar * 2;
+                    const chords = [];
+                    for (let tick = bar * size; tick < Math.min((bar + 1) * size, this.ticks.length); tick++) {
+                        if (this.ticks[tick] && this.startsChord(tick)) chords.push({ tick, name: this.ticks[tick], passing: this.passingTicks.has(tick) });
+                    }
+                    return chords;
+                },
+                // A chord marked or unmarked as passing, in its block and in the same place of the blocks repeated with it.
+                togglePassing(tick) {
+                    const block = this.blockOfTick(tick);
+                    if (!block) return;
+                    const position = this.blockChordTicks(block).indexOf(tick);
+                    if (position < 0) return;
+                    this.forGroup(block, target => {
+                        this.linesFor(target);
+                        const passing = target.data.passing || [];
+                        target.data = { ...target.data, passing: passing.includes(position) ? passing.filter(p => p !== position) : [...passing, position].sort((a, b) => a - b) };
+                    });
                     this.revision++;
                 },
 
                 // ---- Blocks ----
+                // A new block at the end of the song: `count` bars with a "?" each (chords to be written by ear), from the
+                // end of the song. Returns whether it was added.
+                addBlockAtEnd(typed, count) {
+                    const name = String(typed ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
+                    const bars = Math.max(1, Math.min(64, Math.round(Number(count) || 0)));
+                    if (!name || this.versionId) return false;
+                    const size = this.perBar * 2;
+                    this.remember();
+                    const startTick = this.ticks.length;
+                    for (let bar = 0; bar < bars; bar++) {
+                        // Each bar its own "?" (the same chord again would join the bars into one chord).
+                        if (bar > 0 || this.ticks[startTick - 1] === '?') this.splits.push(this.ticks.length);
+                        for (let tick = 0; tick < size; tick++) this.ticks.push('?');
+                    }
+                    this.blocks.push({ id: nextId++, startTick, data: { section: name, start: formatStart(this.timeOfTick(startTick)) } });
+                    this.originalTicks = [];
+                    this.revision++;
+                    this.notice = @js(__(':name added at the end with :n bars: write their chords in place of the "?".')).replace(':name', name).replace(':n', bars);
+                    this.$nextTick(() => document.querySelector(`[data-group-block="${this.blocks[this.blocks.length - 1].id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+                    return true;
+                },
+                // Where a block's ticks end (where the next block starts, or the song's end), and how many bars it has.
+                blockEnd(block) {
+                    const timed = this.timedBlocks();
+                    return timed[timed.indexOf(block) + 1]?.startTick ?? this.ticks.length;
+                },
+                blockBarCount(block) { return Math.max(1, Math.ceil((this.blockEnd(block) - block.startTick) / (this.perBar * 2))); },
+                // The block made `value` bars long: bars with a "?" each added at its end, or its last bars taken out
+                // (one bar at least). The blocks after it follow.
+                setBlockBars(block, value) {
+                    if (!block || this.versionId) return;
+                    const wanted = Math.max(1, Math.min(128, Math.round(Number(value) || 0)));
+                    const current = this.blockBarCount(block);
+                    if (!wanted || wanted === current) return;
+                    const size = this.perBar * 2;
+                    const end = this.blockEnd(block);
+                    this.remember();
+                    if (wanted > current) {
+                        const add = (wanted - current) * size;
+                        const added = [];
+                        // Each new bar its own "?" (the same chord again would join them into one chord).
+                        for (let bar = 0; bar < wanted - current; bar++) {
+                            if (bar > 0 || this.ticks[end - 1] === '?') added.push(end + bar * size);
+                        }
+                        this.ticks = [...this.ticks.slice(0, end), ...new Array(add).fill('?'), ...this.ticks.slice(end)];
+                        this.splits = [...this.splits.map(tick => (tick >= end ? tick + add : tick)), ...added];
+                        if (this.ticks[end + add] === '?' && !this.splits.includes(end + add)) this.splits.push(end + add);
+                        this.blocks = this.blocks.map(item => (item !== block && item.startTick >= end ? { ...item, startTick: item.startTick + add } : item));
+                        this.originalTicks = [];
+                    } else {
+                        this.removeTicks(Math.max(block.startTick + 2, end - (current - wanted) * size), end);
+                    }
+                    this.revision++;
+                    this.notice = @js(__(':name now has :n bars.')).replace(':name', this.blockName(block)).replace(':n', this.blockBarCount(block));
+                },
+                // ---- The menu of a block ----
+                blockMenu: null,
+                openBlockMenu(block, element) {
+                    if (!block || this.isMarker(block)) return;
+                    this.barMenu = null;
+                    this.inline = null;
+                    this.editor = null;
+                    this.blockMenu = { id: block.id };
+                    this.place(this.ref('blockMenu'), element);
+                },
+                menuBlock() { return this.blockMenu ? this.blocks.find(block => block.id === this.blockMenu.id) ?? null : null; },
+                renameMenuBlock(typed) {
+                    const block = this.menuBlock();
+                    const name = String(typed ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
+                    this.blockMenu = null;
+                    if (!block || !name || name === this.blockName(block)) return;
+                    this.remember();
+                    block.data = { ...block.data, section: name };
+                    this.revision++;
+                },
+                // Name, times played in a row and place of the menu's block (safe while the menu closes).
+                menuBlockInfo() {
+                    const block = this.menuBlock();
+                    if (!block) return { name: '', repeats: 1, index: -1, bars: 1, from: 0, to: 0, number: 0, total: 0 };
+                    const size = this.perBar * 2;
+                    const timed = this.timedBlocks();
+                    return {
+                        name: this.blockName(block), repeats: this.groupOf(block).length, index: timed.indexOf(block), bars: this.blockBarCount(block),
+                        from: Math.floor(block.startTick / size) + 1, to: Math.ceil(this.blockEnd(block) / size), number: timed.indexOf(block) + 1, total: timed.length,
+                    };
+                },
+                // What the start time of the menu's block follows.
+                menuTimeHelp() {
+                    const block = this.menuBlock();
+                    if (!block) return '';
+                    if (this.timedBlocks().indexOf(block) === 0) return @js(__('Where the song starts in the recording (bar 1); the other blocks follow it.'));
+                    if (!this.freeTiming) return @js(__('Follows the BPM. Changing it turns on free timing for the song.'));
+                    return block.data.free_start !== undefined
+                        ? @js(__('Marked time: the blocks after it count from here.'))
+                        : @js(__('Right after the block before, at the BPM.'));
+                },
+                // A block's start time typed in (m:ss.cc or seconds), or null: back to right after the block before it.
+                // The first block's is the song's start; another one's is a free-timing mark (turned on if it is off).
+                setBlockTime(block, value) {
+                    if (!block || this.versionId) return;
+                    const timed = this.timedBlocks();
+                    const i = timed.indexOf(block);
+                    if (i < 0) return;
+                    if (value === null) {
+                        if (i === 0 || block.data.free_start === undefined) return;
+                        this.remember();
+                        const data = { ...block.data };
+                        delete data.free_start;
+                        block.data = data;
+                        this.revision++;
+                        return;
+                    }
+                    const seconds = typeof value === 'number' ? Math.round(value * 100) / 100 : toSeconds(String(value).trim().replace(',', '.'));
+                    if (seconds === null || seconds < 0) {
+                        this.notice = @js(__('Type the time as m:ss.cc, e.g. 1:23.50.'));
+                        return;
+                    }
+                    if (i === 0) {
+                        this.remember();
+                        block.data = { ...block.data, start: formatFineStart(seconds) };
+                    } else {
+                        if (seconds <= this.blockStart(timed[i - 1]) + 0.05) {
+                            this.notice = @js(__(':name has to start after the block before it (:time).')).replace(':name', this.blockName(block)).replace(':time', this.formatClock(this.blockStart(timed[i - 1])));
+                            this.revision++;
+                            return;
+                        }
+                        const turnedOn = !this.freeTiming;
+                        // Turning free timing on is remembered too, so one undo takes both back.
+                        if (turnedOn) this.toggleFreeTiming();
+                        else this.remember();
+                        const starts = this.freeStarts(timed);
+                        const expected = starts[i - 1] + (block.startTick - timed[i - 1].startTick) * this.halfBeat;
+                        const data = { ...block.data };
+                        if (Math.abs(seconds - expected) < 0.005) delete data.free_start;
+                        else data.free_start = formatFineStart(seconds);
+                        block.data = data;
+                        if (turnedOn) {
+                            this.revision++;
+                            this.notice = @js(__(':name starts at :time (free timing turned on).')).replace(':name', this.blockName(block)).replace(':time', this.formatClock(seconds));
+                            return;
+                        }
+                    }
+                    this.revision++;
+                    this.notice = @js(__(':name starts at :time.')).replace(':name', this.blockName(block)).replace(':time', this.formatClock(seconds));
+                },
+                // ---- Dragging a block by its head: while dragging, the bars hide and only the heads show, so the order is
+                // easy to see; dropped before or after another block ----
+                groupDrag: null,
+                startGroupDrag(event, block) {
+                    if (this.versionId) return;
+                    event.preventDefault();
+                    this.blockMenu = null;
+                    this.barMenu = null;
+                    this.groupDrag = { id: block.id, x: event.clientX, y: event.clientY, moved: false, target: null, before: true };
+                },
+                onGroupDragMove(event) {
+                    const drag = this.groupDrag;
+                    if (!drag) return;
+                    if (!drag.moved && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 6) return;
+                    drag.moved = true;
+                    // The heads in sight (a repetition grouped "×N" or a block hidden away has none): over a block's
+                    // bars, the place is right before the next block.
+                    const heads = [...document.querySelectorAll('[data-group-block]')].filter(element => element.offsetParent)
+                        .map(element => ({ id: Number(element.dataset.groupBlock), box: element.getBoundingClientRect() }));
+                    const over = heads.find(item => event.clientY < item.box.bottom) ?? heads[heads.length - 1];
+                    if (over) {
+                        drag.target = over.id;
+                        drag.before = event.clientY < over.box.top + over.box.height / 2;
+                    }
+                    if (event.clientY < 60) window.scrollBy(0, -12);
+                    else if (event.clientY > window.innerHeight - 60) window.scrollBy(0, 12);
+                },
+                onGroupDragEnd() {
+                    const drag = this.groupDrag;
+                    this.groupDrag = null;
+                    if (!drag?.moved || drag.target === null || drag.target === drag.id) return;
+                    const block = this.blocks.find(item => item.id === drag.id);
+                    const target = this.blocks.find(item => item.id === drag.target);
+                    if (!block || !target) return;
+                    // A grouped run moves (and is passed over) as a whole.
+                    const ids = this.isCollapsed(block) ? this.groupOf(block) : [block.id];
+                    if (ids.includes(target.id)) return;
+                    const targetIds = this.isCollapsed(target) ? this.groupOf(target) : [target.id];
+                    const anchor = drag.before ? targetIds[0] : targetIds[targetIds.length - 1];
+                    // By place, not by id: the same change goes to the chord sheet's sections (which have no ids).
+                    const order = this.blockItems().map(item => item.block.id);
+                    const movedAt = order.map((id, i) => (ids.includes(id) ? i : -1)).filter(i => i >= 0);
+                    const anchorAt = order.indexOf(anchor);
+                    this.reshapeBlocks(items => {
+                        const moved = movedAt.map(i => items[i]);
+                        const rest = items.filter((item, i) => !movedAt.includes(i));
+                        const at = rest.indexOf(items[anchorAt]);
+                        rest.splice(drag.before ? at : at + 1, 0, ...moved);
+                        return rest;
+                    });
+                    if (block) this.notice = @js(__(':name moved.')).replace(':name', this.blockName(block));
+                },
+
                 startPress(bar, event) {
                     if (event.pointerType !== 'touch') return;
                     const target = event.currentTarget;
@@ -2903,14 +3305,6 @@
                         this.blocks.push({ id: nextId++, startTick, data: { section: name, start: formatStart(this.timeOfTick(startTick)) } });
                         this.blocks.sort((a, b) => a.startTick - b.startTick || (this.isMarker(a) ? -1 : 0));
                     }
-                    this.revision++;
-                },
-                // Joining: the separation goes away and the block that stays keeps the lyrics of both.
-                join(kept, gone) {
-                    this.remember();
-                    const lyrics = [kept.data.lyrics, gone.data.lyrics].map(text => (text || '').trim()).filter(Boolean).join('\n');
-                    kept.data = { ...kept.data, lyrics: lyrics || null };
-                    this.blocks = this.blocks.filter(block => block !== gone);
                     this.revision++;
                 },
                 // ---- Bars added or removed: the chords stay the same (only how long they last changes), so the chord
@@ -2988,6 +3382,23 @@
                     this.originalTicks = [];
                 },
                 // A bar of the chord sounding there, at `at` (in the block before it when `after`, else in the one there).
+                // Every chord twice as long (the map in half beats: each one after the empty beats of bar 1 doubled); the
+                // blocks and the chords that repeat keep their places in the longer map. The BPM stays.
+                doubleBars() {
+                    if (this.versionId || !this.ticks.length) return;
+                    const lead = this.leadTicks;
+                    const place = (tick) => (tick <= lead ? tick : lead + (tick - lead) * 2);
+                    this.remember();
+                    this.ticks = this.ticks.flatMap((chord, tick) => (tick < lead ? [chord] : [chord, chord]));
+                    this.splits = this.splits.map(place);
+                    this.blocks = this.blocks.map(block => ({ ...block, startTick: place(block.startTick) }));
+                    this.originalTicks = [];
+                    this.selection = { anchor: null, from: null, to: null };
+                    this.loop = null;
+                    this.currentTick = this.currentTick < 0 ? this.currentTick : place(this.currentTick);
+                    this.revision++;
+                    this.notice = @js(__('Every bar doubled: remove the extra ones (right click on a bar). Undo goes back.'));
+                },
                 insertTicks(at, after) {
                     const size = this.perBar * 2;
                     const chord = after ? this.ticks[at - 1] : this.ticks[at];
@@ -3024,16 +3435,6 @@
                         || !moved.some((other, k) => k > i && !this.isMarker(other) && other.startTick === block.startTick)
                         && block.startTick < this.ticks.length);
                     this.originalTicks = [];
-                },
-                joinPrevious() {
-                    const bar = this.barMenu.bar;
-                    this.barMenu = null;
-                    this.join(this.previousBlock(bar), this.blockAtBar(bar));
-                },
-                joinNext() {
-                    const bar = this.barMenu.bar;
-                    this.barMenu = null;
-                    this.join(this.blockAtBar(bar), this.nextBlock(bar));
                 },
                 place(popover, element) {
                     this.$nextTick(() => {

@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* The colors of the logo, for the pages' own styles (Tailwind has the same as "primary"): the amber for fills and
+   marks, a darker one for text on white. */
+:root {
+    --brand: #f8a925;
+    --brand-hover: #d8881c;
+    --brand-text: #b45309;
+    --brand-strong: #92400e;
+    --brand-soft: #fef3e2;
+    --brand-100: #fdeccd;
+    --brand-200: #fbd896;
+    --brand-300: #f9c35f;
+}

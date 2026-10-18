@@ -36,12 +36,12 @@
         <h3 class="text-lg font-medium text-gray-700">{{ __('Or send your own message:') }}</h3>
         <form action="https://wa.me/351{{ $member->phone_number }}" method="GET" target="_blank" class="mt-4">
             <div class="flex items-center space-x-4">
-                <textarea name="text" class="w-full rounded-md border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" rows="10" placeholder="Type your message here...">A paz, {{ $member->gender == 'M' ? 'irmão' : 'irmã' }} {{ $member->first_name }}! Tudo bem ? Para concluir o seu registo como membro da igreja, precisamos de algumas informações adicionais. Por favor, responda às perguntas a seguir:
+                <textarea name="text" class="w-full rounded-md border-gray-300 focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50" rows="10" placeholder="Type your message here...">A paz, {{ $member->gender == 'M' ? 'irmão' : 'irmã' }} {{ $member->first_name }}! Tudo bem ? Para concluir o seu registo como membro da igreja, precisamos de algumas informações adicionais. Por favor, responda às perguntas a seguir:
 @foreach($member?->pendingInformations as $information)
 - {{ $information }};
 @endforeach
                 </textarea>
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded">
+                <button type="submit" class="bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded">
                     {{ __('Send Message') }}
                 </button>
             </div>

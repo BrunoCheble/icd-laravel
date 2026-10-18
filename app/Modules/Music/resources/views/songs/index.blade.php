@@ -87,14 +87,14 @@
                         </div>
                         <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex sm:flex-none sm:gap-4">
                             <button type="button" @click="filtersOpen = true; setTimeout(() => $refs.search.focus(), 50)"
-                                class="block rounded-md bg-blue-500 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                                class="block rounded-md bg-primary-500 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
                                 <i class="fa fa-filter"></i>
                                 {{ __('Filter') }}@if ($activeFilters->isNotEmpty()) ({{ $activeFilters->count() }})@endif
                             </button>
                             <a type="button" href="{{ route('songs.bookmarklet') }}"
                                 class="block rounded-md bg-white px-3 py-2 text-center text-sm font-semibold text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50">{{ __('Import from a chord site') }}</a>
                             <a type="button" href="{{ route('songs.create') }}"
-                                class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{{ __('Add new') }}</a>
+                                class="block rounded-md bg-primary-500 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">{{ __('Add new') }}</a>
                         </div>
                     </div>
 
@@ -103,10 +103,10 @@
                     {{-- Active filters; they are changed in the Filter modal --}}
                     <div class="mt-6 flex items-center" style="flex-wrap: wrap; gap: .5rem .75rem;">
                         @foreach ($activeFilters as $text)
-                            <span class="rounded-full px-3 py-1 text-xs font-semibold" style="background: #eef2ff; color: #4338ca;">{{ $text }}</span>
+                            <span class="rounded-full px-3 py-1 text-xs font-semibold" style="background: var(--brand-soft); color: var(--brand-strong);">{{ $text }}</span>
                         @endforeach
                         @if ($hasFilters)
-                            <a href="{{ route('songs.index', ['sort' => $sort, 'direction' => $direction]) }}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-900">{{ __('Clear Filters') }}</a>
+                            <a href="{{ route('songs.index', ['sort' => $sort, 'direction' => $direction]) }}" class="text-sm font-semibold text-primary-700 hover:text-primary-900">{{ __('Clear Filters') }}</a>
                         @endif
                         <span class="text-sm text-gray-500">{{ trans_choice(':count song|:count songs', $songs->total(), ['count' => $songs->total()]) }}</span>
                     </div>
@@ -166,7 +166,7 @@
                     {{-- Several songs selected (on any page): deleted together --}}
                     <div class="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm" style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem;" x-show="selected.length" x-cloak>
                         <strong x-text="@js(__(':count selected')).replace(':count', selected.length)"></strong>
-                        <button type="button" class="font-semibold text-indigo-700 hover:underline" x-show="selected.length < all.length" @click="selectAll()" x-text="@js(__('Select all :count songs')).replace(':count', all.length)"></button>
+                        <button type="button" class="font-semibold text-primary-700 hover:underline" x-show="selected.length < all.length" @click="selectAll()" x-text="@js(__('Select all :count songs')).replace(':count', all.length)"></button>
                         <button type="button" class="font-semibold text-gray-600 hover:underline" @click="clear()">{{ __('Clear selection') }}</button>
                         <span style="flex: 1;"></span>
                         <template x-if="!bulkConfirm">

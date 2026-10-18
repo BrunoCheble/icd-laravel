@@ -24,7 +24,7 @@ class SetlistImportController extends Controller
         $result = $service->execute($request->validated('text'));
 
         return Redirect::route('setlists.import')->with('import', [
-            'setlist'  => ['title' => $result['setlist']->title, 'date' => $result['setlist']->event_date?->format('d/m/Y'), 'url' => route('setlists.show', $result['setlist'])],
+            'setlist'  => ['title' => $result['setlist']->title, 'date' => $result['setlist']->event_date?->format('d/m/Y'), 'url' => route('setlists.index', ['open' => $result['setlist']->id])],
             'created'  => collect($result['created'])->map(fn ($song) => $song->title)->all(),
             'existing' => collect($result['existing'])->map(fn ($song) => $song->title)->all(),
             'pending'  => collect($result['pending'])->map(fn ($song) => ['title' => $song->title, 'layout' => route('songs.layout.edit', $song), 'source' => $song->source_url])->all(),

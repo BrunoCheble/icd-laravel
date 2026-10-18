@@ -22,7 +22,7 @@
                         <div class="mt-4 sm:ml-16 sm:mt-0 flex gap-2">
                             <div>
                                 <a type="button" href="{{ route('ministries.create') }}"
-                                    class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                                    class="block rounded-md bg-primary-500 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
                                     <i class="fa fa-plus" aria-hidden="true"></i>
                                     {{ __('Create') }}
                                     {{ __('Ministry') }}

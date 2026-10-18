@@ -23,7 +23,7 @@
                             <div x-data="{}">
                                 @include('visitors.modal-create')
                                 <button type="button"
-                                        class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                                        class="block rounded-md bg-primary-500 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
                                         x-on:click="$dispatch('open-modal', 'modal-create-visitor')">
                                     <i class="fa fa-plus" aria-hidden="true"></i>
                                     {{ __('Create') }} {{ __('Visitor') }}

@@ -19,12 +19,23 @@ use App\Http\Controllers\Controller;
 
 class SetlistController extends Controller
 {
+    /**
+     * The setlists, each one opening right there to show its songs. `open`: the setlist to show open (the list goes
+     * to its page); otherwise the next one from today is open.
+     */
     public function index(Request $request, ListSetlistsService $service): View
     {
         $search = $request->query('search');
-        $setlists = $service->execute($search);
+        $openId = (int) $request->query('open') ?: null;
+        $page = null;
+        if ($openId && ! $request->has('page') && ($wanted = Setlist::find($openId))) {
+            $page = $service->pageOf($wanted, $search);
+        }
+        $setlists = $service->execute($search, $page);
+        $next = $service->next();
+        $open = $openId ? [$openId] : ($next && ! $search ? [$next->id] : []);
 
-        return view('music::setlists.index', compact('setlists', 'search'));
+        return view('music::setlists.index', ['setlists' => $setlists, 'search' => $search, 'open' => $open, 'nextId' => $next?->id]);
     }
 
     public function create(): View
@@ -46,12 +57,6 @@ class SetlistController extends Controller
 
         return Redirect::route('setlists.index')
             ->with('success', __('Setlist created successfully.'));
-    }
-
-    public function show(Setlist $setlist): View
-    {
-        $setlist->load('songs');
-        return view('music::setlists.show', compact('setlist'));
     }
 
     public function edit(Setlist $setlist): View

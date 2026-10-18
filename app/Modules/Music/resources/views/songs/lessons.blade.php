@@ -10,18 +10,18 @@
         .lesson-group { margin: 1.25rem 0; }
         .lesson-group > summary { display: flex; align-items: center; gap: .5rem; padding: .4rem 0; font-size: 1.05rem; font-weight: 800; color: #111827; cursor: pointer; list-style: none; }
         .lesson-group > summary::-webkit-details-marker { display: none; }
-        .lesson-group > summary .count { padding: .05rem .5rem; border-radius: 999px; background: #eef2ff; color: #4f46e5; font-size: .75rem; }
+        .lesson-group > summary .count { padding: .05rem .5rem; border-radius: 999px; background: var(--brand-soft); color: var(--brand-text); font-size: .75rem; }
         .lesson-group > summary i { color: #9ca3af; transition: transform .15s; }
         .lesson-group[open] > summary i { transform: rotate(90deg); }
         .lesson-list { display: grid; gap: .75rem; }
         .lesson-item { scroll-margin-top: 5rem; }
         .lesson-actions { display: flex; justify-content: flex-end; gap: .35rem; margin-top: .35rem; }
-        .lesson-form { display: grid; gap: .6rem; padding: .9rem; border: 1px solid #c7d2fe; border-radius: .6rem; background: #f8fafc; }
+        .lesson-form { display: grid; gap: .6rem; padding: .9rem; border: 1px solid var(--brand-200); border-radius: .6rem; background: #f8fafc; }
         .lf-row { display: flex; flex-wrap: wrap; gap: .6rem; }
         .lf-types { display: flex; flex-wrap: wrap; gap: .35rem; }
         .lf-type { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .7rem; border: 1px solid #d1d5db; border-radius: 999px; background: #fff; font-size: .85rem; font-weight: 600; color: #374151; cursor: pointer; }
         .lf-type input { position: absolute; opacity: 0; pointer-events: none; }
-        .lf-type.is-on { border-color: #4f46e5; background: #eef2ff; color: #4f46e5; }
+        .lf-type.is-on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-text); }
         .lf-warn { margin: 0; font-size: .8rem; color: #b45309; }
         .lf-field { display: grid; gap: .2rem; font-size: .8rem; font-weight: 600; color: #4b5563; }
         .lf-grow { flex: 1 1 16rem; }
@@ -29,7 +29,7 @@
         .lf-check { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; }
         .lf-actions { display: flex; gap: .4rem; }
         .lf-btn { display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .75rem; border: 1px solid #d1d5db; border-radius: .45rem; background: #fff; font-size: .85rem; font-weight: 600; color: #374151; cursor: pointer; }
-        .lf-btn.is-primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+        .lf-btn.is-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
         .lf-btn.is-danger { color: #dc2626; }
         .lessons-empty { padding: 2rem 1rem; text-align: center; color: #6b7280; border: 1px dashed #d1d5db; border-radius: .6rem; }
     </style>
