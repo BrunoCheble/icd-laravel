@@ -834,5 +834,7 @@
     "Duplicate the block right after it": "Duplicar o bloco logo a seguir",
     "Passing chord: click to unmark it": "Acorde de passagem: clique para desmarcar",
     "Click to mark it as a passing chord": "Clique para marcar como acorde de passagem",
-    ":name moved.": ":name movido."
+    ":name moved.": ":name movido.",
+    "Name of the block": "Nome do bloco",
+    "The block becomes part of the block above it": "O bloco passa a fazer parte do bloco de cima"
 }

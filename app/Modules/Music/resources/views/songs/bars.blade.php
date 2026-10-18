@@ -128,6 +128,8 @@
         .popover input[type=text] { width: 100%; padding: .4rem .55rem; border: 1px solid #d1d5db; border-radius: .4rem; font-weight: 700; font-size: 1.05rem; }
         .popover .row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
         .popover .row .ws-btn { flex: 1; }
+        /* Long labels wrap inside their button instead of running over the next one */
+        .popover .row .ws-btn { min-width: 0; white-space: normal; line-height: 1.2; text-align: center; padding-top: .35rem; padding-bottom: .35rem; }
         .popover .title { margin: 0 0 .4rem; font-size: .8rem; color: #6b7280; }
         .key-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; }
         .key-chip { min-height: 38px; border: 1px solid #d1d5db; border-radius: .5rem; background: #fff; font-weight: 700; cursor: pointer; }
@@ -269,7 +271,7 @@
                                             </button>
                                             <span class="group-repeat" x-show="groupOf(bar.group).length > 1" x-text="`${groupOf(bar.group).indexOf(bar.group.id) + 1}/${groupOf(bar.group).length}`"></span>
                                             <template x-if="!versionId">
-                                                <button type="button" class="block-more" @click.stop="openBarMenu(b, $event.currentTarget)"
+                                                <button type="button" class="block-more" @click.stop="openBlockMenu(bar.group, $event.currentTarget)"
                                                     :title="@js(__('Block menu'))" :aria-label="@js(__('Block menu'))"><i class="fa-solid fa-ellipsis"></i></button>
                                             </template>
                                             <template x-if="freeTiming && !versionId">
@@ -292,13 +294,13 @@
                                             <template x-for="block in bar.chips" :key="block.id">
                                                 <span style="display: contents">
                                                     <button type="button" class="block-chip" :class="{ 'is-marker': isMarker(block) }" :style="typeStyle(blockName(block))"
-                                                        @click.stop="isMarker(block) ? null : playFromTick(block.startTick)" @contextmenu.stop.prevent="openBarMenu(b, $event.currentTarget.closest('.bar'))"
+                                                        @click.stop="isMarker(block) ? null : playFromTick(block.startTick)" @contextmenu.stop.prevent="isMarker(block) ? openBarMenu(b, $event.currentTarget.closest('.bar')) : openBlockMenu(block, $event.currentTarget)"
                                                         :title="isMarker(block) ? '' : @js(__('Play from here'))">
                                                         <i class="fa-solid fa-play play" x-show="!isMarker(block) && canPlay"></i>
                                                         <span x-text="isMarker(block) ? '↺ ' + @js(__('Back to the start')) : blockName(block)"></span>
                                                     </button>
                                                     <template x-if="!versionId">
-                                                        <button type="button" class="block-more" @click.stop="openBarMenu(b, $event.currentTarget.closest('.bar'))" @pointerdown.stop
+                                                        <button type="button" class="block-more" @click.stop="openBlockMenu(block, $event.currentTarget)" @pointerdown.stop
                                                             :title="@js(__('Block menu'))" :aria-label="@js(__('Block menu'))"><i class="fa-solid fa-ellipsis"></i></button>
                                                     </template>
                                                     <template x-if="freeTiming && !versionId && !isMarker(block)">
@@ -457,16 +459,13 @@
                     {{-- Block of a bar: new, rename, join; play from the bar --}}
                     <div class="popover" x-show="barMenu" x-cloak x-ref="barMenu" @click.outside="barMenu = null" @keydown.escape.stop="barMenu = null">
                         <p class="title" x-text="barMenuTitle()"></p>
-                        <input type="text" x-ref="blockName" list="block-names" x-show="!versionId" autocomplete="off" spellcheck="false" placeholder="{{ __('E.g. CHORUS') }}" style="text-transform: uppercase" @keydown.enter.prevent="saveBlockName()">
+                        {{-- A new block from this bar (renaming a block is in its own menu) --}}
+                        <input type="text" x-ref="blockName" list="block-names" x-show="!versionId && barMenu && !blockAtBar(barMenu.bar)" autocomplete="off" spellcheck="false" placeholder="{{ __('E.g. CHORUS') }}" style="text-transform: uppercase" @keydown.enter.prevent="saveBlockName()">
                         <datalist id="block-names">
                             <template x-for="name in commonNames" :key="name"><option :value="name"></option></template>
                         </datalist>
-                        <div class="row" x-show="!versionId">
-                            <button type="button" class="ws-btn ws-btn-primary" @click="saveBlockName()" x-text="barMenu && blockAtBar(barMenu.bar) ? @js(__('Rename')) : @js(__('New block here'))"></button>
-                        </div>
-                        <div class="row" x-show="!versionId && barMenu && blockAtBar(barMenu.bar)">
-                            <button type="button" class="ws-btn" @click="joinPrevious()" :disabled="!barMenu || !previousBlock(barMenu.bar)">{{ __('Join to the block above') }}</button>
-                            <button type="button" class="ws-btn" @click="joinNext()" :disabled="!barMenu || !nextBlock(barMenu.bar)">{{ __('Join with the next') }}</button>
+                        <div class="row" x-show="!versionId && barMenu && !blockAtBar(barMenu.bar)">
+                            <button type="button" class="ws-btn ws-btn-primary" @click="saveBlockName()">{{ __('New block here') }}</button>
                         </div>
                         <div class="row" x-show="!versionId && barMenu && blockOffset(barMenu.bar)">
                             <button type="button" class="ws-btn" @click="alignBlock(false)">{{ __('Start on beat 1 of this bar') }}</button>
@@ -475,25 +474,6 @@
                         <div class="row" x-show="canPlay">
                             <button type="button" class="ws-btn" @click="playFromTick(barMenu.bar * perBar * 2); barMenu = null"><i class="fa-solid fa-play"></i> {{ __('Play from here') }}</button>
                         </div>
-                        {{-- The block of the bar: played how many times in a row, duplicated, moved, removed --}}
-                        <template x-if="!versionId && barMenu && menuBlock()">
-                            <div>
-                                <hr>
-                                <p class="title" x-text="`${@js(__('Block'))}: ${menuBlockInfo().name}`"></p>
-                                <div class="row" style="margin-top: 0; align-items: center;">
-                                    <label class="title" style="margin: 0; display: inline-flex; align-items: center; gap: .35rem;" :title="@js(__('How many times this block is played, one after the other'))">
-                                        {{ __('Repetitions') }}
-                                        <input type="number" class="repeat-input" min="1" max="50" :value="menuBlockInfo().repeats" @change="setRepeats(menuBlock(), $event.target.value); barMenu = null">
-                                    </label>
-                                    <button type="button" class="ws-btn" @click="duplicateBlock(menuBlock()); barMenu = null" title="{{ __('Duplicate the block right after it') }}"><i class="fa-solid fa-clone"></i> {{ __('Duplicate') }}</button>
-                                </div>
-                                <div class="row">
-                                    <button type="button" class="ws-btn" @click="moveBlockStep(menuBlock(), -1); barMenu = null" :disabled="menuBlockInfo().index <= 0"><i class="fa-solid fa-arrow-up"></i> {{ __('Move up') }}</button>
-                                    <button type="button" class="ws-btn" @click="moveBlockStep(menuBlock(), 1); barMenu = null" :disabled="menuBlockInfo().index >= blocks.length - 1"><i class="fa-solid fa-arrow-down"></i> {{ __('Move down') }}</button>
-                                    <button type="button" class="ws-btn" style="color: #dc2626;" @click="removeBlock(menuBlock()); barMenu = null" :disabled="timedBlocks().length < 2"><i class="fa-solid fa-trash"></i> {{ __('Remove block') }}</button>
-                                </div>
-                            </div>
-                        </template>
                         {{-- Passing chords of the bar: underlined in the bars and on the public page --}}
                         <template x-if="!versionId && barMenu && barChords(barMenu.bar).length">
                             <div>
@@ -523,17 +503,49 @@
                         <p class="title" x-text="barMenu ? menuBarsLabel() : ''"></p>
                         <div class="row">
                             <button type="button" class="ws-btn" @click="copyBars(barMenu.bar); barMenu = null"><i class="fa-solid fa-copy"></i> {{ __('Copy') }}</button>
-                            <button type="button" class="ws-btn" @click="copyBlock(barMenu.bar); barMenu = null">{{ __('Copy the block') }}</button>
                         </div>
                         <div class="row" x-show="clipboard">
                             <button type="button" class="ws-btn" @click="paste(barMenu.bar, false); barMenu = null" :title="@js(__('Only the chord names: the changes here stay where they are'))"><i class="fa-solid fa-paste"></i> {{ __('Paste here') }}</button>
                             <button type="button" class="ws-btn" @click="paste(barMenu.bar, true); barMenu = null" :title="@js(__('Where each chord changes comes along too'))">{{ __('Paste with the rhythm') }}</button>
                         </div>
-                        <div class="row">
-                            <button type="button" class="ws-btn" @click="restoreBars(barMenu.bar); barMenu = null" title="{{ __('Back as they were when the page was opened (or last saved)') }}"><i class="fa-solid fa-clock-rotate-left"></i> {{ __('Restore') }}</button>
-                            <button type="button" class="ws-btn" x-show="hasSelection && !isSelected(barMenu?.bar)" @click="selectTo(barMenu.bar); barMenu = null">{{ __('Mark up to here') }}</button>
-                            <button type="button" class="ws-btn" x-show="canPlay" @click="toggleLoop(barMenu.bar); barMenu = null"><i class="fa-solid fa-repeat"></i> <span x-text="loop ? @js(__('Stop repeating')) : @js(__('Repeat'))"></span></button>
+                        <div class="row" x-show="hasSelection && !isSelected(barMenu?.bar)">
+                            <button type="button" class="ws-btn" @click="selectTo(barMenu.bar); barMenu = null">{{ __('Mark up to here') }}</button>
                         </div>
+                    </div>
+
+                    {{-- The menu of a block (its "..." next to its name): name, repetitions, duplicate, move, join, copy, remove --}}
+                    <div class="popover" x-show="blockMenu" x-cloak x-ref="blockMenu" @click.outside="blockMenu = null" @keydown.escape.stop="blockMenu = null">
+                        <template x-if="blockMenu && menuBlock()">
+                            <div x-data="{ name: menuBlockInfo().name }">
+                                <p class="title" x-text="`${@js(__('Block'))} · ${menuBlockInfo().name}`"></p>
+                                <input type="text" list="block-names" x-model="name" autocomplete="off" spellcheck="false" style="text-transform: uppercase"
+                                    :aria-label="@js(__('Name of the block'))" @keydown.enter.prevent="renameMenuBlock(name)">
+                                <div class="row">
+                                    <button type="button" class="ws-btn ws-btn-primary" @click="renameMenuBlock(name)">{{ __('Rename') }}</button>
+                                    <button type="button" class="ws-btn" x-show="canPlay" @click="playFromTick(menuBlock().startTick); blockMenu = null"><i class="fa-solid fa-play"></i> {{ __('Play from here') }}</button>
+                                </div>
+                                <hr>
+                                <div class="row" style="align-items: center;">
+                                    <label class="title" style="margin: 0; display: inline-flex; align-items: center; gap: .35rem;" :title="@js(__('How many times this block is played, one after the other'))">
+                                        {{ __('Repetitions') }}
+                                        <input type="number" class="repeat-input" min="1" max="50" :value="menuBlockInfo().repeats" @change="setRepeats(menuBlock(), $event.target.value); blockMenu = null">
+                                    </label>
+                                    <button type="button" class="ws-btn" @click="duplicateBlock(menuBlock()); blockMenu = null" title="{{ __('Duplicate the block right after it') }}"><i class="fa-solid fa-clone"></i> {{ __('Duplicate') }}</button>
+                                </div>
+                                <div class="row">
+                                    <button type="button" class="ws-btn" @click="moveBlockStep(menuBlock(), -1); blockMenu = null" :disabled="menuBlockInfo().index <= 0"><i class="fa-solid fa-arrow-up"></i> {{ __('Move up') }}</button>
+                                    <button type="button" class="ws-btn" @click="moveBlockStep(menuBlock(), 1); blockMenu = null" :disabled="menuBlockInfo().index >= blocks.length - 1"><i class="fa-solid fa-arrow-down"></i> {{ __('Move down') }}</button>
+                                </div>
+                                <div class="row">
+                                    <button type="button" class="ws-btn" @click="joinMenuBlockAbove()" :disabled="!menuBlockAbove()" title="{{ __('The block becomes part of the block above it') }}">{{ __('Join to the block above') }}</button>
+                                    <button type="button" class="ws-btn" @click="copyBlock(Math.floor(menuBlock().startTick / (perBar * 2))); blockMenu = null"><i class="fa-solid fa-copy"></i> {{ __('Copy the block') }}</button>
+                                </div>
+                                <hr>
+                                <div class="row">
+                                    <button type="button" class="ws-btn" style="color: #dc2626;" @click="removeBlock(menuBlock()); blockMenu = null" :disabled="timedBlocks().length < 2"><i class="fa-solid fa-trash"></i> {{ __('Remove block') }}</button>
+                                </div>
+                            </div>
+                        </template>
                     </div>
 
                     {{-- New version for an instrument: a copy of the base map --}}
@@ -950,8 +962,6 @@
                     block.data = { ...block.data, start: formatStart(start) };
                     this.revision++;
                 },
-                previousBlock(bar) { const list = this.timedBlocks(); return list[list.indexOf(this.blockAtBar(bar)) - 1] ?? null; },
-                nextBlock(bar) { const list = this.timedBlocks(); const block = this.blockAtBar(bar); return block ? list[list.indexOf(block) + 1] ?? null : null; },
                 scrollToBar(bar) {
                     this.$nextTick(() => document.querySelector(`[data-bar="${bar}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
                 },
@@ -2757,10 +2767,36 @@
                 },
 
                 // ---- Blocks ----
-                // The block of a bar's menu: the one starting in the bar, or the one playing on its first beat.
-                menuBlock() {
-                    if (!this.barMenu) return null;
-                    return this.blockAtBar(this.barMenu.bar) ?? this.blockOfTick(this.barMenu.bar * this.perBar * 2) ?? this.timedBlocks()[0] ?? null;
+                // ---- The menu of a block ----
+                blockMenu: null,
+                openBlockMenu(block, element) {
+                    if (!block || this.isMarker(block)) return;
+                    this.barMenu = null;
+                    this.inline = null;
+                    this.editor = null;
+                    this.blockMenu = { id: block.id };
+                    this.place(this.ref('blockMenu'), element);
+                },
+                menuBlock() { return this.blockMenu ? this.blocks.find(block => block.id === this.blockMenu.id) ?? null : null; },
+                menuBlockAbove() {
+                    const block = this.menuBlock();
+                    const timed = this.timedBlocks();
+                    return block ? timed[timed.indexOf(block) - 1] ?? null : null;
+                },
+                renameMenuBlock(typed) {
+                    const block = this.menuBlock();
+                    const name = String(typed ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
+                    this.blockMenu = null;
+                    if (!block || !name || name === this.blockName(block)) return;
+                    this.remember();
+                    block.data = { ...block.data, section: name };
+                    this.revision++;
+                },
+                joinMenuBlockAbove() {
+                    const block = this.menuBlock();
+                    const above = this.menuBlockAbove();
+                    this.blockMenu = null;
+                    if (block && above) this.join(above, block);
                 },
                 // Name, times played in a row and place of the menu's block (safe while the menu closes).
                 menuBlockInfo() {
@@ -2956,16 +2992,6 @@
                         || !moved.some((other, k) => k > i && !this.isMarker(other) && other.startTick === block.startTick)
                         && block.startTick < this.ticks.length);
                     this.originalTicks = [];
-                },
-                joinPrevious() {
-                    const bar = this.barMenu.bar;
-                    this.barMenu = null;
-                    this.join(this.previousBlock(bar), this.blockAtBar(bar));
-                },
-                joinNext() {
-                    const bar = this.barMenu.bar;
-                    this.barMenu = null;
-                    this.join(this.blockAtBar(bar), this.nextBlock(bar));
                 },
                 place(popover, element) {
                     this.$nextTick(() => {
