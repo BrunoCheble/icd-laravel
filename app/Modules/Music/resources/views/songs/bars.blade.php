@@ -560,6 +560,12 @@
                                 </div>
                                 <hr>
                                 <div class="row" style="align-items: center;">
+                                    <label class="title" style="margin: 0; display: inline-flex; align-items: center; gap: .35rem;" :title="@js(__('More bars are added at the end of the block (with a "?" each); fewer take its last bars out'))">
+                                        {{ __('Bars') }}
+                                        <input type="number" class="repeat-input" min="1" max="128" :value="menuBlockInfo().bars" @change="setBlockBars(menuBlock(), $event.target.value); blockMenu = null">
+                                    </label>
+                                </div>
+                                <div class="row" style="align-items: center;">
                                     <label class="title" style="margin: 0; display: inline-flex; align-items: center; gap: .35rem;" :title="@js(__('How many times this block is played, one after the other'))">
                                         {{ __('Repetitions') }}
                                         <input type="number" class="repeat-input" min="1" max="50" :value="menuBlockInfo().repeats" @change="setRepeats(menuBlock(), $event.target.value); blockMenu = null">
@@ -2810,6 +2816,40 @@
                     this.$nextTick(() => document.querySelector(`[data-group-block="${this.blocks[this.blocks.length - 1].id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
                     return true;
                 },
+                // Where a block's ticks end (where the next block starts, or the song's end), and how many bars it has.
+                blockEnd(block) {
+                    const timed = this.timedBlocks();
+                    return timed[timed.indexOf(block) + 1]?.startTick ?? this.ticks.length;
+                },
+                blockBarCount(block) { return Math.max(1, Math.ceil((this.blockEnd(block) - block.startTick) / (this.perBar * 2))); },
+                // The block made `value` bars long: bars with a "?" each added at its end, or its last bars taken out
+                // (one bar at least). The blocks after it follow.
+                setBlockBars(block, value) {
+                    if (!block || this.versionId) return;
+                    const wanted = Math.max(1, Math.min(128, Math.round(Number(value) || 0)));
+                    const current = this.blockBarCount(block);
+                    if (!wanted || wanted === current) return;
+                    const size = this.perBar * 2;
+                    const end = this.blockEnd(block);
+                    this.remember();
+                    if (wanted > current) {
+                        const add = (wanted - current) * size;
+                        const added = [];
+                        // Each new bar its own "?" (the same chord again would join them into one chord).
+                        for (let bar = 0; bar < wanted - current; bar++) {
+                            if (bar > 0 || this.ticks[end - 1] === '?') added.push(end + bar * size);
+                        }
+                        this.ticks = [...this.ticks.slice(0, end), ...new Array(add).fill('?'), ...this.ticks.slice(end)];
+                        this.splits = [...this.splits.map(tick => (tick >= end ? tick + add : tick)), ...added];
+                        if (this.ticks[end + add] === '?' && !this.splits.includes(end + add)) this.splits.push(end + add);
+                        this.blocks = this.blocks.map(item => (item !== block && item.startTick >= end ? { ...item, startTick: item.startTick + add } : item));
+                        this.originalTicks = [];
+                    } else {
+                        this.removeTicks(Math.max(block.startTick + 2, end - (current - wanted) * size), end);
+                    }
+                    this.revision++;
+                    this.notice = @js(__(':name now has :n bars.')).replace(':name', this.blockName(block)).replace(':n', this.blockBarCount(block));
+                },
                 // ---- The menu of a block ----
                 blockMenu: null,
                 openBlockMenu(block, element) {
@@ -2833,7 +2873,7 @@
                 // Name, times played in a row and place of the menu's block (safe while the menu closes).
                 menuBlockInfo() {
                     const block = this.menuBlock();
-                    return block ? { name: this.blockName(block), repeats: this.groupOf(block).length, index: this.blockIndex(block) } : { name: '', repeats: 1, index: -1 };
+                    return block ? { name: this.blockName(block), repeats: this.groupOf(block).length, index: this.blockIndex(block), bars: this.blockBarCount(block) } : { name: '', repeats: 1, index: -1, bars: 1 };
                 },
                 // ---- Dragging a block by its head: while dragging, the bars hide and only the heads show, so the order is
                 // easy to see; dropped before or after another block ----
