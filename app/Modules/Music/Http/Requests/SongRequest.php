@@ -1,0 +1,109 @@
+<?php
+
+namespace App\Modules\Music\Http\Requests;
+
+use App\Modules\Music\Enums\MusicalKey;
+use App\Modules\Music\Services\FindSongBySourceService;
+use App\Modules\Music\Services\SaveSongAudioService;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class SongRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'title'       => ['required', 'string', 'max:255'],
+            'artist'      => ['required', 'string', 'max:255'],
+            'musical_key' => ['nullable', 'string', 'max:20', Rule::in($this->allowedKeys())],
+            'bpm'         => ['nullable', 'numeric', 'between:30,300'],
+            // Time signature of the bars created for the blocks that have none yet.
+            'meter'       => ['nullable', Rule::in(array_keys(\App\Modules\Music\Services\CreateSongBarsService::METERS))],
+            'youtube_url' => ['nullable', 'url', 'max:500'],
+            // Audio file played instead of the YouTube video (and kept for offline use): up to 30 MB.
+            'audio'        => ['nullable', 'file', 'mimes:mp3,mpga,m4a,mp4,aac,ogg,oga,wav', 'max:' . SaveSongAudioService::MAX_MEGABYTES * 1024],
+            'remove_audio' => ['nullable', 'boolean'],
+            'source_url'  => ['nullable', 'url', 'max:500', $this->uniqueSourceRule()],
+
+            'chord_sheet' => ['nullable', 'string', $this->chordSheetRule()],
+
+            'structure' => ['required', 'string', function (string $attribute, mixed $value, \Closure $fail) {
+                $decoded = json_decode($value);
+
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    $fail(__('The :attribute field contains invalid JSON: :error', ['error' => json_last_error_msg()]));
+                } elseif ($decoded === null) {
+                    $fail(__('The :attribute field cannot be null.'));
+                }
+            }],
+        ];
+    }
+
+    /**
+     * The same chord sheet address cannot be used by two songs (see FindSongBySourceService for how they compare).
+     */
+    private function uniqueSourceRule(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) {
+            $existing = app(FindSongBySourceService::class)->execute($value, $this->route('song')?->id);
+
+            if ($existing) {
+                $fail(__('There is already a song with this source: ":title" (:artist).', ['title' => $existing->title, 'artist' => $existing->artist]));
+            }
+        };
+    }
+
+    /**
+     * Keys from the selector, plus the song's current key so legacy values are not rejected on update.
+     */
+    private function allowedKeys(): array
+    {
+        $currentKey = $this->route('song')?->musical_key;
+
+        return array_values(array_filter([...MusicalKey::values(), $currentKey]));
+    }
+
+    /**
+     * Optional chord sheet: JSON text with a "sections" list, each with its "lines".
+     */
+    private function chordSheetRule(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) {
+            $decoded = json_decode($value, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $fail(__('The :attribute field contains invalid JSON: :error', ['error' => json_last_error_msg()]));
+            } elseif (! is_array($decoded['sections'] ?? null) || collect($decoded['sections'])->contains(fn ($section) => ! is_array($section['lines'] ?? null))) {
+                $fail(__('The :attribute must have a "sections" list, each with its "lines".'));
+            }
+        };
+    }
+
+    /**
+     * A file above the server's upload limit arrives as a failed upload: the message says what to do.
+     */
+    public function messages(): array
+    {
+        return [
+            'audio.uploaded' => __('The audio is larger than the server accepts (:size MB). Send a smaller file or raise the upload limit of the server.', ['size' => SaveSongAudioService::maxUploadMegabytes()]),
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'title'                     => __('Title'),
+            'artist'                    => __('Artist'),
+            'musical_key'               => __('Key'),
+            'youtube_url'               => __('YouTube'),
+            'source_url'                => __('Source'),
+            'structure'                 => __('Structure'),
+            'chord_sheet'               => __('Chord sheet'),
+        ];
+    }
+}

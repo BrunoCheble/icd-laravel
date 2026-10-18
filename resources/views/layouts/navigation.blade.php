@@ -34,7 +34,7 @@
                     <x-nav-link :href="route('setlists.index')" :active="request()->routeIs('setlists.*')">
                         {{ __('Setlists') }}
                     </x-nav-link>
-                    @php $pendingSuggestions = \App\Models\SongSuggestion::where('status', 'pending')->count(); @endphp
+                    @php $pendingSuggestions = \App\Modules\Music\Models\SongSuggestion::where('status', 'pending')->count(); @endphp
                     @if ($pendingSuggestions)
                         <x-nav-link :href="route('song-suggestions.index')" :active="request()->routeIs('song-suggestions.*')">
                             {{ __('Suggestions') }} <span class="ms-1 rounded-full bg-indigo-600 px-1.5 text-xs font-bold text-white">{{ $pendingSuggestions }}</span>
