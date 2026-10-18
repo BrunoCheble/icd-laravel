@@ -26,6 +26,7 @@
         .bar-group-head .group-name:hover { background: #eef2ff; }
         .bar-group-head .group-name i { font-size: .65rem; }
         .bar-group-head .group-repeat { font-size: .7rem; font-weight: 700; color: #9ca3af; }
+        .bar-group-head .group-bars { font-size: .7rem; color: #9ca3af; }
         .bar-group-head .group-repeat.is-grouped { padding: .05rem .4rem; border-radius: 999px; background: var(--type-color, #4f46e5); color: #fff; }
         .bar-group-head .group-toggle { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #6b7280; font-size: .7rem; font-weight: 600; text-decoration: underline; cursor: pointer; }
         .bar-group-head .group-toggle:hover { color: #4f46e5; }
@@ -236,6 +237,9 @@
                         <button type="button" class="ws-btn" @click="openVersionMenu($event.currentTarget)" title="{{ __('New version for an instrument') }}" aria-label="{{ __('New version for an instrument') }}"><i class="fa-solid fa-plus"></i></button>
                         <button type="button" class="ws-btn" x-show="versionId" @click="deleteVersion()" title="{{ __('Delete this version') }}" aria-label="{{ __('Delete this version') }}"><i class="fa-solid fa-trash"></i></button>
                         <button type="button" class="ws-btn" @click="undo()" :disabled="!history.length" title="{{ __('Undo') }}" aria-label="{{ __('Undo') }}"><i class="fa-solid fa-rotate-left"></i></button>
+                        {{-- Accordion: only the blocks' heads, one block open at a time --}}
+                        <button type="button" class="ws-btn" :class="{ 'is-active': accordion }" @click="toggleAccordion()" aria-label="{{ __('Collapse the blocks') }}"
+                            :title="accordion ? @js(__('Blocks collapsed: one open at a time (the one playing opens). Click to show every block')) : @js(__('Collapse every block: only their names, one open at a time'))"><i class="fa-solid fa-down-left-and-up-right-to-center"></i></button>
                         <button type="button" class="ws-btn" x-show="canPlay" :class="{ 'is-active': loop }" @click="toggleLoop()"
                             :title="loop ? @js(__('Stop repeating')) : @js(__('Repeat the marked bars (or the current bar)'))" aria-label="{{ __('Repeat') }}"><i class="fa-solid fa-repeat"></i></button>
                         <button type="button" class="ws-btn" x-show="canPlay && !clickOnly" :class="{ 'is-active': metronome }" @click="metronome = !metronome"
@@ -320,9 +324,11 @@
                                         <div class="bar-group-head" x-show="!isHiddenRepeat(bar.group)" :style="typeStyle(blockName(bar.group))" :data-group-block="bar.group.id"
                                             :class="{ 'is-dragging': groupDrag?.moved && groupDrag.id === bar.group.id, 'drop-before': groupDrag?.moved && groupDrag.target === bar.group.id && groupDrag.before, 'drop-after': groupDrag?.moved && groupDrag.target === bar.group.id && !groupDrag.before }">
                                             <span class="group-grip" x-show="!versionId" @pointerdown="startGroupDrag($event, bar.group)" title="{{ __('Drag to move the block') }}"><i class="fa-solid fa-grip-vertical"></i></span>
-                                            <button type="button" class="group-name" @click="playFromTick(bar.group.startTick)" :title="canPlay ? @js(__('Play from here')) : ''">
-                                                <i class="fa-solid fa-play" x-show="canPlay"></i> <span x-text="blockName(bar.group)"></span>
+                                            <button type="button" class="group-name" @click="accordion ? toggleOpenBlock(bar.group) : playFromTick(bar.group.startTick)"
+                                                :title="accordion ? (isOpenBlock(bar.group) ? @js(__('Close the block')) : @js(__('Open the block'))) : (canPlay ? @js(__('Play from here')) : '')" :aria-expanded="accordion ? String(isOpenBlock(bar.group)) : null">
+                                                <i class="fa-solid" :class="accordion ? (isOpenBlock(bar.group) ? 'fa-chevron-down' : 'fa-chevron-right') : 'fa-play'" x-show="accordion || canPlay"></i> <span x-text="blockName(bar.group)"></span>
                                             </button>
+                                            <span class="group-bars" x-show="accordion && !isOpenBlock(bar.group)" x-text="`${blockBarCount(bar.group)} ${blockBarCount(bar.group) === 1 ? @js(__('bar')) : @js(__('bars'))}`"></span>
                                             <span class="group-repeat" x-show="groupOf(bar.group).length > 1" :class="{ 'is-grouped': isCollapsed(bar.group) }"
                                                 x-text="isCollapsed(bar.group) ? `×${groupOf(bar.group).length}` : `${groupOf(bar.group).indexOf(bar.group.id) + 1}/${groupOf(bar.group).length}`"></span>
                                             <template x-if="groupOf(bar.group).length > 1 && groupOf(bar.group)[0] === bar.group.id">
@@ -1013,7 +1019,7 @@
                             const before = this.currentBar;
                             const chordBefore = this.currentSheetChord;
                             this.currentTick = tick;
-                            if (this.isPlaying() && this.currentBar !== before) this.scrollToBar(this.shownBar);
+                            if (this.isPlaying() && this.currentBar !== before) { this.followAccordion(); this.scrollToBar(this.shownBar); }
                             const chord = this.currentSheetChord;
                             if (this.isPlaying() && chord >= 0 && chord !== chordBefore) this.scrollToSheetChord(chord);
                         }
@@ -1697,7 +1703,32 @@
                 isHiddenRepeat(block) { return this.isCollapsed(block) && this.groupOf(block)[0] !== block.id; },
                 isHiddenBar(bar) {
                     const owner = bar.owner === null ? null : this.blocks.find(block => block.id === bar.owner);
-                    return !!owner && this.isHiddenRepeat(owner);
+                    if (!owner) return false;
+                    return this.isHiddenRepeat(owner) || (this.accordion && !this.isOpenBlock(owner));
+                },
+                // ---- Accordion: every block collapsed to its head, one open at a time ----
+                accordion: (() => { try { return localStorage.getItem('bars-accordion') === '1'; } catch (error) { return false; } })(),
+                openBlockId: null,
+                toggleAccordion() {
+                    this.accordion = !this.accordion;
+                    try { localStorage.setItem('bars-accordion', this.accordion ? '1' : '0'); } catch (error) {}
+                    // The block being played (or the one of the selected bar) stays open.
+                    const block = this.blockOfTick(this.currentTick >= 0 ? this.currentTick : (this.selection.anchor ?? -1) * this.perBar * 2);
+                    this.openBlockId = this.accordion && block ? this.shownHead(block).id : null;
+                },
+                // A grouped run opens and closes as one block (its first one).
+                shownHead(block) { return this.isCollapsed(block) ? this.blocks.find(item => item.id === this.groupOf(block)[0]) ?? block : block; },
+                isOpenBlock(block) { return !!block && this.openBlockId === this.shownHead(block).id; },
+                toggleOpenBlock(block) {
+                    const id = this.shownHead(block).id;
+                    this.openBlockId = this.openBlockId === id ? null : id;
+                    if (this.openBlockId !== null) this.$nextTick(() => document.querySelector(`[data-group-block="${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+                },
+                // While playing, the block playing opens (the others close).
+                followAccordion() {
+                    if (!this.accordion) return;
+                    const block = this.blockOfTick(this.currentTick);
+                    if (block && !this.isOpenBlock(block)) this.openBlockId = this.shownHead(block).id;
                 },
                 toggleGroup(block) {
                     const head = this.groupOf(block)[0];
