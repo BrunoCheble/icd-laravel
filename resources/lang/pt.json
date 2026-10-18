@@ -829,5 +829,10 @@
     "Double the bars": "Dobrar os compassos",
     "Double every bar": "Dobrar todos os compassos",
     "Every chord lasts twice as long (one bar becomes two), for fast songs where a chord takes two bars. The BPM and the empty beats before the first chord stay; remove the extra bars afterwards. Undo goes back; nothing is kept until you save.": "Cada acorde passa a durar o dobro (um compasso vira dois), para músicas rápidas em que um acorde ocupa dois compassos. O BPM e os tempos vazios antes do primeiro acorde ficam iguais; depois remova os compassos a mais. O desfazer volta atrás; nada fica gravado até guardar.",
-    "Every bar doubled: remove the extra ones (right click on a bar). Undo goes back.": "Todos os compassos dobrados: remova os que estão a mais (botão direito num compasso). O desfazer volta atrás."
+    "Every bar doubled: remove the extra ones (right click on a bar). Undo goes back.": "Todos os compassos dobrados: remova os que estão a mais (botão direito num compasso). O desfazer volta atrás.",
+    "Block menu": "Menu do bloco",
+    "Duplicate the block right after it": "Duplicar o bloco logo a seguir",
+    "Passing chord: click to unmark it": "Acorde de passagem: clique para desmarcar",
+    "Click to mark it as a passing chord": "Clique para marcar como acorde de passagem",
+    ":name moved.": ":name movido."
 }

@@ -68,43 +68,18 @@
         .ws-toolbar .bpm-input { width: 3.6rem; }
         @media (max-width: 640px) { .ws-toolbar .ws-spacer { display: none; } .ws-toolbar .bpm-input { width: 3rem; } }
         .popover hr { margin: .5rem 0 .1rem; border: 0; border-top: 1px solid #e5e7eb; }
-        /* Lines view: the map's chords in lines as on the public page; clicking a chord breaks the line there or
-           marks it as a passing chord (the bars do not change) */
-        .lines-view { display: grid; gap: .6rem; }
-        .line-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-        .line-block { padding: .45rem .6rem; border: 1px solid #e5e7eb; border-left: 3px solid var(--type-color, #4f46e5); border-radius: .5rem; background: #fff; }
-        .line-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-        .line-name { font-size: .75rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, #4f46e5); }
-        .line-state { font-size: .72rem; color: #9ca3af; }
-        .line-head .ws-btn { min-height: 28px; padding: 0 .5rem; font-size: .75rem; }
-        .line-row { display: flex; flex-wrap: wrap; column-gap: 1rem; margin-top: .25rem; }
-        .line-step { white-space: nowrap; }
-        .line-chord { border: 0; background: none; padding: .05rem .15rem; border-radius: .3rem; font-weight: 800; font-size: 1.05rem; color: #111827; cursor: pointer; }
-        .line-chord:hover { background: #eef2ff; color: #4f46e5; }
-        .line-chord.is-passing { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .22em; }
-        .line-chord.is-playing, .line-chord.is-playing:hover { background: #f59e0b; color: #fff; }
-        .line-block.is-current { background: #fffbeb; }
+        /* Passing chords (marked in the bar menu): underlined, as on the public page */
+        .chord.is-passing { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .2em; }
+        /* The menu of a block, next to its name in the bars */
+        .block-more { border: 0; background: none; padding: 0 .25rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
+        .block-more:hover { background: #eef2ff; color: #4f46e5; }
+        .menu-chords { display: flex; flex-wrap: wrap; gap: .3rem; }
+        .menu-chords button { padding: .2rem .55rem; border: 1px solid #d1d5db; border-radius: 999px; background: #fff; font-weight: 700; font-size: .85rem; cursor: pointer; }
+        .menu-chords button.is-on { border-color: #4f46e5; background: #eef2ff; color: #4f46e5; text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .2em; }
+        .repeat-input { width: 3.6rem; padding: .15rem .35rem; border: 1px solid #d1d5db; border-radius: .35rem; font-weight: 700; text-align: center; }
         .beat.is-on { background: #f59e0b; }
         .beat.is-on .chord, .beat.is-on .count { color: #fff; }
         .bars-page.is-editing .beat { cursor: text; }
-        .block-actions { display: inline-flex; gap: .25rem; margin-left: auto; }
-        .line-rename-btn { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
-        .line-rename-btn:hover { color: #4f46e5; }
-        .line-rename { width: 11rem; padding: .15rem .4rem; border: 1px solid #4f46e5; border-radius: .35rem; font-size: .8rem; font-weight: 800; letter-spacing: .04em; }
-        .repeat-ctl { display: inline-flex; align-items: center; gap: .4rem; font-size: .75rem; color: #6b7280; }
-        .repeat-badge { padding: .05rem .45rem; border-radius: 999px; background: var(--type-color, #4f46e5); color: #fff; font-weight: 800; font-size: .75rem; }
-        .repeat-badge.is-copy { background: #e5e7eb; color: #4b5563; }
-        .repeat-input { width: 3.4rem; margin-left: .25rem; padding: .1rem .3rem; border: 1px solid #d1d5db; border-radius: .35rem; font-weight: 700; text-align: center; }
-        .block-grip { color: #9ca3af; cursor: grab; padding: .15rem .2rem; touch-action: none; }
-        .line-head { cursor: grab; }
-        .line-head button { cursor: pointer; }
-        .line-block.is-dragging { opacity: .45; }
-        .line-block.drop-before { box-shadow: 0 -3px 0 0 #4f46e5; }
-        .line-block.drop-after { box-shadow: 0 3px 0 0 #4f46e5; }
-        .bars-page.is-moving-block, .bars-page.is-moving-block * { cursor: grabbing !important; user-select: none; }
-        /* Moving a block: every block shows only its head, so the order is easy to see */
-        .bars-page.is-moving-block .line-block > :not(.line-head) { display: none; }
-        .block-actions .ws-btn { padding: .15rem .45rem; }
         .inline-chord { width: 100%; min-width: 0; padding: 0 .2rem; border: 1px solid #4f46e5; border-radius: .25rem; font: inherit; font-weight: 800; font-size: .95rem; background: #fff; outline: none; }
         .inline-chord.is-invalid { border-color: #dc2626; background: #fef2f2; }
         .bars-page.is-editing .chord.can-drag { cursor: grab; touch-action: none; border-radius: .2rem; }
@@ -165,7 +140,7 @@
                 @include('music::songs.partials.tabs', ['song' => $song, 'current' => 'layout'])
                 @include('layouts.alert')
 
-                <div class="bars-page" x-cloak :class="{ 'is-editing': mode === 'edit', 'is-dragging': drag && drag.moved, 'is-moving-block': blockDrag?.moved }" x-data="songBars(@js([
+                <div class="bars-page" x-cloak :class="{ 'is-editing': mode === 'edit', 'is-dragging': drag && drag.moved }" x-data="songBars(@js([
                     'structure' => $blocks,
                     'sheet' => $sheet,
                     'key' => $song->musical_key,
@@ -188,7 +163,6 @@
                         <span class="ws-seg" role="group" aria-label="{{ __('Mode') }}">
                             <button type="button" :class="{ 'is-active': mode === 'play' }" @click="setMode('play')" title="{{ __('Clicking a beat plays from it') }}"><i class="fa-solid fa-headphones"></i><span class="ws-label"> {{ __('Play') }}</span></button>
                             <button type="button" :class="{ 'is-active': mode === 'edit' }" @click="setMode('edit')" title="{{ __('Clicking a beat edits its chord') }}"><i class="fa-solid fa-pen"></i><span class="ws-label"> {{ __('Edit') }}</span></button>
-                            <button type="button" :class="{ 'is-active': mode === 'lines' }" @click="setMode('lines')" title="{{ __('Lines of the map and passing chords, without changing the bars') }}"><i class="fa-solid fa-bars-staggered"></i><span class="ws-label"> {{ __('Lines') }}</span></button>
                         </span>
                         <select class="version-select" :value="versionId ?? ''" @change="selectVersion($event.target.value ? Number($event.target.value) : null); $event.target.value = versionId ?? ''"
                             title="{{ __('Version: the base or the map of an instrument') }}" aria-label="{{ __('Version') }}">
@@ -276,66 +250,7 @@
                     <div class="bars-layout" :class="`pane-${pane}`">
                         {{-- Bars: the chord of each beat ("/" while it goes on, a change on the "and" splits the beat) --}}
                         <div class="bars-col">
-                            {{-- Lines of the map (as on the public page), set by clicking the chords --}}
-                            <template x-if="mode === 'lines'">
-                                <div class="lines-view">
-                                    <div class="line-tools">
-                                        <span class="ws-seg" role="group">
-                                            <button type="button" :class="{ 'is-active': lineTool === 'play' }" @click="lineTool = 'play'"><i class="fa-solid fa-play"></i> {{ __('Play') }}</button>
-                                            <button type="button" :class="{ 'is-active': lineTool === 'break' }" @click="lineTool = 'break'">{{ __('Break line') }}</button>
-                                            <button type="button" :class="{ 'is-active': lineTool === 'passing' }" @click="lineTool = 'passing'">{{ __('Passing chord') }}</button>
-                                        </span>
-                                        <span class="ws-note" style="white-space: normal;" x-text="lineTool === 'play' ? @js(__('Click a chord to play the song from it.')) : lineTool === 'break' ? @js(__('Click a chord to start a new line on it; click the first chord of a line to join it to the line above.')) : @js(__('Click a chord to mark it as a passing chord (underlined); click it again to unmark it. Passing chords do not count when looking for repetitions.'))"></span>
-                                    </div>
-                                    <template x-for="item in lineBlocks" :key="`${revision}-${item.block.id}`">
-                                        <div class="line-block" x-show="!isHiddenRepeat(item.block)" :class="{ 'is-current': playingLine?.id === item.block.id, 'is-dragging': blockDrag?.moved && blockDrag.id === item.block.id, 'drop-before': blockDrag?.moved && blockDrag.target === item.block.id && blockDrag.before, 'drop-after': blockDrag?.moved && blockDrag.target === item.block.id && !blockDrag.before }"
-                                            :style="typeStyle(item.name)" :data-line-block="item.block.id">
-                                            <div class="line-head" @pointerdown="!versionId && startBlockDrag($event, item.block)">
-                                                <span class="block-grip" x-show="!versionId" title="{{ __('Drag to move the block') }}"><i class="fa-solid fa-grip-vertical"></i></span>
-                                                <template x-if="lineRename !== item.block.id">
-                                                    <span style="display: inline-flex; align-items: center; gap: .15rem;">
-                                                        <button type="button" class="line-name block-chip" @click="canPlay && playFromTick(item.block.startTick)" :title="canPlay ? @js(__('Play from here')) : ''"><i class="fa-solid fa-play play" x-show="canPlay"></i> <span x-text="item.name"></span></button>
-                                                        <button type="button" class="line-rename-btn" x-show="!versionId" @click="lineRename = item.block.id" @pointerdown.stop title="{{ __('Rename the block') }}" aria-label="{{ __('Rename the block') }}"><i class="fa-solid fa-pen"></i></button>
-                                                    </span>
-                                                </template>
-                                                {{-- The name typed right there: Enter keeps it (for every repetition of a grouped card), Esc leaves it --}}
-                                                <template x-if="lineRename === item.block.id">
-                                                    <input type="text" class="line-rename" list="block-names" :value="item.name" autocomplete="off" spellcheck="false" style="text-transform: uppercase"
-                                                        x-init="$nextTick(() => { $el.focus(); $el.select(); })" @pointerdown.stop
-                                                        @keydown.enter.prevent="renameLineBlock(item.block, $event.target.value)" @keydown.escape.stop.prevent="lineRename = null"
-                                                        @blur="renameLineBlock(item.block, $event.target.value)">
-                                                </template>
-                                                {{-- Equal blocks one after the other: one card "×N" (the number of times can be changed) --}}
-                                                <template x-if="isRepeatHead(item.block)">
-                                                    <span class="repeat-ctl">
-                                                        <span class="repeat-badge" x-show="groupOf(item.block).length > 1" x-text="`×${groupOf(item.block).length}`"></span>
-                                                        <label x-show="!versionId" :title="@js(__('How many times this block is played, one after the other'))">{{ __('Repetitions') }}
-                                                            <input type="number" class="repeat-input" min="1" max="50" :value="groupOf(item.block).length" @change="setRepeats(item.block, $event.target.value)" @pointerdown.stop>
-                                                        </label>
-                                                        <button type="button" class="ws-btn" x-show="groupOf(item.block).length > 1" @click="toggleGroup(item.block)"
-                                                            x-text="expandedGroups[item.block.id] ? @js(__('Group them')) : @js(__('Show each one'))"></button>
-                                                    </span>
-                                                </template>
-                                                <span class="repeat-badge is-copy" x-show="!isRepeatHead(item.block)" x-text="`${groupOf(item.block).indexOf(item.block.id) + 1}/${groupOf(item.block).length}`"></span>
-                                                <span class="line-state" x-text="item.manual ? @js(__('Lines set by hand')) : @js(__('Automatic lines'))"></span>
-                                                <button type="button" class="ws-btn" x-show="item.manual" @click="forGroup(item.block, block => automaticLines(block, false))">{{ __('Back to automatic') }}</button>
-                                                <span class="block-actions" x-show="!versionId">
-                                                    <button type="button" class="ws-btn" @click="isCollapsed(item.block) ? setRepeats(item.block, groupOf(item.block).length + 1) : duplicateBlock(item.block)" title="{{ __('Duplicate') }}" aria-label="{{ __('Duplicate') }}"><i class="fa-solid fa-clone"></i></button>
-                                                    <button type="button" class="ws-btn" @click="isCollapsed(item.block) ? removeGroup(item.block) : removeBlock(item.block)" :disabled="lineBlocks.length < 2" title="{{ __('Remove') }}" aria-label="{{ __('Remove') }}"><i class="fa-solid fa-trash"></i></button>
-                                                </span>
-                                            </div>
-                                            <template x-for="(line, l) in item.lines" :key="l">
-                                                <div class="line-row">
-                                                    <template x-for="(step, i) in line" :key="i">
-                                                        <span class="line-step"><template x-for="chord in step" :key="chord.position"><button type="button" class="line-chord" :class="{ 'is-passing': chord.passing, 'is-playing': playingLine?.id === item.block.id && playingLine?.position === chord.position }" :data-line-chord="`${item.block.id}-${chord.position}`" @click="lineTool === 'play' ? playLineChord(item.block, chord.position) : forGroup(item.block, block => clickLineChord(block, chord.position, false))" x-text="transposeName(chord.name)"></button></template></span>
-                                                    </template>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </template>
-                                </div>
-                            </template>
-                            <div class="bars-grid" x-show="mode !== 'lines'">
+                            <div class="bars-grid">
                                 <template x-for="(bar, b) in bars" :key="bar.key">
                                     <div class="bar" :class="{ 'is-current': b === currentBar, 'has-block': bar.blocks.some(block => !isMarker(block)), 'is-selected': isSelected(b), 'is-looped': loop && b >= loop.from && b <= loop.to }"
                                         :style="bar.blocks.length ? typeStyle(blockName(bar.blocks[0])) : ''" :data-bar="b"
@@ -356,6 +271,10 @@
                                                         <i class="fa-solid fa-play play" x-show="!isMarker(block) && canPlay"></i>
                                                         <span x-text="isMarker(block) ? '↺ ' + @js(__('Back to the start')) : blockName(block)"></span>
                                                     </button>
+                                                    <template x-if="!versionId">
+                                                        <button type="button" class="block-more" @click.stop="openBarMenu(b, $event.currentTarget.closest('.bar'))" @pointerdown.stop
+                                                            :title="@js(__('Block menu'))" :aria-label="@js(__('Block menu'))"><i class="fa-solid fa-ellipsis"></i></button>
+                                                    </template>
                                                     <template x-if="freeTiming && !versionId && !isMarker(block)">
                                                         <button type="button" class="block-mark" :class="{ 'is-marked': isMarked(block) }" @click.stop="openMark(block, $event)" @pointerdown.stop
                                                             :title="`${@js(__('Mark the start of this block now'))} (${formatClock(blockStart(block))})`" :aria-label="@js(__('Mark the start of this block now'))"><i class="fa-regular fa-clock"></i></button>
@@ -376,9 +295,9 @@
                                                             @blur="commitInline(true)">
                                                     </template>
                                                     <span class="halves" x-show="!(inline && Math.floor(inline.tick / 2) === b * perBar + i)">
-                                                        <span class="chord" :class="{ 'is-repeat': beat.repeat, 'is-long': !beat.repeat && beat.chord.length > 4, 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2) }" x-text="beat.repeat ? '/' : (beat.chord || '–')"
+                                                        <span class="chord" :class="{ 'is-repeat': beat.repeat, 'is-long': !beat.repeat && beat.chord.length > 4, 'is-passing': !beat.repeat && passingTicks.has((b * perBar + i) * 2), 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2) }" x-text="beat.repeat ? '/' : (beat.chord || '–')"
                                                             @pointerdown="startDrag($event, b, i, 0)"></span>
-                                                        <template x-if="beat.and !== null"><span class="chord is-and" :class="{ 'is-long': beat.and.length > 4, 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2 + 1) }" x-text="beat.and || '–'"
+                                                        <template x-if="beat.and !== null"><span class="chord is-and" :class="{ 'is-long': beat.and.length > 4, 'is-passing': passingTicks.has((b * perBar + i) * 2 + 1), 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2 + 1) }" x-text="beat.and || '–'"
                                                             @pointerdown="startDrag($event, b, i, 1)"></span></template>
                                                     </span>
                                                     <span class="count" x-text="i + 1"></span>
@@ -526,9 +445,41 @@
                             <button type="button" class="ws-btn" @click="alignBlock(false)">{{ __('Start on beat 1 of this bar') }}</button>
                             <button type="button" class="ws-btn" @click="alignBlock(true)">{{ __('Start on the next bar') }}</button>
                         </div>
-                                <div class="row" x-show="canPlay">
+                        <div class="row" x-show="canPlay">
                             <button type="button" class="ws-btn" @click="playFromTick(barMenu.bar * perBar * 2); barMenu = null"><i class="fa-solid fa-play"></i> {{ __('Play from here') }}</button>
                         </div>
+                        {{-- The block of the bar: played how many times in a row, duplicated, moved, removed --}}
+                        <template x-if="!versionId && barMenu && menuBlock()">
+                            <div>
+                                <hr>
+                                <p class="title" x-text="`${@js(__('Block'))}: ${menuBlockInfo().name}`"></p>
+                                <div class="row" style="margin-top: 0; align-items: center;">
+                                    <label class="title" style="margin: 0; display: inline-flex; align-items: center; gap: .35rem;" :title="@js(__('How many times this block is played, one after the other'))">
+                                        {{ __('Repetitions') }}
+                                        <input type="number" class="repeat-input" min="1" max="50" :value="menuBlockInfo().repeats" @change="setRepeats(menuBlock(), $event.target.value); barMenu = null">
+                                    </label>
+                                    <button type="button" class="ws-btn" @click="duplicateBlock(menuBlock()); barMenu = null" title="{{ __('Duplicate the block right after it') }}"><i class="fa-solid fa-clone"></i> {{ __('Duplicate') }}</button>
+                                </div>
+                                <div class="row">
+                                    <button type="button" class="ws-btn" @click="moveBlockStep(menuBlock(), -1); barMenu = null" :disabled="menuBlockInfo().index <= 0"><i class="fa-solid fa-arrow-up"></i> {{ __('Move up') }}</button>
+                                    <button type="button" class="ws-btn" @click="moveBlockStep(menuBlock(), 1); barMenu = null" :disabled="menuBlockInfo().index >= blocks.length - 1"><i class="fa-solid fa-arrow-down"></i> {{ __('Move down') }}</button>
+                                    <button type="button" class="ws-btn" style="color: #dc2626;" @click="removeBlock(menuBlock()); barMenu = null" :disabled="timedBlocks().length < 2"><i class="fa-solid fa-trash"></i> {{ __('Remove block') }}</button>
+                                </div>
+                            </div>
+                        </template>
+                        {{-- Passing chords of the bar: underlined in the bars and on the public page --}}
+                        <template x-if="!versionId && barMenu && barChords(barMenu.bar).length">
+                            <div>
+                                <hr>
+                                <p class="title">{{ __('Passing chords') }}</p>
+                                <div class="menu-chords">
+                                    <template x-for="chord in barChords(barMenu.bar)" :key="chord.tick">
+                                        <button type="button" :class="{ 'is-on': chord.passing }" @click="togglePassing(chord.tick)" :aria-pressed="chord.passing" x-text="transposeName(chord.name)"
+                                            :title="chord.passing ? @js(__('Passing chord: click to unmark it')) : @js(__('Click to mark it as a passing chord'))"></button>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
                         {{-- Bars added (the chord sounding there goes on one bar longer) or removed --}}
                         <template x-if="!versionId">
                             <div>
@@ -819,7 +770,6 @@
                 barMenu: null,
                 clock: 0,
                 playingSheetChord: -1,
-                playingLine: null,
                 currentTick: -1,
                 // Bars marked (click, then Shift + click): { anchor, from, to }; from / to null when none.
                 selection: { anchor: null, from: null, to: null },
@@ -836,7 +786,6 @@
                 metronome: false,
                 audioSpeed: 1,
                 // Lines view: what a click on a chord does ('break' or 'passing').
-                lineTool: 'play',
                 commonNames: ['INTRO', 'PRIMEIRA PARTE', 'SEGUNDA PARTE', 'PRÉ-REFRÃO', 'REFRÃO', 'PONTE', 'INTERLÚDIO', 'SOLO', 'RIFF', 'FINAL',
                     'VERSE', 'PRE CHORUS', 'CHORUS', 'BRIDGE', 'INTERLUDE', 'TAG', 'OUTRO'],
 
@@ -855,7 +804,7 @@
                         sessionStorage.removeItem(this.placeKey);
                     } catch (error) {}
                     if (!place || Date.now() - place.at > 60000) return;
-                    if (['play', 'edit', 'lines'].includes(place.mode)) this.mode = place.mode;
+                    if (['play', 'edit'].includes(place.mode)) this.mode = place.mode;
                     if (place.pane) this.pane = place.pane;
                     this.$nextTick(() => requestAnimationFrame(() => window.scrollTo(0, place.y)));
                 },
@@ -872,17 +821,16 @@
                     }
                     // The last pointer used: a finger opens the chord editor, a mouse types right in the cell.
                     window.addEventListener('pointerdown', event => { this.touch = event.pointerType === 'touch' || event.pointerType === 'pen'; }, true);
-                    window.addEventListener('pointermove', event => { this.onDragMove(event); this.onSheetDragMove(event); this.onBlockDragMove(event); });
-                    window.addEventListener('pointerup', () => { this.onDragEnd(); this.onSheetDragEnd(); this.onBlockDragEnd(); });
-                    window.addEventListener('pointercancel', () => { this.onDragEnd(); this.onSheetDragEnd(); this.blockDrag = null; });
+                    window.addEventListener('pointermove', event => { this.onDragMove(event); this.onSheetDragMove(event); });
+                    window.addEventListener('pointerup', () => { this.onDragEnd(); this.onSheetDragEnd(); });
+                    window.addEventListener('pointercancel', () => { this.onDragEnd(); this.onSheetDragEnd(); });
                     window.addEventListener('beforeunload', event => {
                         if (this.dirty && !this.saving) event.preventDefault();
                     });
-                    // What is being played in the sheet and in the lines, worked out once per change (not once per
-                    // chord shown), so following the music stays light.
+                    // What is being played in the sheet, worked out once per change (not once per chord shown), so
+                    // following the music stays light.
                     Alpine.effect(() => {
                         this.playingSheetChord = this.currentSheetChord;
-                        this.playingLine = this.mode === 'lines' ? this.linePlaying : null;
                     });
                     const follow = () => {
                         this.clock = this.now();
@@ -894,10 +842,7 @@
                             const before = this.currentBar;
                             const chordBefore = this.currentSheetChord;
                             this.currentTick = tick;
-                            if (this.isPlaying() && this.mode === 'lines') {
-                                const position = this.linePlaying;
-                                if (JSON.stringify(position) !== this.lastLinePlaying) { this.lastLinePlaying = JSON.stringify(position); this.scrollToLineChord(); }
-                            } else if (this.isPlaying() && this.currentBar !== before) this.scrollToBar(this.currentBar);
+                            if (this.isPlaying() && this.currentBar !== before) this.scrollToBar(this.currentBar);
                             const chord = this.currentSheetChord;
                             if (this.isPlaying() && chord >= 0 && chord !== chordBefore) this.scrollToSheetChord(chord);
                         }
@@ -1520,59 +1465,6 @@
                 },
                 // Index of a block among all blocks in order (markers too).
                 blockIndex(block) { return [...this.blocks].sort((a, b) => a.startTick - b.startTick).findIndex(item => item.id === block.id); },
-                // ---- Dragging a block to another place (Lines view): by its grip, or by its header with a mouse ----
-                blockDrag: null,
-                startBlockDrag(event, block) {
-                    if (event.target.closest('button')) return;
-                    if (event.pointerType === 'touch' && !event.target.closest('.block-grip')) return;
-                    event.preventDefault();
-                    this.blockDrag = { id: block.id, x: event.clientX, y: event.clientY, moved: false, target: null, before: true };
-                },
-                onBlockDragMove(event) {
-                    const drag = this.blockDrag;
-                    if (!drag) return;
-                    if (!drag.moved && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 6) return;
-                    if (!drag.moved) {
-                        // The blocks fold to their heads: the dragged one is brought back under the pointer.
-                        drag.moved = true;
-                        this.$nextTick(() => {
-                            const element = document.querySelector(`[data-line-block="${drag.id}"]`);
-                            if (element) window.scrollBy(0, element.getBoundingClientRect().top - (event.clientY - 16));
-                        });
-                        return;
-                    }
-                    // The block under the pointer, and which half of it: the dragged one goes before or after it.
-                    const boxes = [...document.querySelectorAll('[data-line-block]')].map(element => ({ id: Number(element.dataset.lineBlock), box: element.getBoundingClientRect() }));
-                    const over = boxes.find(item => event.clientY < item.box.bottom) ?? boxes[boxes.length - 1];
-                    if (over) {
-                        drag.target = over.id;
-                        drag.before = event.clientY < over.box.top + over.box.height / 2;
-                    }
-                    // Near the edges of the window, the page scrolls.
-                    if (event.clientY < 60) window.scrollBy(0, -12);
-                    else if (event.clientY > window.innerHeight - 60) window.scrollBy(0, 12);
-                },
-                onBlockDragEnd() {
-                    const drag = this.blockDrag;
-                    this.blockDrag = null;
-                    if (!drag?.moved || drag.target === null || drag.target === drag.id) return;
-                    const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
-                    const dragged = list.find(block => block.id === drag.id);
-                    const target = list.find(block => block.id === drag.target);
-                    // A grouped card moves its whole group; dropped after a grouped card, it goes after that group.
-                    const ids = dragged && this.isCollapsed(dragged) ? this.groupOf(dragged) : [drag.id];
-                    if (ids.includes(drag.target)) return;
-                    const targetIds = target && this.isCollapsed(target) ? this.groupOf(target) : [drag.target];
-                    const from = list.findIndex(block => block.id === ids[0]);
-                    let to = drag.before ? list.findIndex(block => block.id === targetIds[0]) : list.findIndex(block => block.id === targetIds[targetIds.length - 1]) + 1;
-                    if (from < to) to -= ids.length;
-                    if (from < 0 || to === from) return;
-                    this.reshapeBlocks(items => {
-                        const moved = items.splice(from, ids.length);
-                        items.splice(to, 0, ...moved);
-                        return items;
-                    });
-                },
                 // Ticks before the song's first chord (empty beats in bar 1).
                 get leadTicks() { return this.timedBlocks()[0]?.startTick ?? 0; },
                 // ---- Review: "Save as reviewed" once the bars are right ----
@@ -1581,18 +1473,7 @@
                 unmarkReviewed() {
                     if (confirm(@js(__('Undo the review of this song? It will no longer show as reviewed.')))) this.save({ reviewed: false });
                 },
-                // ---- Renaming a block in the Lines view (every repetition of a grouped card) ----
-                lineRename: null,
-                renameLineBlock(block, typed) {
-                    if (this.lineRename !== block.id) return;
-                    this.lineRename = null;
-                    const name = String(typed ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
-                    if (!name || name === this.blockName(block)) return;
-                    this.forGroup(block, target => { target.data = { ...target.data, section: name }; });
-                    this.revision++;
-                },
-                // ---- Equal blocks played one after the other (Lines view): shown as one card "×N" ----
-                expandedGroups: {},
+                // ---- Equal blocks played one after the other: a run of the same block "×N" ----
                 repeatCache: { key: null, value: null },
                 // For each block, the first of its run of equal blocks (same name, chords, durations), and each run's blocks.
                 get repeats() {
@@ -1618,14 +1499,10 @@
                     return this.repeatCache.value;
                 },
                 groupOf(block) { return this.repeats.members[this.repeats.head[block.id]] || [block.id]; },
-                isRepeatHead(block) { return (this.repeats.head[block.id] ?? block.id) === block.id; },
-                isCollapsed(block) { return this.isRepeatHead(block) && this.groupOf(block).length > 1 && !this.expandedGroups[block.id]; },
-                isHiddenRepeat(block) { const head = this.repeats.head[block.id]; return head !== undefined && head !== block.id && !this.expandedGroups[head]; },
-                toggleGroup(block) { this.expandedGroups = { ...this.expandedGroups, [block.id]: !this.expandedGroups[block.id] }; },
-                // A change on a grouped card goes to every block of the group (one step to undo).
+                // A change on a block of a run goes to every block of the run (one step to undo).
                 forGroup(block, change) {
                     this.remember();
-                    const ids = this.isCollapsed(block) ? this.groupOf(block) : [block.id];
+                    const ids = this.groupOf(block);
                     ids.forEach(id => { const target = this.blocks.find(item => item.id === id); if (target) change(target); });
                 },
                 // The block played `times` times one after the other: copies added after its run, or the last ones taken out.
@@ -1649,14 +1526,6 @@
                         this.reshapeBlocks(items => { items.splice(last - remove + 1, remove); return items; });
                     }
                     this.notice = @js(__(':name is played :n times.')).replace(':name', this.blockName(block)).replace(':n', wanted);
-                },
-                removeGroup(block) {
-                    const ids = this.groupOf(block);
-                    if (this.timedBlocks().length <= ids.length) return;
-                    const list = [...this.blocks].sort((a, b) => a.startTick - b.startTick);
-                    const first = list.findIndex(item => item.id === ids[0]);
-                    this.reshapeBlocks(items => { items.splice(first, ids.length); return items; });
-                    this.notice = @js(__('Block removed (Undo brings it back).'));
                 },
                 duplicateBlock(block) {
                     const at = this.blockIndex(block);
@@ -2796,81 +2665,83 @@
                     }
                     return ticks;
                 },
-                // Lines view, "Play" tool: the song from that chord, as a click on its beat in the bars.
-                playLineChord(block, position) {
-                    const tick = this.blockChordTicks(block)[position];
-                    if (tick === undefined) return;
-                    if (this.canPlay) this.playFromTick(tick); else this.currentTick = tick;
-                },
                 // Line breaks and passing chords of a block, valid while it has the chords they were set for.
                 lineState(block) {
                     const chords = this.blockChords(block);
                     const valid = JSON.stringify(chords) === JSON.stringify(block.data.lineChords || null);
                     return { chords, valid, breaks: valid ? (block.data.breaks || []) : [], passing: valid ? (block.data.passing || []) : [] };
                 },
+                // The line breaks set before (kept as they were when the block's chords did not change).
                 withBreaks(chords, breaks) { return chords.flatMap((chord, i) => (breaks.includes(i) && i > 0 ? ['|', chord] : [chord])); },
-                get lineBlocks() {
-                    const timed = this.timedBlocks();
-                    const states = timed.map(block => this.lineState(block));
-                    const cycles = songCyclesOf(states.map(state => this.withBreaks(state.chords, state.breaks)), states.map(state => state.passing));
-                    return timed.map((block, index) => {
-                        const state = states[index];
-                        const lines = chordSegments(this.withBreaks(state.chords, state.breaks), cycles, state.passing)
-                            .map(line => line.map(step => step.chords.map((name, i) => ({ name, position: step.positions[i], passing: state.passing.includes(step.positions[i]) }))));
-                        return { block, index, name: this.blockName(block), manual: state.breaks.length > 0, lines, cycles };
-                    });
-                },
-                // Chord being played in the lines view: its block and position (chord index in the block).
-                get linePlaying() {
-                    if (this.currentTick < 0) return null;
-                    const block = this.blockOfTick(this.currentTick);
-                    if (!block) return null;
-                    const position = this.blockChordTicks(block).filter(tick => tick <= this.currentTick).length - 1;
-                    return position < 0 ? null : { id: block.id, position };
-                },
-                // Keeps the chord being played in view in the lines view.
-                scrollToLineChord() {
-                    const playing = this.linePlaying;
-                    if (!playing) return;
-                    this.$nextTick(() => {
-                        const element = document.querySelector(`[data-line-chord="${playing.id}-${playing.position}"]`);
-                        if (!element) return;
-                        const box = element.getBoundingClientRect();
-                        if (box.top < window.innerHeight * .2 || box.bottom > window.innerHeight * .8) {
-                            window.scrollBy({ top: box.top - window.innerHeight * .35, behavior: 'smooth' });
-                        }
-                    });
-                },
-                // Starts editing the lines of a block whose chords changed: none set yet.
+                // Starts marking the passing chords of a block whose chords changed: none set yet.
                 linesFor(block) {
                     const state = this.lineState(block);
                     if (!state.valid) block.data = { ...block.data, lineChords: state.chords, breaks: [], passing: [] };
                     return state;
                 },
-                clickLineChord(block, position, remember = true) {
-                    const item = this.lineBlocks.find(entry => entry.block === block);
-                    if (remember) this.remember();
-                    this.linesFor(block);
-                    if (this.lineTool === 'passing') {
-                        const passing = block.data.passing || [];
-                        block.data = { ...block.data, passing: passing.includes(position) ? passing.filter(p => p !== position) : [...passing, position].sort((a, b) => a - b) };
-                    } else {
-                        // Automatic lines become the starting point of the lines set by hand.
-                        let breaks = block.data.breaks || [];
-                        if (!breaks.length && item) breaks = item.lines.slice(1).map(line => line[0]?.[0]?.position).filter(p => p > 0);
-                        if (position > 0) breaks = breaks.includes(position) ? breaks.filter(p => p !== position) : [...breaks, position].sort((a, b) => a - b);
-                        block.data = { ...block.data, breaks };
-                    }
-                    this.revision++;
+                // ---- Passing chords: marked in the bar menu, underlined in the bars and on the public page ----
+                passingCache: { key: null, value: new Set() },
+                // Ticks where a passing chord starts.
+                get passingTicks() {
+                    const key = `${this.revision}:${this.ticks.length}:${this.splits.join(',')}:${this.blocks.map(block => `${block.id}@${block.startTick}:${(block.data.passing || []).join('.')}`).join(',')}`;
+                    if (this.passingCache.key === key) return this.passingCache.value;
+                    const ticks = new Set();
+                    this.timedBlocks().forEach(block => {
+                        const state = this.lineState(block);
+                        if (!state.passing.length) return;
+                        const starts = this.blockChordTicks(block);
+                        state.passing.forEach(position => { if (starts[position] !== undefined) ticks.add(starts[position]); });
+                    });
+                    this.passingCache = { key, value: ticks };
+                    return ticks;
                 },
-                automaticLines(block, remember = true) {
-                    if (remember) this.remember();
-                    this.linesFor(block);
-                    block.data = { ...block.data, breaks: [] };
+                // The chords starting in a bar, for its menu.
+                barChords(bar) {
+                    const size = this.perBar * 2;
+                    const chords = [];
+                    for (let tick = bar * size; tick < Math.min((bar + 1) * size, this.ticks.length); tick++) {
+                        if (this.ticks[tick] && this.startsChord(tick)) chords.push({ tick, name: this.ticks[tick], passing: this.passingTicks.has(tick) });
+                    }
+                    return chords;
+                },
+                // A chord marked or unmarked as passing, in its block and in the same place of the blocks repeated with it.
+                togglePassing(tick) {
+                    const block = this.blockOfTick(tick);
+                    if (!block) return;
+                    const position = this.blockChordTicks(block).indexOf(tick);
+                    if (position < 0) return;
+                    this.forGroup(block, target => {
+                        this.linesFor(target);
+                        const passing = target.data.passing || [];
+                        target.data = { ...target.data, passing: passing.includes(position) ? passing.filter(p => p !== position) : [...passing, position].sort((a, b) => a - b) };
+                    });
                     this.revision++;
                 },
 
                 // ---- Blocks ----
+                // The block of a bar's menu: the one starting in the bar, or the one playing on its first beat.
+                menuBlock() {
+                    if (!this.barMenu) return null;
+                    return this.blockAtBar(this.barMenu.bar) ?? this.blockOfTick(this.barMenu.bar * this.perBar * 2) ?? this.timedBlocks()[0] ?? null;
+                },
+                // Name, times played in a row and place of the menu's block (safe while the menu closes).
+                menuBlockInfo() {
+                    const block = this.menuBlock();
+                    return block ? { name: this.blockName(block), repeats: this.groupOf(block).length, index: this.blockIndex(block) } : { name: '', repeats: 1, index: -1 };
+                },
+                // A block moved one place up or down among the blocks ("back to the start" markers count as places).
+                moveBlockStep(block, step) {
+                    const at = this.blockIndex(block);
+                    const to = at + step;
+                    if (at < 0 || to < 0 || to >= this.blocks.length) return;
+                    this.reshapeBlocks(items => {
+                        const [moved] = items.splice(at, 1);
+                        items.splice(to, 0, moved);
+                        return items;
+                    });
+                    this.notice = @js(__(':name moved.')).replace(':name', this.blockName(block));
+                },
+
                 startPress(bar, event) {
                     if (event.pointerType !== 'touch') return;
                     const target = event.currentTarget;
