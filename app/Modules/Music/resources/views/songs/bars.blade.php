@@ -533,9 +533,9 @@
                                 <hr>
                                 <p class="title">{{ __('Bar') }}</p>
                                 <div class="row" style="margin-top: 0;">
-                                    <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, false); barMenu = null" title="{{ __('Insert a bar before: the chord at the start of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('Before') }}</button>
-                                    <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, true); barMenu = null" title="{{ __('Insert a bar after: the chord at the end of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('After') }}</button>
-                                    <button type="button" class="ws-btn" @click="removeBar(barMenu.bar); barMenu = null" :disabled="bars.length < 2" :title="@js(__('Remove')) + ': ' + menuBarsLabel()"><i class="fa-solid fa-trash"></i> <span x-text="barMenu && isSelected(barMenu.bar) && selection.to > selection.from ? `${@js(__('Remove'))} (${selection.to - selection.from + 1})` : @js(__('Remove'))"></span></button>
+                                    <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, false)" title="{{ __('Insert a bar before: the chord at the start of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('Before') }}</button>
+                                    <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, true)" title="{{ __('Insert a bar after: the chord at the end of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('After') }}</button>
+                                    <button type="button" class="ws-btn" @click="removeBar(barMenu.bar); if (barMenu && barMenu.bar >= bars.length) barMenu = null" :disabled="bars.length < 2" :title="@js(__('Remove')) + ': ' + menuBarsLabel()"><i class="fa-solid fa-trash"></i> <span x-text="barMenu && isSelected(barMenu.bar) && selection.to > selection.from ? `${@js(__('Remove'))} (${selection.to - selection.from + 1})` : @js(__('Remove'))"></span></button>
                                 </div>
                             </div>
                         </template>
@@ -568,13 +568,13 @@
                                 <div class="row" style="align-items: center;">
                                     <label class="title" style="margin: 0; display: inline-flex; align-items: center; gap: .35rem;" :title="@js(__('More bars are added at the end of the block (with a "?" each); fewer take its last bars out'))">
                                         {{ __('Bars') }}
-                                        <input type="number" class="repeat-input" min="1" max="128" :value="menuBlockInfo().bars" @change="setBlockBars(menuBlock(), $event.target.value); blockMenu = null">
+                                        <input type="number" class="repeat-input" min="1" max="128" :value="menuBlockInfo().bars" @change="setBlockBars(menuBlock(), $event.target.value)">
                                     </label>
                                 </div>
                                 <div class="row" style="align-items: center;">
                                     <label class="title" style="margin: 0; display: inline-flex; align-items: center; gap: .35rem;" :title="@js(__('How many times this block is played, one after the other'))">
                                         {{ __('Repetitions') }}
-                                        <input type="number" class="repeat-input" min="1" max="50" :value="menuBlockInfo().repeats" @change="setRepeats(menuBlock(), $event.target.value); blockMenu = null">
+                                        <input type="number" class="repeat-input" min="1" max="50" :value="menuBlockInfo().repeats" @change="setRepeats(menuBlock(), $event.target.value)">
                                     </label>
                                 </div>
                             </div>
