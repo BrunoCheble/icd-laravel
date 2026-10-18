@@ -31,7 +31,7 @@ class ListSongsService
         'times'    => [self::TIMED_COUNT . ' / NULLIF(' . self::BLOCK_COUNT . ', 0)', self::TIMED_COUNT],
         'youtube'  => ["(youtube_url IS NOT NULL AND youtube_url <> '')"],
         'mp3'      => ["(audio_path IS NOT NULL AND audio_path <> '')"],
-        'lessons'  => ['COALESCE(JSON_LENGTH(video_lesson), 0)'],
+        'lessons'  => ['(SELECT COUNT(*) FROM song_lessons WHERE song_lessons.song_id = songs.id)'],
         'updated'  => ['updated_at'],
     ];
 
@@ -57,7 +57,7 @@ class ListSongsService
         $sort = array_key_exists($filters['sort'] ?? '', self::SORTS) ? $filters['sort'] : 'title';
         $direction = ($filters['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
 
-        $query = Song::query();
+        $query = Song::query()->withCount('lessons');
         foreach (self::SORTS[$sort] as $expression) {
             $query->orderByRaw("{$expression} {$direction}");
         }

@@ -39,7 +39,7 @@
                         $statusFilters = ['reviewed' => __('Reviewed'), 'times' => __('Times'), 'youtube' => 'YouTube', 'mp3' => 'MP3'];
                         $sortOptions = [
                             'title' => __('Title'), 'artist' => __('Artist'), 'key' => __('Key'), 'reviewed' => __('Reviewed'),
-                            'times' => __('Times'), 'youtube' => 'YouTube', 'mp3' => 'MP3', 'lessons' => __('Video Lessons'), 'updated' => __('Updated At'),
+                            'times' => __('Times'), 'youtube' => 'YouTube', 'mp3' => 'MP3', 'lessons' => __('Lessons'), 'updated' => __('Updated At'),
                         ];
                         // Active filters shown next to the button, e.g. "Reviewed: Yes".
                         $activeFilters = collect($statusFilters)
@@ -198,7 +198,7 @@
                                             <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('times') }}" class="hover:text-gray-900" @if ($sort === 'times') style="color: #111827;" @endif>{{ __('Times') }}{{ $sortArrow('times') }}</a></th>
                                             <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('youtube') }}" class="hover:text-gray-900" @if ($sort === 'youtube') style="color: #111827;" @endif>YouTube{{ $sortArrow('youtube') }}</a></th>
                                             <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('mp3') }}" class="hover:text-gray-900" @if ($sort === 'mp3') style="color: #111827;" @endif>MP3{{ $sortArrow('mp3') }}</a></th>
-                                            <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('lessons') }}" class="hover:text-gray-900" @if ($sort === 'lessons') style="color: #111827;" @endif>{{ __('Video Lessons') }}{{ $sortArrow('lessons') }}</a></th>
+                                            <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('lessons') }}" class="hover:text-gray-900" @if ($sort === 'lessons') style="color: #111827;" @endif>{{ __('Lessons') }}{{ $sortArrow('lessons') }}</a></th>
                                             <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('updated') }}" class="hover:text-gray-900" @if ($sort === 'updated') style="color: #111827;" @endif>{{ __('Updated At') }}{{ $sortArrow('updated') }}</a></th>
                                             <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"></th>
                                         </tr>
@@ -239,7 +239,7 @@
                                                         <span style="color: #9ca3af;">—</span>
                                                     @endif
                                                 </td>
-                                                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ count($song->video_lesson ?? []) }}</td>
+                                                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $song->lessons_count ?: '—' }}</td>
                                                 <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $song->updated_at?->format('d/m/Y H:i') }}</td>
                                                 <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-right">
                                                     <button type="button" class="song-menu-button" aria-label="{{ __('Actions') }}" @click="actions = @js([

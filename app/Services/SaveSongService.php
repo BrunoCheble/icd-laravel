@@ -15,7 +15,6 @@ class SaveSongService
             'bpm'          => $data['bpm'] ?? null,
             'youtube_url'  => $data['youtube_url'] ?? null,
             'source_url'   => $data['source_url'] ?? null,
-            'video_lesson' => $this->videoLessons($data['video_lesson'] ?? []),
             // Decoded as entered (only chords spelled E#, B#, Cb, Fb or F## get their simple name).
             'structure'    => $this->structure(json_decode($data['structure'])),
             'chord_sheet'  => isset($data['chord_sheet']) ? $this->chordSheet(json_decode($data['chord_sheet'], true)) : null,
@@ -55,19 +54,5 @@ class SaveSongService
         }
 
         return $sheet;
-    }
-
-    private function videoLessons(array $lessons): ?array
-    {
-        $lessons = collect($lessons)
-            ->map(fn (array $lesson) => [
-                'instrument' => $lesson['instrument'],
-                'title'      => $lesson['title'],
-                'link'       => $lesson['link'],
-            ])
-            ->values()
-            ->all();
-
-        return $lessons ?: null;
     }
 }

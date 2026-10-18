@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MusicalKey;
-use App\Enums\SongInstrument;
 use App\Http\Requests\ListSongsRequest;
 use App\Http\Requests\SongRequest;
 use App\Models\Song;
@@ -33,11 +32,10 @@ class SongController extends Controller
     public function create(FindSongBySourceService $sources): View
     {
         $song = new Song();
-        $instrumentOptions = SongInstrument::options();
         $keyOptions = MusicalKey::pairs();
         $existingSources = $sources->all();
         $existingTitles = $sources->titles();
-        return view('songs.create', compact('song', 'instrumentOptions', 'keyOptions', 'existingSources', 'existingTitles'));
+        return view('songs.create', compact('song', 'keyOptions', 'existingSources', 'existingTitles'));
     }
 
     public function store(SongRequest $request, SaveSongService $service, SaveSongAudioService $audioService, CreateSongBarsService $bars): RedirectResponse
@@ -57,17 +55,15 @@ class SongController extends Controller
 
     public function show(Song $song, GetSongOverviewService $service): View
     {
-        $instrumentOptions = SongInstrument::options();
         $overview = $service->execute($song);
-        return view('songs.show', compact('song', 'instrumentOptions', 'overview'));
+        return view('songs.show', compact('song', 'overview'));
     }
 
     public function edit(Song $song, FindSongBySourceService $sources): View
     {
-        $instrumentOptions = SongInstrument::options();
         $keyOptions = MusicalKey::pairs();
         $existingSources = $sources->all($song->id);
-        return view('songs.edit', compact('song', 'instrumentOptions', 'keyOptions', 'existingSources'));
+        return view('songs.edit', compact('song', 'keyOptions', 'existingSources'));
     }
 
     public function update(SongRequest $request, Song $song, SaveSongService $service, SaveSongAudioService $audioService, CreateSongBarsService $bars): RedirectResponse

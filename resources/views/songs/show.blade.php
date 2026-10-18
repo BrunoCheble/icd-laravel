@@ -96,10 +96,10 @@
                         <span class="status-value">{{ $status['blocks'] ? $status['manualBlocks'] . '/' . $status['blocks'] : '—' }}</span>
                         <span class="status-action">{{ __('Layout') }}</span>
                     </a>
-                    <a href="{{ route('songs.edit', $song) }}" @class(['status-card', 'is-done' => $status['lessons']])>
-                        <span class="status-label">{{ __('Video Lessons') }}</span>
+                    <a href="{{ route('songs.lessons.index', $song) }}" @class(['status-card', 'is-done' => $status['lessons']])>
+                        <span class="status-label">{{ __('Lessons') }}</span>
                         <span class="status-value">{{ $status['lessons'] }}</span>
-                        <span class="status-action">{{ __('Edit') }}</span>
+                        <span class="status-action">{{ __('Lessons') }}</span>
                     </a>
                 </div>
 
@@ -117,17 +117,6 @@
                 @empty
                     <p class="text-sm text-gray-500">{{ __('This song is not in any setlist yet.') }}</p>
                 @endforelse
-
-                {{-- Video lessons --}}
-                @if (! empty($song->video_lesson))
-                    <h3 class="overview-title">{{ __('Video Lessons') }}</h3>
-                    @foreach ($song->video_lesson as $lesson)
-                        <div class="py-1 text-sm">
-                            <span class="font-semibold">{{ $instrumentOptions[$lesson['instrument']] ?? $lesson['instrument'] }}</span> —
-                            <a href="{{ $lesson['link'] }}" target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-900">{{ $lesson['title'] }}</a>
-                        </div>
-                    @endforeach
-                @endif
 
                 {{-- Chord map, as the musicians see it --}}
                 <h3 class="overview-title">{{ __('Map') }}</h3>

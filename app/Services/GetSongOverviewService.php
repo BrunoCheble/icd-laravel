@@ -9,7 +9,7 @@ class GetSongOverviewService
 {
     /**
      * What the song page shows: what is done and what is missing (review, section times, video, chord sheet,
-     * lines set by hand, video lessons), the setlists with it and its chord map blocks for a preview.
+     * lines set by hand, lessons), the setlists with it and its chord map blocks for a preview.
      */
     public function execute(Song $song): array
     {
@@ -28,7 +28,7 @@ class GetSongOverviewService
                 'youtube'       => (bool) $song->youtube_url,
                 'sheetSections' => count($song->chord_sheet['sections'] ?? []),
                 'manualBlocks'  => count(array_filter($blocks, fn ($block) => in_array(UpdateSongLayoutService::LINE_BREAK, $block['chords'] ?? [], true))),
-                'lessons'       => count($song->video_lesson ?? []),
+                'lessons'       => $song->lessons()->count(),
             ],
             'setlists' => $song->setlists()
                 ->orderByDesc('event_date')

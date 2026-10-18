@@ -1,9 +1,3 @@
-@php
-    $videoLessons = session()->hasOldInput()
-        ? array_values(old('video_lesson', []))
-        : ($song->video_lesson ?? []);
-@endphp
-
 <div class="space-y-6">
 
     {{-- Filled by the "Send to ICD" bookmarklet import (see the script at the end of this form) --}}
@@ -95,62 +89,6 @@
         <x-text-input id="source_url" name="source_url" type="url" class="mt-1 block w-full" :value="old('source_url', $song?->source_url)" />
         <x-input-error class="mt-2" :messages="$errors->get('source_url')" />
         <p id="source-duplicate" class="mt-2 text-sm font-semibold" style="display: none; color: #b45309;"></p>
-    </div>
-
-    <div x-data="{
-            lessons: @js($videoLessons),
-            instruments: @js($instrumentOptions),
-            errors: @js($errors->getMessages()),
-            add() { this.lessons.push({ instrument: '', title: '', link: '' }); },
-            remove(index) { this.lessons.splice(index, 1); this.errors = {}; },
-            error(index, field) { return (this.errors[`video_lesson.${index}.${field}`] || [])[0]; },
-        }">
-        <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700">{{ __('Video Lessons') }}</h3>
-        <x-input-error class="mt-2" :messages="$errors->get('video_lesson')" />
-
-        <div class="mt-3 space-y-4">
-            <template x-for="(lesson, index) in lessons" :key="index">
-                <div class="rounded-md border border-gray-300 p-4 space-y-4">
-                    <div>
-                        <label class="block font-medium text-sm text-gray-700" :for="`video_lesson_${index}_instrument`">{{ __('Instrument') }}</label>
-                        <select :id="`video_lesson_${index}_instrument`" :name="`video_lesson[${index}][instrument]`" x-model="lesson.instrument" required
-                            class="block w-full bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-10 py-2 mt-1">
-                            <option value="">{{ __('Select') }}</option>
-                            <template x-if="lesson.instrument && !(lesson.instrument in instruments)">
-                                <option :value="lesson.instrument" x-text="lesson.instrument"></option>
-                            </template>
-                            <template x-for="(label, value) in instruments" :key="value">
-                                <option :value="value" x-text="label" :selected="value === lesson.instrument"></option>
-                            </template>
-                        </select>
-                        <p class="text-sm text-red-600 mt-2" x-show="error(index, 'instrument')" x-text="error(index, 'instrument')"></p>
-                    </div>
-
-                    <div>
-                        <label class="block font-medium text-sm text-gray-700" :for="`video_lesson_${index}_title`">{{ __('Title') }}</label>
-                        <input type="text" :id="`video_lesson_${index}_title`" :name="`video_lesson[${index}][title]`" x-model="lesson.title" required
-                            class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm mt-1 block w-full" />
-                        <p class="text-sm text-red-600 mt-2" x-show="error(index, 'title')" x-text="error(index, 'title')"></p>
-                    </div>
-
-                    <div>
-                        <label class="block font-medium text-sm text-gray-700" :for="`video_lesson_${index}_link`">{{ __('Link') }}</label>
-                        <input type="url" :id="`video_lesson_${index}_link`" :name="`video_lesson[${index}][link]`" x-model="lesson.link" required
-                            placeholder="https://youtube.com/..."
-                            class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm mt-1 block w-full" />
-                        <p class="text-sm text-red-600 mt-2" x-show="error(index, 'link')" x-text="error(index, 'link')"></p>
-                    </div>
-
-                    <div class="flex justify-end">
-                        <x-danger-button type="button" @click="remove(index)">{{ __('Remove') }}</x-danger-button>
-                    </div>
-                </div>
-            </template>
-        </div>
-
-        <div class="mt-4">
-            <x-secondary-button type="button" @click="add()">+ {{ __('Add video lesson') }}</x-secondary-button>
-        </div>
     </div>
 
     <div>

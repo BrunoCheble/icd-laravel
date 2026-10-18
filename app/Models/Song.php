@@ -18,7 +18,6 @@ class Song extends Model
         'bpm',
         'youtube_url',
         'source_url',
-        'video_lesson',
         'structure',
         'chord_sheet',
     ];
@@ -26,7 +25,6 @@ class Song extends Model
     protected function casts(): array
     {
         return [
-            'video_lesson' => 'array',
             'structure' => 'object',
             'chord_sheet' => 'array',
             'reviewed_at' => 'datetime',

@@ -30,12 +30,6 @@ class SongRequest extends FormRequest
             'remove_audio' => ['nullable', 'boolean'],
             'source_url'  => ['nullable', 'url', 'max:500', $this->uniqueSourceRule()],
 
-            'video_lesson'              => ['nullable', 'array'],
-            'video_lesson.*'            => ['required', 'array'],
-            'video_lesson.*.instrument' => ['required', 'string', 'max:50'],
-            'video_lesson.*.title'      => ['required', 'string', 'max:255'],
-            'video_lesson.*.link'       => ['required', 'url', 'max:500'],
-
             'chord_sheet' => ['nullable', 'string', $this->chordSheetRule()],
 
             'structure' => ['required', 'string', function (string $attribute, mixed $value, \Closure $fail) {
@@ -108,10 +102,6 @@ class SongRequest extends FormRequest
             'musical_key'               => __('Key'),
             'youtube_url'               => __('YouTube'),
             'source_url'                => __('Source'),
-            'video_lesson'              => __('Video Lessons'),
-            'video_lesson.*.instrument' => __('Instrument'),
-            'video_lesson.*.title'      => __('Title'),
-            'video_lesson.*.link'       => __('Link'),
             'structure'                 => __('Structure'),
             'chord_sheet'               => __('Chord sheet'),
         ];
