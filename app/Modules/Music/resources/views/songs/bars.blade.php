@@ -1788,7 +1788,10 @@
                 removeRun(block) {
                     const ids = this.groupOf(block);
                     if (this.timedBlocks().length <= ids.length) return;
-                    this.reshapeBlocks(items => items.filter(item => !ids.includes(item.block?.id)));
+                    // By place (the chord sheet's sections go the same way).
+                    const order = this.blockItems().map(item => item.block.id);
+                    const removed = order.map((id, i) => (ids.includes(id) ? i : -1)).filter(i => i >= 0);
+                    this.reshapeBlocks(items => items.filter((item, i) => !removed.includes(i)));
                     this.notice = @js(__('Block removed (Undo brings it back).'));
                 },
                 // A change on a block of a run goes to every block of the run (one step to undo).
@@ -1827,6 +1830,9 @@
                         items.splice(at + 1, 0, copy);
                         return items;
                     });
+                    // The copy shown on its own (not grouped "×N" with the block), to be moved or changed.
+                    const head = this.groupOf(this.blocks.find(item => item.id === id) ?? block)[0];
+                    this.expandedGroups = { ...this.expandedGroups, [head]: true };
                 },
                 removeBlock(block) {
                     if (this.timedBlocks().length < 2) return;
@@ -3237,10 +3243,14 @@
                     if (ids.includes(target.id)) return;
                     const targetIds = this.isCollapsed(target) ? this.groupOf(target) : [target.id];
                     const anchor = drag.before ? targetIds[0] : targetIds[targetIds.length - 1];
+                    // By place, not by id: the same change goes to the chord sheet's sections (which have no ids).
+                    const order = this.blockItems().map(item => item.block.id);
+                    const movedAt = order.map((id, i) => (ids.includes(id) ? i : -1)).filter(i => i >= 0);
+                    const anchorAt = order.indexOf(anchor);
                     this.reshapeBlocks(items => {
-                        const moved = items.filter(item => ids.includes(item.block?.id));
-                        const rest = items.filter(item => !ids.includes(item.block?.id));
-                        const at = rest.findIndex(item => item.block?.id === anchor);
+                        const moved = movedAt.map(i => items[i]);
+                        const rest = items.filter((item, i) => !movedAt.includes(i));
+                        const at = rest.indexOf(items[anchorAt]);
                         rest.splice(drag.before ? at : at + 1, 0, ...moved);
                         return rest;
                     });
