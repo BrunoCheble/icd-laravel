@@ -11,9 +11,9 @@
     <style>
         .song-overview { --type-intro: #0369a1; --type-verse: #047857; --type-prechorus: #b45309; --type-chorus: #be123c; --type-bridge: #6d28d9; --type-instrumental: #4338ca; --type-ending: #475569; --type-other: #111827; }
         .overview-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem .75rem; }
-        .overview-key { padding: .05rem .6rem; border: 1px solid #4f46e5; border-radius: 999px; color: #4f46e5; font-weight: 700; font-size: .9rem; }
+        .overview-key { padding: .05rem .6rem; border: 1px solid var(--brand); border-radius: 999px; color: var(--brand-text); font-weight: 700; font-size: .9rem; }
         .overview-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; margin-top: .35rem; font-size: .85rem; }
-        .overview-links a { color: #4f46e5; font-weight: 600; }
+        .overview-links a { color: var(--brand-text); font-weight: 600; }
         .overview-title { margin: 1.5rem 0 .6rem; font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
 
         /* What is done / missing: each card opens the page where it is done */
@@ -26,7 +26,7 @@
         .status-card.is-partial { border-left-color: #f59e0b; }
         .status-card .status-label { font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
         .status-card .status-value { font-size: .95rem; font-weight: 700; }
-        .status-card .status-action { font-size: .78rem; color: #4f46e5; font-weight: 600; }
+        .status-card .status-action { font-size: .78rem; color: var(--brand-text); font-weight: 600; }
 
         .setlist-row { display: flex; align-items: center; gap: .75rem; padding: .55rem 0; border-top: 1px solid #f3f4f6; }
         .setlist-row:first-child { border-top: 0; }
@@ -36,7 +36,7 @@
 
         /* Chord map preview, as the public page splits and colors it */
         .preview-block { padding: .5rem 0 .6rem; border-top: 1px solid #f3f4f6; }
-        .preview-name { font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, #4f46e5); }
+        .preview-name { font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, var(--brand-text)); }
         .preview-block { border-left: 3px solid var(--type-color, transparent); padding-left: .6rem; }
         .preview-name small { margin-left: .4rem; font-weight: 500; letter-spacing: 0; color: #9ca3af; }
         .preview-anchor { font-size: .85rem; font-style: italic; color: #6b7280; }
@@ -112,7 +112,7 @@
                             <small>{{ $setlist['date'] ?? '—' }} · {{ $setlist['position'] }}ª {{ __('song') }}@if ($setlist['minister']) · {{ __('Minister') }}: {{ $setlist['minister'] }}@endif</small>
                         </span>
                         @if ($setlist['key'])<span class="overview-key">{{ $setlist['key'] }}</span>@endif
-                        <a href="{{ route('setlists.practice', [$setlist['id'], $song->id]) }}" class="text-sm font-semibold text-indigo-600" title="{{ __('Practice') }}"><i class="fa-solid fa-graduation-cap"></i><span class="ws-label"> {{ __('Practice') }}</span></a>
+                        <a href="{{ route('setlists.practice', [$setlist['id'], $song->id]) }}" class="text-sm font-semibold text-primary-700" title="{{ __('Practice') }}"><i class="fa-solid fa-graduation-cap"></i><span class="ws-label"> {{ __('Practice') }}</span></a>
                     </div>
                 @empty
                     <p class="text-sm text-gray-500">{{ __('This song is not in any setlist yet.') }}</p>

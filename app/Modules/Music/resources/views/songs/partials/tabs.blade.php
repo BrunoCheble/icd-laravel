@@ -24,7 +24,7 @@
         .song-tabs::-webkit-scrollbar { display: none; }
         .song-tab { display: inline-flex; align-items: center; gap: .4rem; padding: .55rem .8rem; margin-bottom: -1px; border-bottom: 2px solid transparent; font-size: .875rem; font-weight: 600; color: #6b7280; white-space: nowrap; text-decoration: none; }
         .song-tab:hover { color: #111827; border-bottom-color: #d1d5db; }
-        .song-tab.is-current { color: #4f46e5; border-bottom-color: #4f46e5; }
+        .song-tab.is-current { color: var(--brand-text); border-bottom-color: var(--brand); }
         /* Tablets: icons, and the name of the page being shown */
         @media (max-width: 1023px) {
             .song-tab { padding: .55rem .7rem; }

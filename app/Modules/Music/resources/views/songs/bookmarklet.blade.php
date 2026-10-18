@@ -16,7 +16,7 @@
                         <div class="mt-3">
                             {{-- Rendered with {!! !!} on purpose: the href is a percent-encoded javascript: URL built on the server. --}}
                             <a href="{!! $bookmarklet !!}" onclick="event.preventDefault(); alert(@js(__('Drag this button to the bookmarks bar instead of clicking it.')));"
-                                class="inline-block rounded-md bg-indigo-600 px-4 py-2 font-semibold text-white shadow-sm hover:bg-indigo-500">{{ __('Send to ICD') }}</a>
+                                class="inline-block rounded-md bg-primary-500 px-4 py-2 font-semibold text-white shadow-sm hover:bg-primary-600">{{ __('Send to ICD') }}</a>
                         </div>
                         <p class="mt-2 text-gray-500">{{ __('If the bookmarks bar is hidden, show it with Ctrl+Shift+B (Cmd+Shift+B on Mac).') }}</p>
                     </div>
@@ -32,7 +32,7 @@
                     </div>
 
                     <div>
-                        <a href="{{ route('songs.index') }}" class="text-indigo-600 font-bold hover:text-indigo-900">{{ __('Back') }}</a>
+                        <a href="{{ route('songs.index') }}" class="text-primary-700 font-bold hover:text-primary-900">{{ __('Back') }}</a>
                     </div>
                 </div>
             </div>

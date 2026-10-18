@@ -25,9 +25,9 @@
         .sheet-comment { font-size: .8rem; font-style: italic; color: #6b7280; }
         .suggestion:first-of-type { border-top: 0; }
         .suggestion-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .75rem; }
-        .suggestion-head a { font-weight: 700; color: #4f46e5; }
+        .suggestion-head a { font-weight: 700; color: var(--brand-text); }
         .suggestion-meta { font-size: .85rem; color: #6b7280; }
-        .suggestion-note { margin-top: .35rem; padding: .4rem .6rem; border-left: 3px solid #c7d2fe; background: #f9fafb; font-size: .9rem; white-space: pre-line; }
+        .suggestion-note { margin-top: .35rem; padding: .4rem .6rem; border-left: 3px solid var(--brand-200); background: #f9fafb; font-size: .9rem; white-space: pre-line; }
         .change { display: flex; align-items: center; gap: .6rem; padding: .3rem 0; font-size: .95rem; }
         .change .where { min-width: 11rem; color: #6b7280; font-size: .85rem; }
         .change .from { font-weight: 700; text-decoration: line-through; color: #9ca3af; }

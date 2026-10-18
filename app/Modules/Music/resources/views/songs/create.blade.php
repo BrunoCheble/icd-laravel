@@ -15,7 +15,7 @@
                             <p class="mt-2 text-sm text-gray-700">{{ __('Add a new song.') }}</p>
                         </div>
                         <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-                            <a type="button" href="{{ route('songs.index') }}" class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{{ __('Back') }}</a>
+                            <a type="button" href="{{ route('songs.index') }}" class="block rounded-md bg-primary-500 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">{{ __('Back') }}</a>
                         </div>
                     </div>
 

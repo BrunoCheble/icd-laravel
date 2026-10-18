@@ -28,7 +28,7 @@
             /* ---- Frame: side menu (one section per module), top bar with the page's title, content ---- */
             /* --app-sticky-top: where a page's own sticky bar sticks (below the top bar when that one sticks too) */
             /* The colors of the logo (Tailwind's "primary"): the amber for marks and fills, a darker one for text on white */
-            :root { --sidebar-width: 15.5rem; --sidebar-folded: 4.25rem; --app-accent: #f8a925; --app-accent-hover: #d8881c; --app-accent-text: #b45309; --app-accent-soft: #fef3e2; --app-sticky-top: 0px; }
+            :root { --sidebar-width: 15.5rem; --sidebar-folded: 4.25rem; --app-accent: var(--brand); --app-accent-hover: var(--brand-hover); --app-accent-text: var(--brand-text); --app-accent-soft: var(--brand-soft); --app-sticky-top: 0px; }
             html.sidebar-collapsed { --sidebar-width: var(--sidebar-folded); }
             body { background: #f4f5f7; }
             .app-shell { min-height: 100vh; }

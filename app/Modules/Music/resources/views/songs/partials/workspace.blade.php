@@ -17,13 +17,13 @@
         .ws-btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; flex-shrink: 0; min-width: 38px; min-height: 38px; padding: 0 .7rem; border: 1px solid #d1d5db; border-radius: .5rem; background: #fff; color: #374151; font-size: .85rem; font-weight: 600; white-space: nowrap; cursor: pointer; text-decoration: none; }
         .ws-btn:hover:not(:disabled) { background: #f9fafb; }
         .ws-btn:disabled, .ws-btn.is-disabled { opacity: .4; cursor: default; pointer-events: none; }
-        .ws-btn.is-active { border-color: #4f46e5; color: #4f46e5; }
-        .ws-btn-primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
-        .ws-btn-primary:hover:not(:disabled) { background: #4338ca; }
+        .ws-btn.is-active { border-color: var(--brand); color: var(--brand-text); }
+        .ws-btn-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+        .ws-btn-primary:hover:not(:disabled) { background: var(--brand-hover); }
         .ws-seg { display: inline-flex; flex-shrink: 0; border: 1px solid #d1d5db; border-radius: .5rem; overflow: hidden; }
         .ws-seg button { min-height: 36px; padding: 0 .65rem; border: 0; background: #fff; color: #374151; font-size: .85rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
         .ws-seg button + button { border-left: 1px solid #d1d5db; }
-        .ws-seg button.is-active { background: #4f46e5; color: #fff; }
+        .ws-seg button.is-active { background: var(--brand); color: #fff; }
         .ws-play { font-variant-numeric: tabular-nums; }
         .ws-play .ws-time { min-width: 2.4rem; text-align: left; }
         .ws-note { font-size: .8rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

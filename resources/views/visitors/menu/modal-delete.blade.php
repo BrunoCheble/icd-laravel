@@ -18,7 +18,7 @@
         </p>
 
         <h4 class="mt-6 text-sm font-medium text-gray-700">Motivo:</h4>
-        <textarea name="reason" class="w-full rounded-md border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Digite o motivo aqui..."></textarea>
+        <textarea name="reason" class="w-full rounded-md border-gray-300 focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50" placeholder="Digite o motivo aqui..."></textarea>
 
         <div class="mt-6 flex justify-end">
             <x-secondary-button x-on:click="$dispatch('close')">

@@ -31,26 +31,26 @@
         .layout-block.is-playing { box-shadow: inset 4px 0 0 #f59e0b; background: #fffbeb; }
         .layout-time { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .5rem; border: 1px solid #fcd34d; border-radius: 999px; background: #fffbeb; color: #92400e; font-size: .75rem; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
         .layout-time:hover { background: #fef3c7; }
-        .layout-block.is-selected { border-color: #4f46e5; background: #f5f7ff; box-shadow: 0 0 0 2px #c7d2fe; }
+        .layout-block.is-selected { border-color: var(--brand); background: #f5f7ff; box-shadow: 0 0 0 2px var(--brand-200); }
         .key-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; }
         .key-chip { min-height: 38px; border: 1px solid #d1d5db; border-radius: .5rem; background: #fff; color: #374151; font-weight: 700; font-size: .9rem; cursor: pointer; }
         .key-chip:hover { background: #f3f4f6; }
-        .key-chip.is-active { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+        .key-chip.is-active { background: var(--brand); border-color: var(--brand); color: #fff; }
         .layout-timing { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-bottom: .5rem; }
         .layout-time-input { width: 4.75rem; padding: .25rem .4rem; text-align: center; font-variant-numeric: tabular-nums; }
         .layout-block-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .5rem; }
         .layout-name { width: 12rem; max-width: 100%; padding: .3rem .5rem; font-size: .85rem; font-weight: 700; text-transform: uppercase; }
-        .layout-suggest { padding: .25rem .55rem; border: 1px dashed #a5b4fc; border-radius: .375rem; background: #eef2ff; font-size: .75rem; font-weight: 700; color: #4338ca; text-transform: uppercase; }
-        .layout-suggest:hover { background: #e0e7ff; }
+        .layout-suggest { padding: .25rem .55rem; border: 1px dashed var(--brand-300); border-radius: .375rem; background: var(--brand-soft); font-size: .75rem; font-weight: 700; color: var(--brand-strong); text-transform: uppercase; }
+        .layout-suggest:hover { background: var(--brand-100); }
         .layout-tag { font-size: .75rem; color: #6b7280; }
         .layout-lines { display: grid; gap: .35rem; }
         .layout-line { display: flex; flex-wrap: wrap; gap: .3rem; padding-left: .5rem; border-left: 3px solid var(--type-color, #e5e7eb); }
         .layout-chord { position: relative; min-width: 2.5rem; padding: .3rem .55rem; border: 1px solid #e5e7eb; border-radius: .375rem; background: #f9fafb; font-weight: 700; color: var(--type-color, #111827); cursor: pointer; }
-        .layout-chord:hover { border-color: #4f46e5; background: #eef2ff; }
+        .layout-chord:hover { border-color: var(--brand); background: var(--brand-soft); }
         .layout-chord:disabled { cursor: default; }
         .layout-chord:disabled:hover { border-color: #e5e7eb; background: #f9fafb; }
         /* Where a click would act: before the chord (new line or new block). */
-        .layout-chord:not(:disabled):hover::before { content: ''; position: absolute; left: -.25rem; top: .15rem; bottom: .15rem; width: 3px; border-radius: 2px; background: #4f46e5; }
+        .layout-chord:not(:disabled):hover::before { content: ''; position: absolute; left: -.25rem; top: .15rem; bottom: .15rem; width: 3px; border-radius: 2px; background: var(--brand); }
         /* Passing chords: dotted underline (here and wherever the map is shown) */
         .layout-chord.is-passing, .sheet-chord.is-passing > span:last-child { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .25em; }
         /* Phones: play without its time, so the toolbar fits in one line */
@@ -58,7 +58,7 @@
         .layout-empty { font-size: .85rem; color: #9ca3af; }
         .layout-lyrics { margin-top: .5rem; }
         .layout-lyrics textarea { width: 100%; font-size: .85rem; line-height: 1.4; }
-        .layout-link { font-size: .8rem; font-weight: 600; color: #4f46e5; background: none; border: 0; padding: 0; cursor: pointer; }
+        .layout-link { font-size: .8rem; font-weight: 600; color: var(--brand-text); background: none; border: 0; padding: 0; cursor: pointer; }
         .layout-notice { padding: .75rem 1rem; border: 1px solid #fcd34d; border-radius: .5rem; background: #fffbeb; font-size: .875rem; color: #92400e; }
 
         /* Chord sheet: each chord over the lyric it starts on; clicking a chord acts on the map. */
@@ -73,8 +73,8 @@
         .sheet-line, .sheet-comment, .sheet-label { cursor: pointer; border-radius: .25rem; margin-left: -.35rem; padding-left: .35rem; transition: background .15s; }
         .sheet-line:hover, .sheet-comment:hover { background: #f9fafb; }
         .sheet-line.is-playing, .sheet-comment.is-playing, .sheet-label.is-playing { background: #fffbeb; box-shadow: inset 3px 0 0 #f59e0b; }
-        .sheet-line.is-selected, .sheet-comment.is-selected, .sheet-label.is-selected { background: #eef2ff; box-shadow: inset 3px 0 0 #4f46e5; }
-        .sheet-chord.is-selected { background: #c7d2fe; }
+        .sheet-line.is-selected, .sheet-comment.is-selected, .sheet-label.is-selected { background: var(--brand-soft); box-shadow: inset 3px 0 0 var(--brand); }
+        .sheet-chord.is-selected { background: var(--brand-200); }
         /* Lines with chords only (intro, riffs) have no lyric row */
         .sheet-line.only-chords .sheet-text { display: none; }
         .sheet-line.only-chords .sheet-seg { padding-right: .35em; }
@@ -82,8 +82,8 @@
         /* Editing the lyrics of a section of the chord sheet (the chords stay the same) */
         .sheet-head { display: flex; align-items: center; gap: .35rem; }
         .sheet-edit-btn { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
-        .sheet-edit-btn:hover { color: #4f46e5; background: #eef2ff; }
-        .sheet-editor textarea { width: 100%; margin-top: .3rem; padding: .4rem .5rem; border: 1px solid #c7d2fe; border-radius: .4rem; font: .85rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
+        .sheet-edit-btn:hover { color: var(--brand-text); background: var(--brand-soft); }
+        .sheet-editor textarea { width: 100%; margin-top: .3rem; padding: .4rem .5rem; border: 1px solid var(--brand-200); border-radius: .4rem; font: .85rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
         .sheet-editor .row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .3rem; }
         .sheet-editor .help { font-size: .75rem; color: #6b7280; margin-top: .3rem; }
         .sheet-editor .error { font-size: .78rem; color: #dc2626; margin-top: .3rem; }
@@ -92,11 +92,11 @@
         .sheet-chord-space { height: 1.3em; }
         .sheet-text { min-height: 1.3em; color: #374151; white-space: pre; }
         .sheet-chord { position: relative; align-self: flex-start; padding: 0 .2rem; margin-left: -.2rem; border-radius: .25rem; font-weight: 700; color: var(--type-color, #111827); background: none; border: 0; cursor: pointer; line-height: 1.3; white-space: nowrap; }
-        .sheet-chord:hover { background: #eef2ff; }
+        .sheet-chord:hover { background: var(--brand-soft); }
         .sheet-chord:disabled { cursor: default; background: none; }
         .sheet-chord.is-line-start::before { content: ''; position: absolute; left: -.15rem; top: .1rem; bottom: .1rem; width: 3px; border-radius: 2px; background: var(--type-color, #9ca3af); }
-        .sheet-chord.is-block-start::before { width: 4px; background: #4f46e5; }
-        .sheet-block-name { position: absolute; bottom: 100%; left: -.2rem; padding: 0 .3rem; border-radius: .25rem; background: #4f46e5; color: #fff; font-size: .65rem; font-weight: 700; line-height: 1.35; white-space: nowrap; text-transform: uppercase; }
+        .sheet-chord.is-block-start::before { width: 4px; background: var(--brand); }
+        .sheet-block-name { position: absolute; bottom: 100%; left: -.2rem; padding: 0 .3rem; border-radius: .25rem; background: var(--brand); color: #fff; font-size: .65rem; font-weight: 700; line-height: 1.35; white-space: nowrap; text-transform: uppercase; }
     </style>
 
     @include('music::songs.partials.workspace')
@@ -120,11 +120,11 @@
 
                 @if ($blocks === [] && $sheet === [])
                     {{-- Pre-registered song (e.g. from a schedule): its chord sheet comes with "Send to ICD" --}}
-                    <div class="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
+                    <div class="mt-6 rounded-lg border border-primary-200 bg-primary-50 p-4 text-sm text-primary-900">
                         <p class="font-semibold">{{ __('This song has no chord sheet yet.') }}</p>
                         @if ($song->source_url)
                             <p class="mt-1">{{ __('Open its chord sheet and click "Send to ICD" there: the chord sheet, the chord map and the bars are saved here, and this page opens again.') }}</p>
-                            <a href="{{ $song->source_url }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 font-semibold text-white hover:bg-indigo-500"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ __('Open the chord sheet') }}</a>
+                            <a href="{{ $song->source_url }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 rounded-md bg-primary-500 px-3 py-2 font-semibold text-white hover:bg-primary-600"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ __('Open the chord sheet') }}</a>
                         @else
                             <p class="mt-1">{{ __('Open its chord sheet (e.g. on Cifra Club) and click "Send to ICD" there: it is saved in this song.') }}</p>
                         @endif
@@ -137,7 +137,7 @@
                         @csrf
                     </form>
                     {{-- A song without bars yet: creating them (one bar per chord, in the time signature chosen) comes first --}}
-                    <div class="mt-4 p-4 rounded-lg border border-indigo-200 bg-indigo-50" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem 1rem;"
+                    <div class="mt-4 p-4 rounded-lg border border-primary-200 bg-primary-50" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem 1rem;"
                         x-cloak x-data="{ meter: @js(\App\Modules\Music\Services\CreateSongBarsService::meterOf($song->structure)), bpm: @js($song->bpm), taps: [],
                             // Tapping the beat: the average of the last taps (from the third one; a pause of 2 s starts over).
                             tap() {
@@ -148,23 +148,23 @@
                                 this.bpm = Math.round(600000 / (gaps.reduce((a, b) => a + b, 0) / gaps.length)) / 10;
                             } }">
                         <div style="flex: 1 1 20rem;">
-                            <p class="font-semibold text-indigo-900"><i class="fa-solid fa-table-cells"></i> {{ __('This song has no bars yet.') }}</p>
-                            <p class="text-sm text-indigo-800">{{ __('Create them to edit the map as a grid of bars: the chords of each block, one bar each, to be adjusted on the grid.') }}</p>
+                            <p class="font-semibold text-primary-900"><i class="fa-solid fa-table-cells"></i> {{ __('This song has no bars yet.') }}</p>
+                            <p class="text-sm text-primary-800">{{ __('Create them to edit the map as a grid of bars: the chords of each block, one bar each, to be adjusted on the grid.') }}</p>
                         </div>
-                        <label class="text-sm text-indigo-900" style="display: flex; flex-direction: column; gap: .25rem; white-space: nowrap;">{{ __('Time signature') }}
+                        <label class="text-sm text-primary-900" style="display: flex; flex-direction: column; gap: .25rem; white-space: nowrap;">{{ __('Time signature') }}
                             <select name="meter" form="create-bars-form" x-model="meter" class="block border-gray-300 rounded-md text-sm">
                                 @foreach (array_keys(\App\Modules\Music\Services\CreateSongBarsService::METERS) as $meter)
                                     <option value="{{ $meter }}">{{ $meter }}</option>
                                 @endforeach
                             </select>
                         </label>
-                        <div class="text-sm text-indigo-900" style="display: flex; flex-direction: column; gap: .25rem; white-space: nowrap;">
+                        <div class="text-sm text-primary-900" style="display: flex; flex-direction: column; gap: .25rem; white-space: nowrap;">
                             {{-- Tapping "BPM" in the rhythm of the song sets it --}}
-                            <button type="button" class="text-left font-semibold text-indigo-700" style="padding: 0;" @click="tap()" title="{{ __('Tap the beat to set the tempo') }}">BPM <i class="fa-solid fa-hand-pointer"></i></button>
+                            <button type="button" class="text-left font-semibold text-primary-700" style="padding: 0;" @click="tap()" title="{{ __('Tap the beat to set the tempo') }}">BPM <i class="fa-solid fa-hand-pointer"></i></button>
                             <input type="number" name="bpm" form="create-bars-form" step="0.1" min="30" max="300" x-model="bpm" aria-label="BPM" class="block border-gray-300 rounded-md text-sm" style="width: 7rem;">
                         </div>
-                        <button type="submit" form="create-bars-form" class="rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700" style="display: inline-flex; align-items: center; gap: .5rem; padding: .55rem 1rem;"><i class="fa-solid fa-table-cells"></i> {{ __('Create bars') }}</button>
-                        <p class="text-sm" style="color: #4338ca; flex-basis: 100%;" x-show="meter === '6/8'" x-cloak>{{ __('In 6/8 the bars count the eighth notes: the BPM is of the eighths (a song felt at 60 is 180).') }}</p>
+                        <button type="submit" form="create-bars-form" class="rounded-md bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600" style="display: inline-flex; align-items: center; gap: .5rem; padding: .55rem 1rem;"><i class="fa-solid fa-table-cells"></i> {{ __('Create bars') }}</button>
+                        <p class="text-sm" style="color: var(--brand-strong); flex-basis: 100%;" x-show="meter === '6/8'" x-cloak>{{ __('In 6/8 the bars count the eighth notes: the BPM is of the eighths (a song felt at 60 is 180).') }}</p>
                     </div>
 
                     <form method="POST" action="{{ route('songs.layout.update', $song) }}" class="mt-2 sm:mt-6 space-y-4"

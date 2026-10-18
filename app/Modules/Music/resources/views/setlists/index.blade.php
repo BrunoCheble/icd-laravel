@@ -10,19 +10,19 @@
         .sl-head .grow { flex: 1 1 14rem; }
         .sl-btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 38px; padding: 0 .8rem; border: 1px solid #d1d5db; border-radius: .5rem; background: #fff; color: #374151; font-size: .875rem; font-weight: 600; white-space: nowrap; cursor: pointer; text-decoration: none; }
         .sl-btn:hover { background: #f9fafb; }
-        .sl-btn.is-primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
-        .sl-btn.is-primary:hover { background: #4338ca; }
+        .sl-btn.is-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+        .sl-btn.is-primary:hover { background: var(--brand-hover); }
         .sl-search { display: flex; gap: .5rem; margin-top: 1rem; max-width: 36rem; }
         .sl-search input { flex: 1; min-width: 0; min-height: 38px; padding: 0 .75rem; border: 1px solid #d1d5db; border-radius: .5rem; font-size: .9rem; }
 
         .sl-list { display: grid; gap: .6rem; margin-top: 1.25rem; }
         .sl-card { border: 1px solid #e5e7eb; border-radius: .75rem; background: #fff; overflow: hidden; scroll-margin-top: 5rem; }
-        .sl-card.is-next { border-color: #a5b4fc; box-shadow: 0 0 0 1px #a5b4fc; }
+        .sl-card.is-next { border-color: var(--brand-300); box-shadow: 0 0 0 1px var(--brand-300); }
         .sl-card.is-past .sl-title, .sl-card.is-past .sl-date { color: #6b7280; }
         .sl-row { display: flex; align-items: center; gap: .75rem; padding: .7rem .9rem; }
         .sl-toggle { display: flex; align-items: center; gap: .75rem; flex: 1; min-width: 0; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; }
         .sl-chevron { flex: none; width: 1.75rem; height: 1.75rem; display: grid; place-items: center; border-radius: 999px; background: #f3f4f6; color: #6b7280; transition: transform .15s; }
-        .sl-card.is-open .sl-chevron { transform: rotate(90deg); background: #e0e7ff; color: #4f46e5; }
+        .sl-card.is-open .sl-chevron { transform: rotate(90deg); background: var(--brand-100); color: var(--brand-text); }
         .sl-date { flex: none; width: 6.5rem; display: grid; line-height: 1.2; color: #111827; }
         .sl-date strong { font-size: .95rem; }
         .sl-date small { font-size: .72rem; color: #6b7280; }
@@ -30,7 +30,7 @@
         .sl-title { font-weight: 700; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .sl-meta { font-size: .8rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .sl-badge { display: inline-flex; align-items: center; gap: .25rem; padding: .05rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 800; letter-spacing: .03em; vertical-align: middle; }
-        .sl-badge.is-next { background: #4f46e5; color: #fff; }
+        .sl-badge.is-next { background: var(--brand); color: #fff; }
         .sl-count { flex: none; min-width: 2.2rem; padding: .15rem .55rem; border-radius: 999px; background: #f3f4f6; color: #374151; font-size: .8rem; font-weight: 700; text-align: center; }
         .sl-actions { display: flex; align-items: center; gap: .25rem; flex: none; }
         .sl-icon { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid transparent; border-radius: .5rem; background: none; color: #6b7280; cursor: pointer; text-decoration: none; }
@@ -42,10 +42,10 @@
         .sl-song:last-child { border-bottom: 0; }
         .sl-n { flex: none; width: 1.5rem; color: #9ca3af; font-size: .8rem; font-weight: 700; text-align: right; }
         .sl-song-main { flex: 1; min-width: 0; display: grid; }
-        .sl-song-main a { font-weight: 600; color: #4f46e5; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sl-song-main a { font-weight: 600; color: var(--brand-text); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .sl-song-main a:hover { text-decoration: underline; }
         .sl-song-main small { font-size: .78rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .sl-key { flex: none; min-width: 2.4rem; padding: .1rem .45rem; border: 1px solid #4f46e5; border-radius: 999px; color: #4f46e5; font-size: .78rem; font-weight: 800; text-align: center; }
+        .sl-key { flex: none; min-width: 2.4rem; padding: .1rem .45rem; border: 1px solid var(--brand); border-radius: 999px; color: var(--brand-text); font-size: .78rem; font-weight: 800; text-align: center; }
         .sl-key small { color: #9ca3af; font-weight: 600; }
         .sl-bpm { flex: none; font-size: .75rem; font-weight: 700; color: #6b7280; font-variant-numeric: tabular-nums; }
         .sl-empty { padding: .6rem 0; font-size: .85rem; color: #6b7280; }
@@ -161,7 +161,7 @@
                                             <a href="{{ route('setlists.practice', [$setlist, $song]) }}" class="sl-icon" title="{{ __('Practice') }}" aria-label="{{ __('Practice') }}"><i class="fa-solid fa-graduation-cap"></i></a>
                                         </li>
                                     @empty
-                                        <li class="sl-empty">{{ __('No songs in this setlist yet.') }} <a href="{{ route('setlists.edit', $setlist) }}" class="font-semibold text-indigo-600">{{ __('Edit') }}</a></li>
+                                        <li class="sl-empty">{{ __('No songs in this setlist yet.') }} <a href="{{ route('setlists.edit', $setlist) }}" class="font-semibold text-primary-700">{{ __('Edit') }}</a></li>
                                     @endforelse
                                 </ol>
                             </article>

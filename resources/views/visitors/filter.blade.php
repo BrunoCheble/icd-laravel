@@ -13,7 +13,7 @@
 } }">
     <button
         type="button"
-        class="block rounded-md bg-blue-500 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+        class="block rounded-md bg-primary-500 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
         @click="showModal = true">
         <i class="fa fa-filter"></i>
         {{ __('Filter') }}
@@ -53,7 +53,7 @@
                         <select
                             id="search"
                             name="search"
-                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500">
                             <template x-for="[key, value] in Object.entries(searchOptions[selectedAttribute])" :key="key">
                                 <option :value="key" x-text="value"></option>
                             </template>

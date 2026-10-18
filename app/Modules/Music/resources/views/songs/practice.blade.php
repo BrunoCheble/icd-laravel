@@ -12,20 +12,20 @@
         [x-cloak] { display: none !important; }
         .practice {
             --surface: #ffffff; --surface-2: #f3f4f6; --border: #d1d5db; --text: #111827; --muted: #6b7280;
-            --accent: #4f46e5; --accent-text: #ffffff; --accent-soft: rgba(79, 70, 229, .08); --chord: #111827;
+            --accent: var(--brand); --accent-text: #ffffff; --accent-soft: rgba(79, 70, 229, .08); --chord: #111827;
             color: var(--text);
         }
 
         .counter-button { border: 0; background: none; padding: .35rem .25rem; border-radius: .375rem; cursor: pointer; text-decoration: underline dotted; text-underline-offset: .25em; }
-        .counter-button:hover { background: #f3f4f6; color: #4f46e5; }
+        .counter-button:hover { background: #f3f4f6; color: var(--brand-text); }
         .song-pick { display: grid; gap: .25rem; }
         .song-pick-item { display: flex; align-items: center; gap: .6rem; padding: .55rem .6rem; border-radius: .5rem; color: #111827; text-decoration: none; }
         .song-pick-item:hover { background: #f3f4f6; }
-        .song-pick-item.is-current { background: #eef2ff; box-shadow: inset 3px 0 0 #4f46e5; }
+        .song-pick-item.is-current { background: var(--brand-soft); box-shadow: inset 3px 0 0 var(--brand); }
         .song-pick-number { min-width: 1.5rem; font-size: .8rem; font-weight: 700; color: #9ca3af; text-align: right; font-variant-numeric: tabular-nums; }
         .song-pick-title { flex: 1; min-width: 0; font-weight: 600; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .song-pick-title small { display: block; font-weight: 400; color: #6b7280; overflow: hidden; text-overflow: ellipsis; }
-        .song-pick-key { padding: .1rem .5rem; border: 1px solid #c7d2fe; border-radius: 999px; font-size: .75rem; font-weight: 700; color: #4f46e5; }
+        .song-pick-key { padding: .1rem .5rem; border: 1px solid var(--brand-200); border-radius: 999px; font-size: .75rem; font-weight: 700; color: var(--brand-text); }
         .counter { white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; font-size: .85rem; color: var(--muted); min-width: 2.4rem; text-align: center; }
         /* Phones: the toolbar has room (songs are picked from the counter), so it is not squeezed */
         @media (max-width: 639px) {
