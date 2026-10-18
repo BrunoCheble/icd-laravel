@@ -12,7 +12,7 @@
         @media (max-width: 639px) { .ws-desktop { display: none !important; } }
         @media (min-width: 640px) { .ws-mobile { display: none !important; } }
 
-        .ws-toolbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: .35rem; padding: .45rem 0; background: #fff; border-bottom: 1px solid #e5e7eb; }
+        .ws-toolbar { position: sticky; top: var(--app-sticky-top, 0px); z-index: 20; display: flex; align-items: center; gap: .35rem; padding: .45rem 0; background: #fff; border-bottom: 1px solid #e5e7eb; }
         .ws-toolbar .ws-spacer { flex: 1; min-width: 0; }
         .ws-btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; flex-shrink: 0; min-width: 38px; min-height: 38px; padding: 0 .7rem; border: 1px solid #d1d5db; border-radius: .5rem; background: #fff; color: #374151; font-size: .85rem; font-weight: 600; white-space: nowrap; cursor: pointer; text-decoration: none; }
         .ws-btn:hover:not(:disabled) { background: #f9fafb; }

@@ -48,6 +48,8 @@
         .bar-group-head .group-remove:disabled { opacity: .3; cursor: default; }
         /* Moving a block: the blocks look as they are; a line shows where it goes */
         .bars-page.is-moving-block, .bars-page.is-moving-block * { cursor: grabbing !important; user-select: none; }
+        /* A bar or block brought into view stays clear of the sticky bars above it */
+        .bars-grid .bar, .bar-group-head { scroll-margin-top: calc(var(--app-sticky-top, 0px) + 4rem); }
         /* Toolbar on one line: play on the left, undo / save / options on the right, the rest slides in between */
         .bars-toolbar, .bars-toolbar.ws-toolbar { flex-wrap: nowrap; }
         .bars-toolbar .tb-scroll { flex: 1; min-width: 0; display: flex; align-items: center; gap: .35rem; overflow-x: auto; scrollbar-width: none; padding: 2px 1px; }

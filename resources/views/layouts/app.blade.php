@@ -26,7 +26,8 @@
             [x-cloak] { display: none !important; }
 
             /* ---- Frame: side menu (one section per module), top bar with the page's title, content ---- */
-            :root { --sidebar-width: 15.5rem; --sidebar-folded: 4.25rem; --app-accent: #4f46e5; --app-accent-soft: #eef2ff; }
+            /* --app-sticky-top: where a page's own sticky bar sticks (below the top bar when that one sticks too) */
+            :root { --sidebar-width: 15.5rem; --sidebar-folded: 4.25rem; --app-accent: #4f46e5; --app-accent-soft: #eef2ff; --app-sticky-top: 0px; }
             html.sidebar-collapsed { --sidebar-width: var(--sidebar-folded); }
             body { background: #f4f5f7; }
             .app-shell { min-height: 100vh; }
@@ -85,7 +86,9 @@
                 .app-sidebar-collapse { display: none; }
                 .app-sidebar-close { display: inline-flex; }
                 .app-topbar-menu { display: inline-flex; }
-                .app-topbar { padding: .4rem .75rem; min-height: 3.25rem; }
+                /* The top bar (with the menu button) stays in sight while the page scrolls */
+                :root { --app-sticky-top: 3.25rem; }
+                .app-topbar { position: sticky; top: 0; z-index: 30; height: 3.25rem; min-height: 0; padding: 0 .75rem; }
             }
 
             /* Phones: a more compact frame (page title and page spacing), so content starts higher. */
