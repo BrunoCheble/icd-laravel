@@ -840,5 +840,7 @@
     "New block": "Novo bloco",
     ":name added at the end with :n bars: write their chords in place of the \"?\".": ":name acrescentado no fim com :n compassos: escreva os acordes no lugar dos \"?\".",
     "More bars are added at the end of the block (with a \"?\" each); fewer take its last bars out": "Mais compassos são acrescentados no fim do bloco (com um \"?\" cada); menos tira os últimos compassos do bloco",
-    ":name now has :n bars.": ":name tem agora :n compassos."
+    ":name now has :n bars.": ":name tem agora :n compassos.",
+    "Show each block": "Mostrar cada um",
+    "Play it once more": "Tocar mais uma vez"
 }

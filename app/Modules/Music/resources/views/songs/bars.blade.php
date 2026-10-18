@@ -26,6 +26,9 @@
         .bar-group-head .group-name:hover { background: #eef2ff; }
         .bar-group-head .group-name i { font-size: .65rem; }
         .bar-group-head .group-repeat { font-size: .7rem; font-weight: 700; color: #9ca3af; }
+        .bar-group-head .group-repeat.is-grouped { padding: .05rem .4rem; border-radius: 999px; background: var(--type-color, #4f46e5); color: #fff; }
+        .bar-group-head .group-toggle { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #6b7280; font-size: .7rem; font-weight: 600; text-decoration: underline; cursor: pointer; }
+        .bar-group-head .group-toggle:hover { color: #4f46e5; }
         .bar.is-group-start { grid-column-start: 1; }
         .add-block { margin-top: .9rem; }
         .add-block-open { width: 100%; padding: .7rem; border: 2px dashed #d1d5db; border-radius: .6rem; background: none; color: #6b7280; font-weight: 700; cursor: pointer; }
@@ -285,13 +288,18 @@
                                     <div style="display: contents">
                                     {{-- A new block: its name over its rows of bars --}}
                                     <template x-if="bar.group">
-                                        <div class="bar-group-head" :style="typeStyle(blockName(bar.group))" :data-group-block="bar.group.id"
+                                        <div class="bar-group-head" x-show="!isHiddenRepeat(bar.group)" :style="typeStyle(blockName(bar.group))" :data-group-block="bar.group.id"
                                             :class="{ 'is-dragging': groupDrag?.moved && groupDrag.id === bar.group.id, 'drop-before': groupDrag?.moved && groupDrag.target === bar.group.id && groupDrag.before, 'drop-after': groupDrag?.moved && groupDrag.target === bar.group.id && !groupDrag.before }">
                                             <span class="group-grip" x-show="!versionId" @pointerdown="startGroupDrag($event, bar.group)" title="{{ __('Drag to move the block') }}"><i class="fa-solid fa-grip-vertical"></i></span>
                                             <button type="button" class="group-name" @click="playFromTick(bar.group.startTick)" :title="canPlay ? @js(__('Play from here')) : ''">
                                                 <i class="fa-solid fa-play" x-show="canPlay"></i> <span x-text="blockName(bar.group)"></span>
                                             </button>
-                                            <span class="group-repeat" x-show="groupOf(bar.group).length > 1" x-text="`${groupOf(bar.group).indexOf(bar.group.id) + 1}/${groupOf(bar.group).length}`"></span>
+                                            <span class="group-repeat" x-show="groupOf(bar.group).length > 1" :class="{ 'is-grouped': isCollapsed(bar.group) }"
+                                                x-text="isCollapsed(bar.group) ? `×${groupOf(bar.group).length}` : `${groupOf(bar.group).indexOf(bar.group.id) + 1}/${groupOf(bar.group).length}`"></span>
+                                            <template x-if="groupOf(bar.group).length > 1 && groupOf(bar.group)[0] === bar.group.id">
+                                                <button type="button" class="group-toggle" @click.stop="toggleGroup(bar.group)"
+                                                    x-text="isCollapsed(bar.group) ? @js(__('Show each block')) : @js(__('Group them'))"></button>
+                                            </template>
                                             <template x-if="!versionId">
                                                 <button type="button" class="block-more" @click.stop="openBlockMenu(bar.group, $event.currentTarget)"
                                                     :title="@js(__('Block menu'))" :aria-label="@js(__('Block menu'))"><i class="fa-solid fa-ellipsis"></i></button>
@@ -301,16 +309,16 @@
                                                     :title="`${@js(__('Mark the start of this block now'))} (${formatClock(blockStart(bar.group))})`" :aria-label="@js(__('Mark the start of this block now'))"><i class="fa-regular fa-clock"></i></button>
                                             </template>
                                             <template x-if="!versionId">
-                                                <button type="button" class="group-action group-duplicate" @click.stop="duplicateBlock(bar.group)"
-                                                    :title="@js(__('Duplicate the block right after it'))" :aria-label="@js(__('Duplicate'))"><i class="fa-solid fa-clone"></i></button>
+                                                <button type="button" class="group-action group-duplicate" @click.stop="isCollapsed(bar.group) ? setRepeats(bar.group, groupOf(bar.group).length + 1) : duplicateBlock(bar.group)"
+                                                    :title="isCollapsed(bar.group) ? @js(__('Play it once more')) : @js(__('Duplicate the block right after it'))" :aria-label="@js(__('Duplicate'))"><i class="fa-solid fa-clone"></i></button>
                                             </template>
                                             <template x-if="!versionId">
-                                                <button type="button" class="group-action group-remove" @click.stop="removeBlock(bar.group)" :disabled="timedBlocks().length < 2"
+                                                <button type="button" class="group-action group-remove" @click.stop="isCollapsed(bar.group) ? removeRun(bar.group) : removeBlock(bar.group)" :disabled="timedBlocks().length <= (isCollapsed(bar.group) ? groupOf(bar.group).length : 1)"
                                                     :title="@js(__('Remove block'))" :aria-label="@js(__('Remove block'))"><i class="fa-solid fa-trash"></i></button>
                                             </template>
                                         </div>
                                     </template>
-                                    <div class="bar" :class="{ 'is-group-start': !!bar.group, 'is-current': b === currentBar, 'has-block': bar.blocks.some(block => !isMarker(block)), 'is-selected': isSelected(b), 'is-looped': loop && b >= loop.from && b <= loop.to }"
+                                    <div class="bar" x-show="!isHiddenBar(bar)" :class="{ 'is-group-start': !!bar.group, 'is-current': b === shownBar, 'has-block': bar.blocks.some(block => !isMarker(block)), 'is-selected': isSelected(b), 'is-looped': loop && b >= loop.from && b <= loop.to }"
                                         :style="bar.blocks.length ? typeStyle(blockName(bar.blocks[0])) : ''" :data-bar="b"
                                         @click="clickBar(b, $event)" @contextmenu.prevent="openBarMenu(b, $event.currentTarget)"
                                         @pointerdown="startPress(b, $event)" @pointerup="endPress()" @pointerleave="endPress()" @pointercancel="endPress()">
@@ -342,7 +350,7 @@
                                         </div>
                                         <div class="bar-beats" :style="`grid-template-columns: repeat(${bar.beats.length}, minmax(0, 1fr))`">
                                             <template x-for="(beat, i) in bar.beats" :key="i">
-                                                <span class="beat" :class="{ 'is-on': b === currentBar && i === currentBeat }" :data-beat="i" @click.stop="clickBeat(b, i, $event.currentTarget, $event)" @dblclick.stop="mode === 'edit' && editBeat(b, i, $event)"
+                                                <span class="beat" :class="{ 'is-on': b === shownBar && i === currentBeat }" :data-beat="i" @click.stop="clickBeat(b, i, $event.currentTarget, $event)" @dblclick.stop="mode === 'edit' && editBeat(b, i, $event)"
                                                     :title="`${@js(__('Beat'))} ${i + 1}: ${beat.chord || '–'}${beat.and !== null ? ' → ' + (beat.and || '–') + ' (e)' : ''}`">
                                                     <template x-if="inline && Math.floor(inline.tick / 2) === b * perBar + i">
                                                         <input type="text" class="inline-chord" :class="{ 'is-invalid': inline?.invalid }" :value="inline?.text ?? ''" autocomplete="off" spellcheck="false"
@@ -914,7 +922,7 @@
                             const before = this.currentBar;
                             const chordBefore = this.currentSheetChord;
                             this.currentTick = tick;
-                            if (this.isPlaying() && this.currentBar !== before) this.scrollToBar(this.currentBar);
+                            if (this.isPlaying() && this.currentBar !== before) this.scrollToBar(this.shownBar);
                             const chord = this.currentSheetChord;
                             if (this.isPlaying() && chord >= 0 && chord !== chordBefore) this.scrollToSheetChord(chord);
                         }
@@ -957,11 +965,21 @@
                             blocks.map(block => `${block.id}:${block.startTick - start}:${block.data.section}:${block.data.jump ?? ''}`).join(','),
                             groupStart ? `head:${owner.id}:${owner.data.section}` : ''].join('|');
                         seen[content] = (seen[content] ?? 0) + 1;
-                        bars.push({ beats, blocks, chips, group: groupStart ? owner : null, key: `${content}#${seen[content]}` });
+                        bars.push({ beats, blocks, chips, group: groupStart ? owner : null, owner: owner?.id ?? null, key: `${content}#${seen[content]}` });
                     }
                     return bars;
                 },
                 get currentBar() { return this.currentTick < 0 ? -1 : Math.floor(this.currentTick / (this.perBar * 2)); },
+                // The bar lit while playing: in a grouped run, the bar of the block in view played now by a hidden repetition.
+                get shownBar() {
+                    const bar = this.currentBar;
+                    if (bar < 0) return bar;
+                    const size = this.perBar * 2;
+                    const owner = this.blockOfTick(bar * size);
+                    if (!owner || !this.isHiddenRepeat(owner)) return bar;
+                    const head = this.blocks.find(block => block.id === this.groupOf(owner)[0]);
+                    return head ? Math.floor(head.startTick / size) + bar - Math.floor(owner.startTick / size) : bar;
+                },
                 get currentBeat() { return this.currentTick < 0 ? -1 : Math.floor((this.currentTick % (this.perBar * 2)) / 2); },
                 isMarker(block) { return isMarkerData(block.data); },
                 blockName(block) { return String(block.data.section || '').replaceAll('_', ' '); },
@@ -1580,6 +1598,25 @@
                     return this.repeatCache.value;
                 },
                 groupOf(block) { return this.repeats.members[this.repeats.head[block.id]] || [block.id]; },
+                // A run is shown grouped (one block "×N", its bars once) until "Show each block" is chosen on it.
+                expandedGroups: {},
+                isCollapsed(block) { const ids = this.groupOf(block); return ids.length > 1 && !this.expandedGroups[ids[0]]; },
+                isHiddenRepeat(block) { return this.isCollapsed(block) && this.groupOf(block)[0] !== block.id; },
+                isHiddenBar(bar) {
+                    const owner = bar.owner === null ? null : this.blocks.find(block => block.id === bar.owner);
+                    return !!owner && this.isHiddenRepeat(owner);
+                },
+                toggleGroup(block) {
+                    const head = this.groupOf(block)[0];
+                    this.expandedGroups = { ...this.expandedGroups, [head]: !this.expandedGroups[head] };
+                },
+                // The whole run of a grouped block taken out.
+                removeRun(block) {
+                    const ids = this.groupOf(block);
+                    if (this.timedBlocks().length <= ids.length) return;
+                    this.reshapeBlocks(items => items.filter(item => !ids.includes(item.block?.id)));
+                    this.notice = @js(__('Block removed (Undo brings it back).'));
+                },
                 // A change on a block of a run goes to every block of the run (one step to undo).
                 forGroup(block, change) {
                     this.remember();
@@ -2917,12 +2954,19 @@
                     this.groupDrag = null;
                     if (!drag?.moved || drag.target === null || drag.target === drag.id) return;
                     const block = this.blocks.find(item => item.id === drag.id);
+                    const target = this.blocks.find(item => item.id === drag.target);
+                    if (!block || !target) return;
+                    // A grouped run moves (and is passed over) as a whole.
+                    const ids = this.isCollapsed(block) ? this.groupOf(block) : [block.id];
+                    if (ids.includes(target.id)) return;
+                    const targetIds = this.isCollapsed(target) ? this.groupOf(target) : [target.id];
+                    const anchor = drag.before ? targetIds[0] : targetIds[targetIds.length - 1];
                     this.reshapeBlocks(items => {
-                        const from = items.findIndex(item => item.block.id === drag.id);
-                        const [moved] = items.splice(from, 1);
-                        const at = items.findIndex(item => item.block.id === drag.target);
-                        items.splice(drag.before ? at : at + 1, 0, moved);
-                        return items;
+                        const moved = items.filter(item => ids.includes(item.block?.id));
+                        const rest = items.filter(item => !ids.includes(item.block?.id));
+                        const at = rest.findIndex(item => item.block?.id === anchor);
+                        rest.splice(drag.before ? at : at + 1, 0, ...moved);
+                        return rest;
                     });
                     if (block) this.notice = @js(__(':name moved.')).replace(':name', this.blockName(block));
                 },
