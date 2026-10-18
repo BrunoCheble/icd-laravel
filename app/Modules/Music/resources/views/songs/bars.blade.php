@@ -27,6 +27,17 @@
         .bar-group-head .group-name i { font-size: .65rem; }
         .bar-group-head .group-repeat { font-size: .7rem; font-weight: 700; color: #9ca3af; }
         .bar.is-group-start { grid-column-start: 1; }
+        .bar-group-head .group-grip { color: #9ca3af; cursor: grab; padding: .1rem .15rem; touch-action: none; }
+        .bar-group-head .group-remove { margin-left: auto; border: 0; background: none; padding: .15rem .35rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
+        .bar-group-head .group-remove:hover { background: #fef2f2; color: #dc2626; }
+        .bar-group-head .group-remove:disabled { opacity: .3; cursor: default; }
+        /* Moving a block: the bars fold away and only the heads show */
+        .bars-page.is-moving-block, .bars-page.is-moving-block * { cursor: grabbing !important; user-select: none; }
+        .bars-page.is-moving-block .bars-grid .bar { display: none; }
+        .bars-page.is-moving-block .bar-group-head { margin-top: .2rem; padding: .35rem .2rem; border: 1px solid #e5e7eb; border-left: 4px solid var(--type-color, #4f46e5); border-radius: .45rem; background: #fff; }
+        .bar-group-head.is-dragging { opacity: .45; }
+        .bar-group-head.drop-before { box-shadow: 0 -3px 0 0 #4f46e5; }
+        .bar-group-head.drop-after { box-shadow: 0 3px 0 0 #4f46e5; }
         @container (min-width: 34rem) { .bars-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
         @container (min-width: 46rem) { .bars-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
@@ -150,7 +161,7 @@
                 @include('music::songs.partials.tabs', ['song' => $song, 'current' => 'layout'])
                 @include('layouts.alert')
 
-                <div class="bars-page" x-cloak :class="{ 'is-editing': mode === 'edit', 'is-dragging': drag && drag.moved }" x-data="songBars(@js([
+                <div class="bars-page" x-cloak :class="{ 'is-editing': mode === 'edit', 'is-dragging': drag && drag.moved, 'is-moving-block': groupDrag?.moved }" x-data="songBars(@js([
                     'structure' => $blocks,
                     'sheet' => $sheet,
                     'key' => $song->musical_key,
@@ -265,7 +276,9 @@
                                     <div style="display: contents">
                                     {{-- A new block: its name over its rows of bars --}}
                                     <template x-if="bar.group">
-                                        <div class="bar-group-head" :style="typeStyle(blockName(bar.group))">
+                                        <div class="bar-group-head" :style="typeStyle(blockName(bar.group))" :data-group-block="bar.group.id"
+                                            :class="{ 'is-dragging': groupDrag?.moved && groupDrag.id === bar.group.id, 'drop-before': groupDrag?.moved && groupDrag.target === bar.group.id && groupDrag.before, 'drop-after': groupDrag?.moved && groupDrag.target === bar.group.id && !groupDrag.before }">
+                                            <span class="group-grip" x-show="!versionId" @pointerdown="startGroupDrag($event, bar.group)" title="{{ __('Drag to move the block') }}"><i class="fa-solid fa-grip-vertical"></i></span>
                                             <button type="button" class="group-name" @click="playFromTick(bar.group.startTick)" :title="canPlay ? @js(__('Play from here')) : ''">
                                                 <i class="fa-solid fa-play" x-show="canPlay"></i> <span x-text="blockName(bar.group)"></span>
                                             </button>
@@ -277,6 +290,10 @@
                                             <template x-if="freeTiming && !versionId">
                                                 <button type="button" class="block-mark" :class="{ 'is-marked': isMarked(bar.group) }" @click.stop="openMark(bar.group, $event)"
                                                     :title="`${@js(__('Mark the start of this block now'))} (${formatClock(blockStart(bar.group))})`" :aria-label="@js(__('Mark the start of this block now'))"><i class="fa-regular fa-clock"></i></button>
+                                            </template>
+                                            <template x-if="!versionId">
+                                                <button type="button" class="group-remove" @click.stop="removeBlock(bar.group)" :disabled="timedBlocks().length < 2"
+                                                    :title="@js(__('Remove block'))" :aria-label="@js(__('Remove block'))"><i class="fa-solid fa-trash"></i></button>
                                             </template>
                                         </div>
                                     </template>
@@ -510,7 +527,8 @@
                         </div>
                     </div>
 
-                    {{-- The menu of a block (its "..." next to its name): name, repetitions, duplicate, move, join, copy, remove --}}
+                    {{-- The menu of a block (its "..." next to its name): name, repetitions, duplicate (it is moved by dragging its
+                         head and removed with the bin on its right) --}}
                     <div class="popover" x-show="blockMenu" x-cloak x-ref="blockMenu" @click.outside="blockMenu = null" @keydown.escape.stop="blockMenu = null">
                         <template x-if="blockMenu && menuBlock()">
                             <div x-data="{ name: menuBlockInfo().name }">
@@ -527,18 +545,6 @@
                                         <input type="number" class="repeat-input" min="1" max="50" :value="menuBlockInfo().repeats" @change="setRepeats(menuBlock(), $event.target.value); blockMenu = null">
                                     </label>
                                     <button type="button" class="ws-btn" @click="duplicateBlock(menuBlock()); blockMenu = null" title="{{ __('Duplicate the block right after it') }}"><i class="fa-solid fa-clone"></i> {{ __('Duplicate') }}</button>
-                                </div>
-                                <div class="row">
-                                    <button type="button" class="ws-btn" @click="moveBlockStep(menuBlock(), -1); blockMenu = null" :disabled="menuBlockInfo().index <= 0"><i class="fa-solid fa-arrow-up"></i> {{ __('Move up') }}</button>
-                                    <button type="button" class="ws-btn" @click="moveBlockStep(menuBlock(), 1); blockMenu = null" :disabled="menuBlockInfo().index >= blocks.length - 1"><i class="fa-solid fa-arrow-down"></i> {{ __('Move down') }}</button>
-                                </div>
-                                <div class="row">
-                                    <button type="button" class="ws-btn" @click="joinMenuBlockAbove()" :disabled="!menuBlockAbove()" title="{{ __('The block becomes part of the block above it') }}">{{ __('Join to the block above') }}</button>
-                                    <button type="button" class="ws-btn" @click="copyBlock(Math.floor(menuBlock().startTick / (perBar * 2))); blockMenu = null"><i class="fa-solid fa-copy"></i> {{ __('Copy the block') }}</button>
-                                </div>
-                                <hr>
-                                <div class="row">
-                                    <button type="button" class="ws-btn" style="color: #dc2626;" @click="removeBlock(menuBlock()); blockMenu = null" :disabled="timedBlocks().length < 2"><i class="fa-solid fa-trash"></i> {{ __('Remove block') }}</button>
                                 </div>
                             </div>
                         </template>
@@ -856,9 +862,9 @@
                     }
                     // The last pointer used: a finger opens the chord editor, a mouse types right in the cell.
                     window.addEventListener('pointerdown', event => { this.touch = event.pointerType === 'touch' || event.pointerType === 'pen'; }, true);
-                    window.addEventListener('pointermove', event => { this.onDragMove(event); this.onSheetDragMove(event); });
-                    window.addEventListener('pointerup', () => { this.onDragEnd(); this.onSheetDragEnd(); });
-                    window.addEventListener('pointercancel', () => { this.onDragEnd(); this.onSheetDragEnd(); });
+                    window.addEventListener('pointermove', event => { this.onDragMove(event); this.onSheetDragMove(event); this.onGroupDragMove(event); });
+                    window.addEventListener('pointerup', () => { this.onDragEnd(); this.onSheetDragEnd(); this.onGroupDragEnd(); });
+                    window.addEventListener('pointercancel', () => { this.onDragEnd(); this.onSheetDragEnd(); this.groupDrag = null; });
                     window.addEventListener('beforeunload', event => {
                         if (this.dirty && !this.saving) event.preventDefault();
                     });
@@ -2774,11 +2780,6 @@
                     this.place(this.ref('blockMenu'), element);
                 },
                 menuBlock() { return this.blockMenu ? this.blocks.find(block => block.id === this.blockMenu.id) ?? null : null; },
-                menuBlockAbove() {
-                    const block = this.menuBlock();
-                    const timed = this.timedBlocks();
-                    return block ? timed[timed.indexOf(block) - 1] ?? null : null;
-                },
                 renameMenuBlock(typed) {
                     const block = this.menuBlock();
                     const name = String(typed ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
@@ -2788,28 +2789,56 @@
                     block.data = { ...block.data, section: name };
                     this.revision++;
                 },
-                joinMenuBlockAbove() {
-                    const block = this.menuBlock();
-                    const above = this.menuBlockAbove();
-                    this.blockMenu = null;
-                    if (block && above) this.join(above, block);
-                },
                 // Name, times played in a row and place of the menu's block (safe while the menu closes).
                 menuBlockInfo() {
                     const block = this.menuBlock();
                     return block ? { name: this.blockName(block), repeats: this.groupOf(block).length, index: this.blockIndex(block) } : { name: '', repeats: 1, index: -1 };
                 },
-                // A block moved one place up or down among the blocks ("back to the start" markers count as places).
-                moveBlockStep(block, step) {
-                    const at = this.blockIndex(block);
-                    const to = at + step;
-                    if (at < 0 || to < 0 || to >= this.blocks.length) return;
+                // ---- Dragging a block by its head: while dragging, the bars hide and only the heads show, so the order is
+                // easy to see; dropped before or after another block ----
+                groupDrag: null,
+                startGroupDrag(event, block) {
+                    if (this.versionId) return;
+                    event.preventDefault();
+                    this.blockMenu = null;
+                    this.barMenu = null;
+                    this.groupDrag = { id: block.id, x: event.clientX, y: event.clientY, moved: false, target: null, before: true };
+                },
+                onGroupDragMove(event) {
+                    const drag = this.groupDrag;
+                    if (!drag) return;
+                    if (!drag.moved && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 6) return;
+                    if (!drag.moved) {
+                        // The bars fold away: the dragged head is brought back under the pointer.
+                        drag.moved = true;
+                        this.$nextTick(() => {
+                            const element = document.querySelector(`[data-group-block="${drag.id}"]`);
+                            if (element) window.scrollBy(0, element.getBoundingClientRect().top - (event.clientY - 12));
+                        });
+                        return;
+                    }
+                    const heads = [...document.querySelectorAll('[data-group-block]')].map(element => ({ id: Number(element.dataset.groupBlock), box: element.getBoundingClientRect() }));
+                    const over = heads.find(item => event.clientY < item.box.bottom) ?? heads[heads.length - 1];
+                    if (over) {
+                        drag.target = over.id;
+                        drag.before = event.clientY < over.box.top + over.box.height / 2;
+                    }
+                    if (event.clientY < 60) window.scrollBy(0, -12);
+                    else if (event.clientY > window.innerHeight - 60) window.scrollBy(0, 12);
+                },
+                onGroupDragEnd() {
+                    const drag = this.groupDrag;
+                    this.groupDrag = null;
+                    if (!drag?.moved || drag.target === null || drag.target === drag.id) return;
+                    const block = this.blocks.find(item => item.id === drag.id);
                     this.reshapeBlocks(items => {
-                        const [moved] = items.splice(at, 1);
-                        items.splice(to, 0, moved);
+                        const from = items.findIndex(item => item.block.id === drag.id);
+                        const [moved] = items.splice(from, 1);
+                        const at = items.findIndex(item => item.block.id === drag.target);
+                        items.splice(drag.before ? at : at + 1, 0, moved);
                         return items;
                     });
-                    this.notice = @js(__(':name moved.')).replace(':name', this.blockName(block));
+                    if (block) this.notice = @js(__(':name moved.')).replace(':name', this.blockName(block));
                 },
 
                 startPress(bar, event) {
@@ -2850,14 +2879,6 @@
                         this.blocks.push({ id: nextId++, startTick, data: { section: name, start: formatStart(this.timeOfTick(startTick)) } });
                         this.blocks.sort((a, b) => a.startTick - b.startTick || (this.isMarker(a) ? -1 : 0));
                     }
-                    this.revision++;
-                },
-                // Joining: the separation goes away and the block that stays keeps the lyrics of both.
-                join(kept, gone) {
-                    this.remember();
-                    const lyrics = [kept.data.lyrics, gone.data.lyrics].map(text => (text || '').trim()).filter(Boolean).join('\n');
-                    kept.data = { ...kept.data, lyrics: lyrics || null };
-                    this.blocks = this.blocks.filter(block => block !== gone);
                     this.revision++;
                 },
                 // ---- Bars added or removed: the chords stay the same (only how long they last changes), so the chord
