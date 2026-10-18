@@ -59,4 +59,21 @@ class SongAdminPagesTest extends MusicTestCase
         $this->assertTrue($structure[0]['free_timing']);
         $this->assertSame('0:11.54', $structure[1]['free_start']);
     }
+
+    public function test_a_block_of_unknown_chords_is_saved(): void
+    {
+        $song = $this->song();
+        $blocks = [
+            ['section' => 'INTRO', 'chords' => ['G', 'D'], 'durations' => [4, 4], 'beats_per_bar' => 4, 'start' => '0:02'],
+            ['section' => 'BRIDGE', 'chords' => ['?', '?', '?'], 'durations' => [4, 4, 4], 'beats_per_bar' => 4],
+        ];
+
+        $this->actingAs($this->admin())
+            ->putJson("/songs/{$song->id}/bars", ['blocks' => $blocks, 'updated_at' => $song->updated_at->toIso8601String()])
+            ->assertOk();
+
+        $structure = json_decode(json_encode($song->fresh()->structure), true);
+        $this->assertSame(['?', '?', '?'], $structure[1]['chords']);
+        $this->assertSame([4, 4, 4], $structure[1]['durations']);
+    }
 }

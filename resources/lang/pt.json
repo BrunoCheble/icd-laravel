@@ -836,5 +836,7 @@
     "Click to mark it as a passing chord": "Clique para marcar como acorde de passagem",
     ":name moved.": ":name movido.",
     "Name of the block": "Nome do bloco",
-    "The block becomes part of the block above it": "O bloco passa a fazer parte do bloco de cima"
+    "The block becomes part of the block above it": "O bloco passa a fazer parte do bloco de cima",
+    "New block": "Novo bloco",
+    ":name added at the end with :n bars: write their chords in place of the \"?\".": ":name acrescentado no fim com :n compassos: escreva os acordes no lugar dos \"?\"."
 }

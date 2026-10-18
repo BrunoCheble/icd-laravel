@@ -27,6 +27,13 @@
         .bar-group-head .group-name i { font-size: .65rem; }
         .bar-group-head .group-repeat { font-size: .7rem; font-weight: 700; color: #9ca3af; }
         .bar.is-group-start { grid-column-start: 1; }
+        .add-block { margin-top: .9rem; }
+        .add-block-open { width: 100%; padding: .7rem; border: 2px dashed #d1d5db; border-radius: .6rem; background: none; color: #6b7280; font-weight: 700; cursor: pointer; }
+        .add-block-open:hover { border-color: #4f46e5; color: #4f46e5; }
+        .add-block-form { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .6rem; border: 1px solid #c7d2fe; border-radius: .6rem; background: #f8fafc; }
+        .add-block-form input[type=text] { flex: 1 1 12rem; min-width: 0; padding: .4rem .55rem; border: 1px solid #d1d5db; border-radius: .4rem; font-weight: 700; }
+        .add-block-form label { display: inline-flex; align-items: center; gap: .35rem; font-size: .85rem; color: #4b5563; }
+        .add-block-form input[type=number] { width: 4.5rem; padding: .35rem .4rem; border: 1px solid #d1d5db; border-radius: .4rem; text-align: center; font-weight: 700; }
         .bar-group-head .group-grip { color: #9ca3af; cursor: grab; padding: .1rem .15rem; touch-action: none; }
         .bar-group-head .group-remove { margin-left: auto; border: 0; background: none; padding: .15rem .35rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
         .bar-group-head .group-remove:hover { background: #fef2f2; color: #dc2626; }
@@ -352,6 +359,19 @@
                                     </div>
                                     </div>
                                 </template>
+                            </div>
+                            {{-- A new block at the end: its name and how many bars (each with a "?" to be written by ear) --}}
+                            <div class="add-block" x-show="!versionId" x-data="{ open: false, name: '', count: 4 }">
+                                <button type="button" class="add-block-open" x-show="!open" @click="open = true; $nextTick(() => $refs.newBlockName.focus())">
+                                    <i class="fa-solid fa-plus"></i> {{ __('New block') }}
+                                </button>
+                                <form class="add-block-form" x-show="open" x-cloak @submit.prevent="if (addBlockAtEnd(name, count)) { open = false; name = ''; count = 4; }" @keydown.escape.stop="open = false">
+                                    <input type="text" x-ref="newBlockName" x-model="name" list="block-names" required autocomplete="off" spellcheck="false" style="text-transform: uppercase"
+                                        placeholder="{{ __('E.g. CHORUS') }}" aria-label="{{ __('Name of the block') }}">
+                                    <label>{{ __('Bars') }} <input type="number" x-model.number="count" min="1" max="64" required></label>
+                                    <button type="submit" class="ws-btn ws-btn-primary"><i class="fa-solid fa-plus"></i> {{ __('Add') }}</button>
+                                    <button type="button" class="ws-btn" @click="open = false">{{ __('Cancel') }}</button>
+                                </form>
                             </div>
                         </div>
 
@@ -2769,6 +2789,27 @@
                 },
 
                 // ---- Blocks ----
+                // A new block at the end of the song: `count` bars with a "?" each (chords to be written by ear), from the
+                // end of the song. Returns whether it was added.
+                addBlockAtEnd(typed, count) {
+                    const name = String(typed ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
+                    const bars = Math.max(1, Math.min(64, Math.round(Number(count) || 0)));
+                    if (!name || this.versionId) return false;
+                    const size = this.perBar * 2;
+                    this.remember();
+                    const startTick = this.ticks.length;
+                    for (let bar = 0; bar < bars; bar++) {
+                        // Each bar its own "?" (the same chord again would join the bars into one chord).
+                        if (bar > 0 || this.ticks[startTick - 1] === '?') this.splits.push(this.ticks.length);
+                        for (let tick = 0; tick < size; tick++) this.ticks.push('?');
+                    }
+                    this.blocks.push({ id: nextId++, startTick, data: { section: name, start: formatStart(this.timeOfTick(startTick)) } });
+                    this.originalTicks = [];
+                    this.revision++;
+                    this.notice = @js(__(':name added at the end with :n bars: write their chords in place of the "?".')).replace(':name', name).replace(':n', bars);
+                    this.$nextTick(() => document.querySelector(`[data-group-block="${this.blocks[this.blocks.length - 1].id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+                    return true;
+                },
                 // ---- The menu of a block ----
                 blockMenu: null,
                 openBlockMenu(block, element) {
