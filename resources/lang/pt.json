@@ -842,5 +842,22 @@
     "More bars are added at the end of the block (with a \"?\" each); fewer take its last bars out": "Mais compassos são acrescentados no fim do bloco (com um \"?\" cada); menos tira os últimos compassos do bloco",
     ":name now has :n bars.": ":name tem agora :n compassos.",
     "Show each block": "Mostrar cada um",
-    "Play it once more": "Tocar mais uma vez"
+    "Play it once more": "Tocar mais uma vez",
+    "Bars :from–:to · block :n of :total": "Compassos :from–:to · bloco :n de :total",
+    "Fewer bars": "Menos compassos",
+    "More bars": "Mais compassos",
+    "Fewer repetitions": "Menos repetições",
+    "More repetitions": "Mais repetições",
+    "Starts at": "Começa em",
+    "0.1 s earlier": "0,1 s mais cedo",
+    "0.1 s later": "0,1 s mais tarde",
+    "Back to right after the block before": "Voltar a logo após o bloco anterior",
+    "Where the song starts in the recording (bar 1); the other blocks follow it.": "Onde a música começa na gravação (compasso 1); os outros blocos seguem-no.",
+    "Follows the BPM. Changing it turns on free timing for the song.": "Segue o BPM. Ao alterar, o tempo livre é ativado na música.",
+    "Marked time: the blocks after it count from here.": "Hora marcada: os blocos seguintes contam a partir daqui.",
+    "Right after the block before, at the BPM.": "Logo após o bloco anterior, ao BPM.",
+    "Type the time as m:ss.cc, e.g. 1:23.50.": "Escreva a hora como m:ss.cc, ex.: 1:23.50.",
+    ":name has to start after the block before it (:time).": ":name tem de começar depois do bloco anterior (:time).",
+    ":name starts at :time (free timing turned on).": ":name começa em :time (tempo livre ativado).",
+    ":name starts at :time.": ":name começa em :time."
 }

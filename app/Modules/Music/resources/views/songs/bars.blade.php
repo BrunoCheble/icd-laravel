@@ -107,6 +107,30 @@
         .menu-chords { display: flex; flex-wrap: wrap; gap: .3rem; }
         .menu-chords button { padding: .2rem .55rem; border: 1px solid #d1d5db; border-radius: 999px; background: #fff; font-weight: 700; font-size: .85rem; cursor: pointer; }
         .menu-chords button.is-on { border-color: #4f46e5; background: #eef2ff; color: #4f46e5; text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .2em; }
+        /* The menu of a block: its name and place on top, then name, bars, repetitions and start time */
+        .block-menu-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; margin: -.65rem -.65rem .55rem; padding: .55rem .65rem .5rem; border-bottom: 3px solid var(--type-color, #4f46e5); border-radius: .6rem .6rem 0 0; background: #f8fafc; }
+        .block-menu-name { margin: 0; color: var(--type-color, #4f46e5); font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+        .block-menu-place { margin: .1rem 0 0; font-size: .72rem; color: #6b7280; }
+        .block-menu-close { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #9ca3af; cursor: pointer; }
+        .block-menu-close:hover { background: #e5e7eb; color: #374151; }
+        .block-menu-field { margin-top: .55rem; }
+        .block-menu-label { display: block; margin-bottom: .2rem; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
+        .block-menu-name-row { display: flex; gap: .35rem; }
+        .block-menu-name-row input { flex: 1; min-width: 0; }
+        .block-menu-name-row .ws-btn { flex: none; min-width: 2.6rem; justify-content: center; }
+        .block-menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+        .stepper { display: flex; align-items: stretch; border: 1px solid #d1d5db; border-radius: .45rem; overflow: hidden; }
+        .stepper button { flex: none; width: 2.1rem; border: 0; background: #f3f4f6; color: #374151; font-size: .75rem; cursor: pointer; }
+        .stepper button:hover:not(:disabled) { background: #e0e7ff; color: #4f46e5; }
+        .stepper button:disabled { opacity: .4; cursor: default; }
+        .stepper input { flex: 1; min-width: 0; width: 100%; border: 0; padding: .35rem 0; text-align: center; font-weight: 700; -moz-appearance: textfield; }
+        .stepper input::-webkit-inner-spin-button, .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .block-menu-time { display: flex; gap: .3rem; }
+        .block-menu-time input { flex: 1; min-width: 0; padding: .35rem .4rem; border: 1px solid #d1d5db; border-radius: .45rem; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .block-menu-time .nudge { flex: none; padding: 0 .45rem; border: 1px solid #d1d5db; border-radius: .45rem; background: #fff; color: #4b5563; font-size: .72rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        .block-menu-time .nudge:hover { border-color: #4f46e5; color: #4f46e5; }
+        .block-menu-time .now { color: #4f46e5; }
+        .link-btn { margin-top: .3rem; padding: 0; border: 0; background: none; color: #4f46e5; font-size: .75rem; text-decoration: underline; cursor: pointer; }
         .repeat-input { width: 3.6rem; padding: .15rem .35rem; border: 1px solid #d1d5db; border-radius: .35rem; font-weight: 700; text-align: center; }
         .beat.is-on { background: #f59e0b; }
         .beat.is-on .chord, .beat.is-on .count { color: #fff; }
@@ -565,25 +589,55 @@
                          duplicated and removed with the buttons on its right) --}}
                     <div class="popover" x-show="blockMenu" x-cloak x-ref="blockMenu" @click.outside="blockMenu = null" @keydown.escape.stop="blockMenu = null">
                         <template x-if="blockMenu && menuBlock()">
-                            <div x-data="{ name: menuBlockInfo().name }">
-                                <p class="title" x-text="`${@js(__('Block'))} · ${menuBlockInfo().name}`"></p>
-                                <input type="text" list="block-names" x-model="name" autocomplete="off" spellcheck="false" style="text-transform: uppercase"
-                                    :aria-label="@js(__('Name of the block'))" @keydown.enter.prevent="renameMenuBlock(name)">
-                                <div class="row">
-                                    <button type="button" class="ws-btn ws-btn-primary" @click="renameMenuBlock(name)">{{ __('Rename') }}</button>
+                            <div x-data="{ name: menuBlockInfo().name }" class="block-menu" :style="typeStyle(menuBlockInfo().name)">
+                                <div class="block-menu-head">
+                                    <div>
+                                        <p class="block-menu-name" x-text="menuBlockInfo().name"></p>
+                                        <p class="block-menu-place" x-text="@js(__('Bars :from–:to · block :n of :total')).replace(':from', menuBlockInfo().from).replace(':to', menuBlockInfo().to).replace(':n', menuBlockInfo().number).replace(':total', menuBlockInfo().total)"></p>
+                                    </div>
+                                    <button type="button" class="block-menu-close" @click="blockMenu = null" :aria-label="@js(__('Close'))"><i class="fa-solid fa-xmark"></i></button>
                                 </div>
-                                <hr>
-                                <div class="row" style="align-items: center;">
-                                    <label class="title" style="margin: 0; display: inline-flex; align-items: center; gap: .35rem;" :title="@js(__('More bars are added at the end of the block (with a "?" each); fewer take its last bars out'))">
-                                        {{ __('Bars') }}
-                                        <input type="number" class="repeat-input" min="1" max="128" :value="menuBlockInfo().bars" @change="setBlockBars(menuBlock(), $event.target.value)">
-                                    </label>
+                                <div class="block-menu-field">
+                                    <span class="block-menu-label">{{ __('Name') }}</span>
+                                    <div class="block-menu-name-row">
+                                        <input type="text" list="block-names" x-model="name" autocomplete="off" spellcheck="false" style="text-transform: uppercase"
+                                            :aria-label="@js(__('Name of the block'))" @keydown.enter.prevent="renameMenuBlock(name)">
+                                        <button type="button" class="ws-btn ws-btn-primary" @click="renameMenuBlock(name)" :disabled="!name.trim() || name.trim().toUpperCase() === menuBlockInfo().name"
+                                            :title="@js(__('Rename'))" :aria-label="@js(__('Rename'))"><i class="fa-solid fa-check"></i></button>
+                                    </div>
                                 </div>
-                                <div class="row" style="align-items: center;">
-                                    <label class="title" style="margin: 0; display: inline-flex; align-items: center; gap: .35rem;" :title="@js(__('How many times this block is played, one after the other'))">
-                                        {{ __('Repetitions') }}
-                                        <input type="number" class="repeat-input" min="1" max="50" :value="menuBlockInfo().repeats" @change="setRepeats(menuBlock(), $event.target.value)">
-                                    </label>
+                                <div class="block-menu-grid">
+                                    <div class="block-menu-field" :title="@js(__('More bars are added at the end of the block (with a "?" each); fewer take its last bars out'))">
+                                        <span class="block-menu-label">{{ __('Bars') }}</span>
+                                        <div class="stepper">
+                                            <button type="button" @click="setBlockBars(menuBlock(), menuBlockInfo().bars - 1)" :disabled="menuBlockInfo().bars <= 1" :aria-label="@js(__('Fewer bars'))"><i class="fa-solid fa-minus"></i></button>
+                                            <input type="number" min="1" max="128" :value="menuBlockInfo().bars" @change="setBlockBars(menuBlock(), $event.target.value)" :aria-label="@js(__('Bars'))">
+                                            <button type="button" @click="setBlockBars(menuBlock(), menuBlockInfo().bars + 1)" :aria-label="@js(__('More bars'))"><i class="fa-solid fa-plus"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="block-menu-field" :title="@js(__('How many times this block is played, one after the other'))">
+                                        <span class="block-menu-label">{{ __('Repetitions') }}</span>
+                                        <div class="stepper">
+                                            <button type="button" @click="setRepeats(menuBlock(), menuBlockInfo().repeats - 1)" :disabled="menuBlockInfo().repeats <= 1" :aria-label="@js(__('Fewer repetitions'))"><i class="fa-solid fa-minus"></i></button>
+                                            <input type="number" min="1" max="50" :value="menuBlockInfo().repeats" @change="setRepeats(menuBlock(), $event.target.value)" :aria-label="@js(__('Repetitions'))">
+                                            <button type="button" @click="setRepeats(menuBlock(), menuBlockInfo().repeats + 1)" :aria-label="@js(__('More repetitions'))"><i class="fa-solid fa-plus"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {{-- Start time: where the block starts in the recording --}}
+                                <div class="block-menu-field">
+                                    <span class="block-menu-label">{{ __('Starts at') }}</span>
+                                    <div class="block-menu-time">
+                                        <button type="button" class="nudge" @click="setBlockTime(menuBlock(), blockStart(menuBlock()) - 0.1)" title="{{ __('0.1 s earlier') }}">−0,1</button>
+                                        <input type="text" inputmode="decimal" :value="formatClock(blockStart(menuBlock()))" @change="setBlockTime(menuBlock(), $event.target.value); $event.target.value = formatClock(blockStart(menuBlock()))"
+                                            @keydown.enter.prevent="$event.target.blur()" :aria-label="@js(__('Starts at'))" placeholder="0:00.00">
+                                        <button type="button" class="nudge" @click="setBlockTime(menuBlock(), blockStart(menuBlock()) + 0.1)" title="{{ __('0.1 s later') }}">+0,1</button>
+                                        <button type="button" class="nudge now" x-show="hasMusic && !clickOnly" @click="const block = menuBlock(); blockMenu = null; openMark(block, $event)"
+                                            title="{{ __('Mark the start of this block now') }}"><i class="fa-regular fa-clock"></i> {{ __('Now') }}</button>
+                                    </div>
+                                    <p class="help" x-text="menuTimeHelp()"></p>
+                                    <button type="button" class="link-btn" x-show="menuBlockInfo().index > 0 && freeTiming && menuBlock()?.data.free_start !== undefined"
+                                        @click="setBlockTime(menuBlock(), null)">{{ __('Back to right after the block before') }}</button>
                                 </div>
                             </div>
                         </template>
@@ -2917,7 +2971,72 @@
                 // Name, times played in a row and place of the menu's block (safe while the menu closes).
                 menuBlockInfo() {
                     const block = this.menuBlock();
-                    return block ? { name: this.blockName(block), repeats: this.groupOf(block).length, index: this.blockIndex(block), bars: this.blockBarCount(block) } : { name: '', repeats: 1, index: -1, bars: 1 };
+                    if (!block) return { name: '', repeats: 1, index: -1, bars: 1, from: 0, to: 0, number: 0, total: 0 };
+                    const size = this.perBar * 2;
+                    const timed = this.timedBlocks();
+                    return {
+                        name: this.blockName(block), repeats: this.groupOf(block).length, index: timed.indexOf(block), bars: this.blockBarCount(block),
+                        from: Math.floor(block.startTick / size) + 1, to: Math.ceil(this.blockEnd(block) / size), number: timed.indexOf(block) + 1, total: timed.length,
+                    };
+                },
+                // What the start time of the menu's block follows.
+                menuTimeHelp() {
+                    const block = this.menuBlock();
+                    if (!block) return '';
+                    if (this.timedBlocks().indexOf(block) === 0) return @js(__('Where the song starts in the recording (bar 1); the other blocks follow it.'));
+                    if (!this.freeTiming) return @js(__('Follows the BPM. Changing it turns on free timing for the song.'));
+                    return block.data.free_start !== undefined
+                        ? @js(__('Marked time: the blocks after it count from here.'))
+                        : @js(__('Right after the block before, at the BPM.'));
+                },
+                // A block's start time typed in (m:ss.cc or seconds), or null: back to right after the block before it.
+                // The first block's is the song's start; another one's is a free-timing mark (turned on if it is off).
+                setBlockTime(block, value) {
+                    if (!block || this.versionId) return;
+                    const timed = this.timedBlocks();
+                    const i = timed.indexOf(block);
+                    if (i < 0) return;
+                    if (value === null) {
+                        if (i === 0 || block.data.free_start === undefined) return;
+                        this.remember();
+                        const data = { ...block.data };
+                        delete data.free_start;
+                        block.data = data;
+                        this.revision++;
+                        return;
+                    }
+                    const seconds = typeof value === 'number' ? Math.round(value * 100) / 100 : toSeconds(String(value).trim().replace(',', '.'));
+                    if (seconds === null || seconds < 0) {
+                        this.notice = @js(__('Type the time as m:ss.cc, e.g. 1:23.50.'));
+                        return;
+                    }
+                    if (i === 0) {
+                        this.remember();
+                        block.data = { ...block.data, start: formatFineStart(seconds) };
+                    } else {
+                        if (seconds <= this.blockStart(timed[i - 1]) + 0.05) {
+                            this.notice = @js(__(':name has to start after the block before it (:time).')).replace(':name', this.blockName(block)).replace(':time', this.formatClock(this.blockStart(timed[i - 1])));
+                            this.revision++;
+                            return;
+                        }
+                        const turnedOn = !this.freeTiming;
+                        // Turning free timing on is remembered too, so one undo takes both back.
+                        if (turnedOn) this.toggleFreeTiming();
+                        else this.remember();
+                        const starts = this.freeStarts(timed);
+                        const expected = starts[i - 1] + (block.startTick - timed[i - 1].startTick) * this.halfBeat;
+                        const data = { ...block.data };
+                        if (Math.abs(seconds - expected) < 0.005) delete data.free_start;
+                        else data.free_start = formatFineStart(seconds);
+                        block.data = data;
+                        if (turnedOn) {
+                            this.revision++;
+                            this.notice = @js(__(':name starts at :time (free timing turned on).')).replace(':name', this.blockName(block)).replace(':time', this.formatClock(seconds));
+                            return;
+                        }
+                    }
+                    this.revision++;
+                    this.notice = @js(__(':name starts at :time.')).replace(':name', this.blockName(block)).replace(':time', this.formatClock(seconds));
                 },
                 // ---- Dragging a block by its head: while dragging, the bars hide and only the heads show, so the order is
                 // easy to see; dropped before or after another block ----
