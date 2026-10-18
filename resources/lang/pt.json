@@ -817,14 +817,5 @@
     "Cursor": "Cursor",
     "The block, bar, chord and beat being played are lit": "O bloco, compasso, acorde e tempo que estão a tocar ficam acesos",
     "This song": "Esta música",
-    "Size": "Tamanho",
-    "Forgot your password?": "Esqueceu-se da palavra-passe?",
-    "Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.": "Esqueceu-se da palavra-passe? Indique o seu email e enviamos-lhe um link para escolher uma nova.",
-    "Email Password Reset Link": "Enviar link de recuperação",
-    "Reset Password": "Redefinir palavra-passe",
-    "Confirm Password": "Confirmar palavra-passe",
-    "Reset Password Notification": "Recuperação da palavra-passe",
-    "You are receiving this email because we received a password reset request for your account.": "Recebeu este email porque foi pedida a recuperação da palavra-passe da sua conta.",
-    "This password reset link will expire in :count minutes.": "Este link de recuperação expira dentro de :count minutos.",
-    "If you did not request a password reset, no further action is required.": "Se não pediu a recuperação da palavra-passe, não precisa de fazer nada."
+    "Size": "Tamanho"
 }
