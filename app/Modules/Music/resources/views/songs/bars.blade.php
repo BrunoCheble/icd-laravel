@@ -19,6 +19,14 @@
         .bars-col { container-type: inline-size; }
         @media (min-width: 1024px) { .pane-tabs { display: none !important; } }
         .bars-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem; }
+        /* Each block on its own rows, under its name (as the map on the public page) */
+        .bar-group-head { grid-column: 1 / -1; display: flex; align-items: center; gap: .35rem; margin-top: .55rem; padding: 0 .1rem .15rem; border-bottom: 2px solid var(--type-color, #4f46e5); }
+        .bars-grid > div:first-child > .bar-group-head { margin-top: 0; }
+        .bar-group-head .group-name { display: inline-flex; align-items: center; gap: .3rem; padding: .1rem .2rem; border: 0; border-radius: .3rem; background: none; color: var(--type-color, #4f46e5); font-size: .78rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; }
+        .bar-group-head .group-name:hover { background: #eef2ff; }
+        .bar-group-head .group-name i { font-size: .65rem; }
+        .bar-group-head .group-repeat { font-size: .7rem; font-weight: 700; color: #9ca3af; }
+        .bar.is-group-start { grid-column-start: 1; }
         @container (min-width: 34rem) { .bars-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
         @container (min-width: 46rem) { .bars-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
@@ -252,7 +260,25 @@
                         <div class="bars-col">
                             <div class="bars-grid">
                                 <template x-for="(bar, b) in bars" :key="bar.key">
-                                    <div class="bar" :class="{ 'is-current': b === currentBar, 'has-block': bar.blocks.some(block => !isMarker(block)), 'is-selected': isSelected(b), 'is-looped': loop && b >= loop.from && b <= loop.to }"
+                                    <div style="display: contents">
+                                    {{-- A new block: its name over its rows of bars --}}
+                                    <template x-if="bar.group">
+                                        <div class="bar-group-head" :style="typeStyle(blockName(bar.group))">
+                                            <button type="button" class="group-name" @click="playFromTick(bar.group.startTick)" :title="canPlay ? @js(__('Play from here')) : ''">
+                                                <i class="fa-solid fa-play" x-show="canPlay"></i> <span x-text="blockName(bar.group)"></span>
+                                            </button>
+                                            <span class="group-repeat" x-show="groupOf(bar.group).length > 1" x-text="`${groupOf(bar.group).indexOf(bar.group.id) + 1}/${groupOf(bar.group).length}`"></span>
+                                            <template x-if="!versionId">
+                                                <button type="button" class="block-more" @click.stop="openBarMenu(b, $event.currentTarget)"
+                                                    :title="@js(__('Block menu'))" :aria-label="@js(__('Block menu'))"><i class="fa-solid fa-ellipsis"></i></button>
+                                            </template>
+                                            <template x-if="freeTiming && !versionId">
+                                                <button type="button" class="block-mark" :class="{ 'is-marked': isMarked(bar.group) }" @click.stop="openMark(bar.group, $event)"
+                                                    :title="`${@js(__('Mark the start of this block now'))} (${formatClock(blockStart(bar.group))})`" :aria-label="@js(__('Mark the start of this block now'))"><i class="fa-regular fa-clock"></i></button>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <div class="bar" :class="{ 'is-group-start': !!bar.group, 'is-current': b === currentBar, 'has-block': bar.blocks.some(block => !isMarker(block)), 'is-selected': isSelected(b), 'is-looped': loop && b >= loop.from && b <= loop.to }"
                                         :style="bar.blocks.length ? typeStyle(blockName(bar.blocks[0])) : ''" :data-bar="b"
                                         @click="clickBar(b, $event)" @contextmenu.prevent="openBarMenu(b, $event.currentTarget)"
                                         @pointerdown="startPress(b, $event)" @pointerup="endPress()" @pointerleave="endPress()" @pointercancel="endPress()">
@@ -263,7 +289,7 @@
                                             <button type="button" @click="removeBar(b)" :disabled="ticks.length <= perBar * 2" :title="isSelected(b) && selection.to > selection.from ? @js(__('Remove the marked bars')) : @js(__('Remove this bar'))" aria-label="{{ __('Remove this bar') }}"><i class="fa-solid fa-trash"></i></button>
                                         </span>
                                         <div class="bar-blocks">
-                                            <template x-for="block in bar.blocks" :key="block.id">
+                                            <template x-for="block in bar.chips" :key="block.id">
                                                 <span style="display: contents">
                                                     <button type="button" class="block-chip" :class="{ 'is-marker': isMarker(block) }" :style="typeStyle(blockName(block))"
                                                         @click.stop="isMarker(block) ? null : playFromTick(block.startTick)" @contextmenu.stop.prevent="openBarMenu(b, $event.currentTarget.closest('.bar'))"
@@ -304,6 +330,7 @@
                                                 </span>
                                             </template>
                                         </div>
+                                    </div>
                                     </div>
                                 </template>
                             </div>
@@ -855,6 +882,8 @@
                 get bars() {
                     const size = this.perBar * 2;
                     const bars = [];
+                    const timed = this.timedBlocks();
+                    let previousOwner = null;
                     // Drawn again only when what a bar shows changes, not when it moves (equal bars told apart by their count).
                     const seen = {};
                     for (let start = 0; start < this.ticks.length; start += size) {
@@ -870,11 +899,20 @@
                             });
                         }
                         const blocks = this.blocks.filter(block => block.startTick >= start && block.startTick < start + size);
+                        // The block of the bar: the one playing on its first beat (bar 1 belongs to the first block even
+                        // when its first beats are empty). A bar of another block than the one before starts a new row.
+                        const owner = this.blockOfTick(start) ?? timed[0] ?? null;
+                        const groupStart = !!owner && owner !== previousOwner;
+                        previousOwner = owner;
+                        // Names shown in the bar: the "back to the start" markers and the blocks starting after its first
+                        // beat (the block of a new row is named in its head; so is the first block in bar 1).
+                        const chips = blocks.filter(block => this.isMarker(block) || !(groupStart && block === owner && (block.startTick === start || start === 0)));
                         // Drawn again only when what it shows changes (not on every change elsewhere in the song).
                         const content = [this.key, part.join(','), this.splits.filter(tick => tick >= start && tick < start + size).map(tick => tick - start).join(','),
-                            blocks.map(block => `${block.id}:${block.startTick - start}:${block.data.section}:${block.data.jump ?? ''}`).join(',')].join('|');
+                            blocks.map(block => `${block.id}:${block.startTick - start}:${block.data.section}:${block.data.jump ?? ''}`).join(','),
+                            groupStart ? `head:${owner.id}:${owner.data.section}` : ''].join('|');
                         seen[content] = (seen[content] ?? 0) + 1;
-                        bars.push({ beats, blocks, key: `${content}#${seen[content]}` });
+                        bars.push({ beats, blocks, chips, group: groupStart ? owner : null, key: `${content}#${seen[content]}` });
                     }
                     return bars;
                 },
