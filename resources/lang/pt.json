@@ -859,5 +859,9 @@
     "Type the time as m:ss.cc, e.g. 1:23.50.": "Escreva a hora como m:ss.cc, ex.: 1:23.50.",
     ":name has to start after the block before it (:time).": ":name tem de começar depois do bloco anterior (:time).",
     ":name starts at :time (free timing turned on).": ":name começa em :time (tempo livre ativado).",
-    ":name starts at :time.": ":name começa em :time."
+    ":name starts at :time.": ":name começa em :time.",
+    "In the song": "Na música",
+    "In the key of": "No tom de",
+    "Where it starts": "Onde começa",
+    "Double click a beat to choose its chord; right click a bar for its block.": "Duplo clique num tempo para escolher o acorde; botão direito num compasso para o bloco."
 }

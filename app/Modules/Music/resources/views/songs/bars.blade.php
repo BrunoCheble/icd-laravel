@@ -131,6 +131,11 @@
         .block-menu-time .nudge:hover { border-color: #4f46e5; color: #4f46e5; }
         .block-menu-time .now { color: #4f46e5; }
         .link-btn { margin-top: .3rem; padding: 0; border: 0; background: none; color: #4f46e5; font-size: .75rem; text-decoration: underline; cursor: pointer; }
+        .chord-picker .block-menu-field:first-of-type { margin-top: .45rem; }
+        .menu-chords button.is-current { border-color: var(--type-color, #4f46e5); background: var(--type-color, #4f46e5); color: #fff; }
+        .menu-chords.is-key button { border-style: dashed; color: #4b5563; }
+        .menu-chords button:hover { border-color: #4f46e5; color: #4f46e5; }
+        .menu-chords button.is-current:hover { color: #fff; }
         .repeat-input { width: 3.6rem; padding: .15rem .35rem; border: 1px solid #d1d5db; border-radius: .35rem; font-weight: 700; text-align: center; }
         .beat.is-on { background: #f59e0b; }
         .beat.is-on .chord, .beat.is-on .count { color: #fff; }
@@ -283,7 +288,7 @@
                     </div>
                     <div class="flex flex-wrap items-center gap-2 mt-1">
                         <span class="save-state" :class="{ 'is-dirty': dirty, 'is-error': saveError }" x-text="saveState"></span>
-                        <span class="ws-note ws-desktop" x-text="mode === 'edit' ? @js(__('Click a beat to change its chord; right click a bar for its block.')) : @js(__('Click a beat to play from it; right click a bar for its block.'))"></span>
+                        <span class="ws-note ws-desktop" x-text="mode === 'edit' ? @js(__('Double click a beat to choose its chord; right click a bar for its block.')) : @js(__('Click a beat to play from it; right click a bar for its block.'))"></span>
                     </div>
                     <p class="version-note" x-show="versionId" x-cloak x-text="@js(__('Editing the version for :instrument: only its chords change (the blocks, times, tempo, key and lyrics are the base\'s). It is a copy: later changes to the base do not reach it.')).replace(':instrument', currentVersion?.instrument ?? '')"></p>
                     {{-- Marked bars, copied chords and what happened to them --}}
@@ -379,7 +384,7 @@
                                                     <template x-if="inline && Math.floor(inline.tick / 2) === b * perBar + i">
                                                         <input type="text" class="inline-chord" :class="{ 'is-invalid': inline?.invalid }" :value="inline?.text ?? ''" autocomplete="off" spellcheck="false"
                                                             x-init="$nextTick(() => { $el.focus(); inline?.select ? $el.select() : $el.setSelectionRange($el.value.length, $el.value.length); })"
-                                                            @click.stop @dblclick.stop @pointerdown.stop
+                                                            @click.stop @pointerdown.stop
                                                             @input="if (inline) { inline.text = $event.target.value; inline.invalid = false; }"
                                                             @keydown.enter.prevent="commitInline()" @keydown.escape.stop.prevent="inline = null" @keydown.tab.prevent="commitInline()"
                                                             @blur="commitInline(true)">
@@ -475,19 +480,51 @@
                         </div>
                     </div>
 
-                    {{-- Chord of a beat, on touch screens (with a mouse the chord is typed right in the cell) --}}
-                    <div class="popover" x-show="editor" x-cloak x-ref="editor" @click.outside="editor = null" @keydown.escape.stop="editor = null">
-                        <p class="title" x-text="editor ? `${@js(__('Bar'))} ${editor.bar + 1}, ${@js(__('beat'))} ${editor.beat + 1}${editor.half ? ' (e)' : ''}` : ''"></p>
-                        <input type="text" x-ref="editorChord" autocomplete="off" spellcheck="false" placeholder="G, Am7, C/E, D4" @keydown.enter.prevent="applyChord()">
-                        <div class="row">
-                            <button type="button" class="ws-btn" :class="{ 'is-active': editor?.half === 0 }" @click="editor.half = 0; fillEditor()">{{ __('On the beat') }}</button>
-                            <button type="button" class="ws-btn" :class="{ 'is-active': editor?.half === 1 }" @click="editor.half = 1; fillEditor()">{{ __('On the "and"') }}</button>
+                    {{-- Chord of a beat (double click, or a tap on touch screens): one of the song's chords, one of the key, or typed --}}
+                    <div class="popover chord-picker" x-show="editor" x-cloak x-ref="editor" @click.outside="editor = null" @keydown.escape.stop="editor = null" :style="editor ? typeStyle(editorBlockName()) : ''">
+                        <div class="block-menu-head">
+                            <div>
+                                <p class="block-menu-name" x-text="editorBlockName()"></p>
+                                <p class="block-menu-place" x-text="editor ? `${@js(__('Bar'))} ${editor.bar + 1}, ${@js(__('beat'))} ${editor.beat + 1}${editor.half ? ' (e)' : ''}` : ''"></p>
+                            </div>
+                            <button type="button" class="block-menu-close" @click="editor = null" :aria-label="@js(__('Close'))"><i class="fa-solid fa-xmark"></i></button>
                         </div>
-                        <div class="row">
-                            <button type="button" class="ws-btn ws-btn-primary" @click="applyChord()">{{ __('Apply') }}</button>
-                            <button type="button" class="ws-btn" @click="removeChange()" :disabled="!canRemoveChange()" title="{{ __('The chord before goes on from here') }}">{{ __('Remove change') }}</button>
+                        <div class="block-menu-name-row">
+                            <input type="text" x-ref="editorChord" autocomplete="off" spellcheck="false" placeholder="G, Am7, C/E, D4"
+                                @input="if (editor) { editor.text = $event.target.value; editorError = ''; }" @keydown.enter.prevent="applyChord()">
+                            <button type="button" class="ws-btn ws-btn-primary" @click="applyChord()" :title="@js(__('Apply'))" :aria-label="@js(__('Apply'))"><i class="fa-solid fa-check"></i></button>
                         </div>
-                        <p class="title mt-2" x-show="editorError" x-text="editorError" style="color: #dc2626;"></p>
+                        <p class="help" x-show="editorError" x-text="editorError" style="color: #dc2626;"></p>
+                        <template x-if="editor">
+                            <div>
+                                <div class="block-menu-field" x-show="pickerChords('song').length">
+                                    <span class="block-menu-label">{{ __('In the song') }}</span>
+                                    <div class="menu-chords">
+                                        <template x-for="chord in pickerChords('song')" :key="chord">
+                                            <button type="button" :class="{ 'is-current': chord === editorChordNow() }" @click="pickChord(chord)" x-text="chord"></button>
+                                        </template>
+                                    </div>
+                                </div>
+                                <div class="block-menu-field" x-show="pickerChords('key').length">
+                                    <span class="block-menu-label" x-text="`${@js(__('In the key of'))} ${key}`"></span>
+                                    <div class="menu-chords is-key">
+                                        <template x-for="chord in pickerChords('key')" :key="chord">
+                                            <button type="button" @click="pickChord(chord)" x-text="chord"></button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <div class="block-menu-field">
+                            <span class="block-menu-label">{{ __('Where it starts') }}</span>
+                            <div class="row" style="margin-top: 0;">
+                                <button type="button" class="ws-btn" :class="{ 'is-active': editor?.half === 0 }" @click="editor.half = 0; fillEditor()">{{ __('On the beat') }}</button>
+                                <button type="button" class="ws-btn" :class="{ 'is-active': editor?.half === 1 }" @click="editor.half = 1; fillEditor()">{{ __('On the "and"') }}</button>
+                            </div>
+                        </div>
+                        <div class="row" x-show="canRemoveChange()">
+                            <button type="button" class="ws-btn" @click="removeChange()" title="{{ __('The chord before goes on from here') }}"><i class="fa-solid fa-eraser"></i> {{ __('Remove change') }}</button>
+                        </div>
                     </div>
 
                     {{-- After a chord change in a block that has equal copies: the same change there too? --}}
@@ -2244,6 +2281,8 @@
                     const onBeat = (bar * this.perBar + beat) * 2;
                     const andStarts = this.ticks[onBeat + 1] !== undefined && this.startsChord(onBeat + 1);
                     const onAnd = andStarts && (!!event?.target?.closest?.('.is-and') || !this.chordStartsAt(onBeat));
+                    const cell = event?.target?.closest?.('.beat');
+                    if (cell) return this.openBeatEditor(bar, beat, cell, onAnd ? 1 : 0);
                     this.editTick(onBeat + (onAnd ? 1 : 0));
                 },
                 editTick(tick) {
@@ -2553,7 +2592,7 @@
                     this.inline = null;
                     this.barMenu = null;
                     this.copyOffer = null;
-                    this.editor = { bar, beat, half: half ?? (this.ticks[tick + 1] !== this.ticks[tick] ? 1 : 0) };
+                    this.editor = { bar, beat, half: half ?? (this.ticks[tick + 1] !== this.ticks[tick] ? 1 : 0), text: '' };
                     this.place(this.ref('editor'), cell);
                     this.fillEditor();
                     this.$nextTick(() => { this.ref('editorChord').focus(); this.ref('editorChord').select(); });
@@ -2562,6 +2601,32 @@
                 fillEditor() {
                     this.editorError = '';
                     this.ref('editorChord').value = this.transposeName(this.ticks[this.editorTick()]) || '';
+                    // The chord shown at first is not a filter: every chord is offered until something is typed.
+                    if (this.editor) this.editor.text = '';
+                },
+                editorBlockName() { return this.editor ? this.blockName(this.blockOfTick(this.editorTick()) ?? { data: {} }) : ''; },
+                editorChordNow() { return this.editor ? this.transposeName(this.ticks[this.editorTick()]) || null : null; },
+                // The song's chords (in the order they first come, as shown in the current key), or the chords of the
+                // key that the song does not use yet; filtered by what is typed.
+                pickerChords(kind) {
+                    const song = [];
+                    this.ticks.forEach(chord => {
+                        const name = chord && chord !== '?' ? this.transposeName(chord) : null;
+                        if (name && !song.includes(name)) song.push(name);
+                    });
+                    let list = song;
+                    if (kind === 'key') {
+                        if (!this.key || typeof ChordTransposer === 'undefined') return [];
+                        const minor = /m$/.test(this.key);
+                        const base = minor ? ['Am', 'C', 'Dm', 'Em', 'E', 'F', 'G'] : ['C', 'Dm', 'Em', 'F', 'G', 'Am'];
+                        list = base.map(chord => ChordTransposer.transposeChord(chord, minor ? 'Am' : 'C', this.key)).filter(chord => !song.includes(chord));
+                    }
+                    const typed = (this.editor?.text || '').trim().toLowerCase();
+                    return typed ? list.filter(chord => chord.toLowerCase().startsWith(typed)) : list;
+                },
+                pickChord(chord) {
+                    this.ref('editorChord').value = chord;
+                    this.applyChord();
                 },
                 canRemoveChange() { return !!this.editor && this.isChangeAt(this.editorTick()); },
                 // As typed in the cell: a chord that starts there is renamed, otherwise a new one starts.
