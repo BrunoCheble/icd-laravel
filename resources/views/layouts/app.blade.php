@@ -27,7 +27,8 @@
 
             /* ---- Frame: side menu (one section per module), top bar with the page's title, content ---- */
             /* --app-sticky-top: where a page's own sticky bar sticks (below the top bar when that one sticks too) */
-            :root { --sidebar-width: 15.5rem; --sidebar-folded: 4.25rem; --app-accent: #4f46e5; --app-accent-soft: #eef2ff; --app-sticky-top: 0px; }
+            /* The colors of the logo (Tailwind's "primary"): the amber for marks and fills, a darker one for text on white */
+            :root { --sidebar-width: 15.5rem; --sidebar-folded: 4.25rem; --app-accent: #f8a925; --app-accent-hover: #d8881c; --app-accent-text: #b45309; --app-accent-soft: #fef3e2; --app-sticky-top: 0px; }
             html.sidebar-collapsed { --sidebar-width: var(--sidebar-folded); }
             body { background: #f4f5f7; }
             .app-shell { min-height: 100vh; }
@@ -46,11 +47,11 @@
             .app-nav-item i { width: 1.15rem; text-align: center; color: #9ca3af; font-size: .95rem; transition: color .15s; }
             .app-nav-item:hover { background: #f3f4f6; color: #111827; }
             .app-nav-item:hover i { color: #4b5563; }
-            .app-nav-item.is-active { background: var(--app-accent-soft); color: var(--app-accent); font-weight: 600; }
-            .app-nav-item.is-active i { color: var(--app-accent); }
+            .app-nav-item.is-active { background: var(--app-accent-soft); color: var(--app-accent-text); font-weight: 600; }
+            .app-nav-item.is-active i { color: var(--app-accent-hover); }
             .app-nav-item.is-active::before { content: ''; position: absolute; left: -.6rem; top: .45rem; bottom: .45rem; width: 3px; border-radius: 0 3px 3px 0; background: var(--app-accent); }
             .app-nav-label { overflow: hidden; text-overflow: ellipsis; }
-            .app-nav-badge { margin-left: auto; min-width: 1.25rem; padding: 0 .4rem; border-radius: 999px; background: var(--app-accent); color: #fff; font-size: .7rem; font-weight: 700; line-height: 1.25rem; text-align: center; }
+            .app-nav-badge { margin-left: auto; min-width: 1.25rem; padding: 0 .4rem; border-radius: 999px; background: var(--app-accent); color: #3b2502; font-size: .7rem; font-weight: 700; line-height: 1.25rem; text-align: center; }
             .app-sidebar-collapse { display: flex; align-items: center; gap: .7rem; margin: .5rem .6rem .75rem; padding: .5rem .65rem; border: 0; border-radius: .55rem; background: none; color: #9ca3af; font-size: .8rem; cursor: pointer; white-space: nowrap; }
             .app-sidebar-collapse i { width: 1.15rem; text-align: center; }
             .app-sidebar-collapse:hover { background: #f3f4f6; color: #4b5563; }
@@ -70,7 +71,7 @@
             .app-topbar-title h2 { margin: 0; font-size: 1.15rem; font-weight: 700; color: #111827; overflow: hidden; text-overflow: ellipsis; }
             .app-user { display: inline-flex; align-items: center; gap: .55rem; padding: .3rem .55rem .3rem .3rem; border: 1px solid transparent; border-radius: 999px; background: none; color: #374151; font-size: .875rem; font-weight: 500; cursor: pointer; }
             .app-user:hover { background: #f3f4f6; }
-            .app-avatar { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 999px; background: var(--app-accent); color: #fff; font-size: .8rem; font-weight: 700; }
+            .app-avatar { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 999px; background: var(--app-accent); color: #3b2502; font-size: .8rem; font-weight: 700; }
             .app-main { flex: 1; }
 
             /* Phones and tablets: the menu is a drawer opened from the top bar */
