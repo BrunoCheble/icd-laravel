@@ -46,10 +46,8 @@
         .bar-group-head .group-duplicate:hover { background: #eef2ff; color: #4f46e5; }
         .bar-group-head .group-remove:hover { background: #fef2f2; color: #dc2626; }
         .bar-group-head .group-remove:disabled { opacity: .3; cursor: default; }
-        /* Moving a block: the bars fold away and only the heads show */
+        /* Moving a block: the blocks look as they are; a line shows where it goes */
         .bars-page.is-moving-block, .bars-page.is-moving-block * { cursor: grabbing !important; user-select: none; }
-        .bars-page.is-moving-block .bars-grid .bar { display: none; }
-        .bars-page.is-moving-block .bar-group-head { margin-top: .2rem; padding: .35rem .2rem; border: 1px solid #e5e7eb; border-left: 4px solid var(--type-color, #4f46e5); border-radius: .45rem; background: #fff; }
         .bar-group-head.is-dragging { opacity: .45; }
         .bar-group-head.drop-before { box-shadow: 0 -3px 0 0 #4f46e5; }
         .bar-group-head.drop-after { box-shadow: 0 3px 0 0 #4f46e5; }
@@ -3213,16 +3211,11 @@
                     const drag = this.groupDrag;
                     if (!drag) return;
                     if (!drag.moved && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 6) return;
-                    if (!drag.moved) {
-                        // The bars fold away: the dragged head is brought back under the pointer.
-                        drag.moved = true;
-                        this.$nextTick(() => {
-                            const element = document.querySelector(`[data-group-block="${drag.id}"]`);
-                            if (element) window.scrollBy(0, element.getBoundingClientRect().top - (event.clientY - 12));
-                        });
-                        return;
-                    }
-                    const heads = [...document.querySelectorAll('[data-group-block]')].map(element => ({ id: Number(element.dataset.groupBlock), box: element.getBoundingClientRect() }));
+                    drag.moved = true;
+                    // The heads in sight (a repetition grouped "×N" or a block hidden away has none): over a block's
+                    // bars, the place is right before the next block.
+                    const heads = [...document.querySelectorAll('[data-group-block]')].filter(element => element.offsetParent)
+                        .map(element => ({ id: Number(element.dataset.groupBlock), box: element.getBoundingClientRect() }));
                     const over = heads.find(item => event.clientY < item.box.bottom) ?? heads[heads.length - 1];
                     if (over) {
                         drag.target = over.id;
