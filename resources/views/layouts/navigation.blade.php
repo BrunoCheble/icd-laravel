@@ -46,12 +46,6 @@
                     <x-nav-link style="display: none" :href="route('ministries.index')" :active="request()->routeIs('ministry.index')">
                         {{ __('Ministries') }}
                     </x-nav-link>
-                    <x-nav-link style="display: none" :href="route('financial-movements.index')" :active="request()->routeIs('financial-movements.index')">
-                        {{ __('Financial Movements') }}
-                    </x-nav-link>
-                    <x-nav-link style="display: none" :href="route('financial-categories.index')" :active="request()->routeIs('financial-categories.index')">
-                        {{ __('Financial Categories') }}
-                    </x-nav-link>
                 </div>
             </div>
 
