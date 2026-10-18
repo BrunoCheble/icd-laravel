@@ -66,6 +66,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/setlists/songs/search', [SetlistController::class, 'searchSongs'])->name('setlists.songs.search');
     Route::get('/setlists/import', [SetlistImportController::class, 'create'])->name('setlists.import');
     Route::post('/setlists/import', [SetlistImportController::class, 'store'])->name('setlists.import.store');
-    Route::resource('setlists', SetlistController::class);
+    Route::resource('setlists', SetlistController::class)->except('show');
     Route::get('/setlists/{setlist}/practice/{song?}', [SongPracticeController::class, 'setlist'])->name('setlists.practice');
 });

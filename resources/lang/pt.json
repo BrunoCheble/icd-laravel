@@ -817,5 +817,13 @@
     "Cursor": "Cursor",
     "The block, bar, chord and beat being played are lit": "O bloco, compasso, acorde e tempo que estão a tocar ficam acesos",
     "This song": "Esta música",
-    "Size": "Tamanho"
+    "Size": "Tamanho",
+    "Tap a setlist to see its songs.": "Toque num repertório para ver as músicas.",
+    "Expand all": "Abrir todos",
+    "Collapse all": "Fechar todos",
+    "Show songs": "Mostrar as músicas",
+    "Hide songs": "Esconder as músicas",
+    "Open the song": "Abrir a música",
+    "Tempo set for the band in this setlist": "Andamento definido para a banda neste repertório",
+    "Today": "Hoje"
 }

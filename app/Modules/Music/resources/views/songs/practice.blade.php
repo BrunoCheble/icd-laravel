@@ -142,7 +142,7 @@
                 <div class="practice" :class="{ 'is-test': settings.mode === 'test' }" x-data="practicePage(@js($data))" @keydown.window="onKey($event)" :style="`--scale: ${settings.scale}`">
                     {{-- Toolbar: songs, mode, view, player, options --}}
                     <div class="ws-toolbar">
-                        <a class="ws-btn ws-desktop" href="{{ $setlist ? route('setlists.show', $setlist['id']) : route('songs.index') }}" title="{{ __('Back') }}" aria-label="{{ __('Back') }}"><i class="fa-solid fa-arrow-left"></i></a>
+                        <a class="ws-btn ws-desktop" href="{{ $setlist ? route('setlists.index', ['open' => $setlist['id']]) : route('songs.index') }}" title="{{ __('Back') }}" aria-label="{{ __('Back') }}"><i class="fa-solid fa-arrow-left"></i></a>
                         <button type="button" class="counter counter-button" @click="songsOpen = true; songSearch = ''; $nextTick(() => $refs.songSearch?.focus())"
                             title="{{ __('Choose the song') }}" aria-label="{{ __('Choose the song') }}">{{ $data['position'] }}/{{ $data['total'] }}</button>
                         <span class="ws-seg" role="group" aria-label="{{ __('Mode') }}">

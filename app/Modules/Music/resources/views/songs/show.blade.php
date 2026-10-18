@@ -108,7 +108,7 @@
                 @forelse ($overview['setlists'] as $setlist)
                     <div class="setlist-row">
                         <span class="setlist-title">
-                            <a href="{{ route('setlists.show', $setlist['id']) }}">{{ $setlist['title'] }}</a>
+                            <a href="{{ route('setlists.index', ['open' => $setlist['id']]) }}">{{ $setlist['title'] }}</a>
                             <small>{{ $setlist['date'] ?? '—' }} · {{ $setlist['position'] }}ª {{ __('song') }}@if ($setlist['minister']) · {{ __('Minister') }}: {{ $setlist['minister'] }}@endif</small>
                         </span>
                         @if ($setlist['key'])<span class="overview-key">{{ $setlist['key'] }}</span>@endif

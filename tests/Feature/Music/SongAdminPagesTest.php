@@ -22,7 +22,7 @@ class SongAdminPagesTest extends MusicTestCase
         foreach ([
             '/songs', '/songs/create', "/songs/{$song->id}", "/songs/{$song->id}/edit", "/songs/{$song->id}/layout", "/songs/{$song->id}/sheet",
             "/songs/{$song->id}/lessons", "/songs/{$song->id}/practice", "/songs/{$song->id}/history", '/songs/bookmarklet', '/song-suggestions',
-            '/setlists', '/setlists/create', "/setlists/{$setlist->id}", "/setlists/{$setlist->id}/edit", '/setlists/import',
+            '/setlists', '/setlists/create', "/setlists/{$setlist->id}/edit", '/setlists/import',
             "/setlists/{$setlist->id}/practice/{$song->id}",
         ] as $uri) {
             $this->get($uri)->assertOk();
