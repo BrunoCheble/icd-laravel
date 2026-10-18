@@ -868,5 +868,18 @@
     "Blocks collapsed: one open at a time (the one playing opens). Click to show every block": "Blocos recolhidos: um aberto de cada vez (o que está a tocar abre). Clique para mostrar todos",
     "Collapse every block: only their names, one open at a time": "Recolher todos os blocos: só os nomes, um aberto de cada vez",
     "Close the block": "Fechar o bloco",
-    "Open the block": "Abrir o bloco"
+    "Open the block": "Abrir o bloco",
+    "Dashboard": "Início",
+    "Announcements": "Avisos",
+    "Prayer Requests": "Pedidos de oração",
+    "Profile": "Perfil",
+    "Log Out": "Sair",
+    "People": "Pessoas",
+    "Communication": "Comunicação",
+    "Music": "Música",
+    "Menu": "Menu",
+    "Close menu": "Fechar o menu",
+    "Open menu": "Abrir o menu",
+    "Collapse menu": "Recolher o menu",
+    "Expand menu": "Abrir o menu"
 }
