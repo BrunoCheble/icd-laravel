@@ -1020,10 +1020,14 @@
                         if (tick !== this.currentTick) {
                             const before = this.currentBar;
                             const chordBefore = this.currentSheetChord;
+                            const sectionBefore = this.currentSheetSection;
                             this.currentTick = tick;
                             if (this.isPlaying() && this.currentBar !== before) { this.followAccordion(); this.scrollToBar(this.shownBar); }
                             const chord = this.currentSheetChord;
-                            if (this.isPlaying() && chord >= 0 && chord !== chordBefore) this.scrollToSheetChord(chord);
+                            const section = this.currentSheetSection;
+                            // A new block goes to the top of the chord sheet; within a block, the lit chord is kept in view.
+                            if (this.isPlaying() && section >= 0 && section !== sectionBefore) this.scrollToSheetSection(section);
+                            else if (this.isPlaying() && chord >= 0 && chord !== chordBefore) this.scrollToSheetChord(chord);
                         }
                         requestAnimationFrame(follow);
                     };
@@ -1486,7 +1490,30 @@
                     }
                     return n;
                 },
-                // Keeps the lit chord in view while playing (in the sheet's own scroll on large screens).
+                // The section of the block that starts playing at the top of the chord sheet (in its own scroll on large
+                // screens; on small ones the page scrolls, below the toolbar).
+                scrollToSheetSection(s) {
+                    this.$nextTick(() => {
+                        const section = document.querySelector(`.sheet-box [data-sheet="${s}"]`);
+                        if (!section || !section.offsetParent) return;
+                        const box = section.closest('.sheet-box');
+                        if (box.scrollHeight > box.clientHeight + 4) {
+                            const top = section.getBoundingClientRect().top - box.getBoundingClientRect().top;
+                            box.scrollTo({ top: Math.max(0, box.scrollTop + top - 8), behavior: 'smooth' });
+                        } else if (this.pane === 'sheet') {
+                            section.style.scrollMarginTop = `${this.toolbarBottom() + 8}px`;
+                            section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+                        }
+                    });
+                },
+                // Where the toolbar ends once it sticks to the top of the screen (what scrolled content must stay below).
+                toolbarBottom() {
+                    const bar = document.querySelector('.ws-toolbar');
+                    if (!bar) return 0;
+                    const style = getComputedStyle(bar);
+                    return (style.position === 'sticky' ? parseFloat(style.top) || 0 : 0) + bar.offsetHeight;
+                },
+                // Keeps the lit chord in view (in the sheet's own scroll on large screens).
                 scrollToSheetChord(n) {
                     this.$nextTick(() => {
                         const chord = document.querySelector(`.sheet-box [data-chord="${n}"]`);
@@ -1494,10 +1521,20 @@
                         const box = chord.closest('.sheet-box');
                         if (box.scrollHeight > box.clientHeight + 4) {
                             const top = chord.getBoundingClientRect().top - box.getBoundingClientRect().top;
-                            if (top < box.clientHeight * .15 || top > box.clientHeight * .7) {
-                                box.scrollTo({ top: box.scrollTop + top - box.clientHeight * .3, behavior: 'smooth' });
+                            // Only when it is out of sight, so the block that came to the top stays there (a chord written
+                            // at the end of the section before, above it, does not take the sheet back up).
+                            const section = box.querySelector(`[data-sheet="${this.currentSheetSection}"]`);
+                            const sectionShown = !!section && section.getBoundingClientRect().top >= box.getBoundingClientRect().top - 1;
+                            if ((top < 0 && !sectionShown) || top > box.clientHeight * .85) {
+                                box.scrollTo({ top: box.scrollTop + top - box.clientHeight * .15, behavior: 'smooth' });
                             }
                         } else if (this.pane === 'sheet') {
+                            // The same on small screens, where the page scrolls (below the toolbar).
+                            const below = this.toolbarBottom();
+                            const section = box.querySelector(`[data-sheet="${this.currentSheetSection}"]`);
+                            const top = chord.getBoundingClientRect().top;
+                            if (top < below && section && section.getBoundingClientRect().top >= below - 1) return;
+                            chord.style.scrollMarginTop = `${below + 8}px`;
                             chord.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
                         }
                     });
