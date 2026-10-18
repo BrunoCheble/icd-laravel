@@ -471,9 +471,6 @@
                             <button type="button" class="ws-btn" @click="alignBlock(false)">{{ __('Start on beat 1 of this bar') }}</button>
                             <button type="button" class="ws-btn" @click="alignBlock(true)">{{ __('Start on the next bar') }}</button>
                         </div>
-                        <div class="row" x-show="canPlay">
-                            <button type="button" class="ws-btn" @click="playFromTick(barMenu.bar * perBar * 2); barMenu = null"><i class="fa-solid fa-play"></i> {{ __('Play from here') }}</button>
-                        </div>
                         {{-- Passing chords of the bar: underlined in the bars and on the public page --}}
                         <template x-if="!versionId && barMenu && barChords(barMenu.bar).length">
                             <div>
@@ -522,7 +519,6 @@
                                     :aria-label="@js(__('Name of the block'))" @keydown.enter.prevent="renameMenuBlock(name)">
                                 <div class="row">
                                     <button type="button" class="ws-btn ws-btn-primary" @click="renameMenuBlock(name)">{{ __('Rename') }}</button>
-                                    <button type="button" class="ws-btn" x-show="canPlay" @click="playFromTick(menuBlock().startTick); blockMenu = null"><i class="fa-solid fa-play"></i> {{ __('Play from here') }}</button>
                                 </div>
                                 <hr>
                                 <div class="row" style="align-items: center;">
