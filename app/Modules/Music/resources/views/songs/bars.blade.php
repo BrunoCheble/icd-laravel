@@ -1020,14 +1020,11 @@
                         if (tick !== this.currentTick) {
                             const before = this.currentBar;
                             const chordBefore = this.currentSheetChord;
-                            const sectionBefore = this.currentSheetSection;
                             this.currentTick = tick;
                             if (this.isPlaying() && this.currentBar !== before) { this.followAccordion(); this.scrollToBar(this.shownBar); }
                             const chord = this.currentSheetChord;
-                            const section = this.currentSheetSection;
                             // A new block goes to the top of the chord sheet; within a block, the lit chord is kept in view.
-                            if (this.isPlaying() && section >= 0 && section !== sectionBefore) this.scrollToSheetSection(section);
-                            else if (this.isPlaying() && chord >= 0 && chord !== chordBefore) this.scrollToSheetChord(chord);
+                            if (this.isPlaying() && !this.followSheet() && chord >= 0 && chord !== chordBefore) this.scrollToSheetChord(chord);
                         }
                         requestAnimationFrame(follow);
                     };
@@ -1294,6 +1291,7 @@
                     else if (this.clickOnly) this.clickOffset = time;
                     else if (this.playerReady) this.seekVideo(time, false);
                     this.scrollToBar(this.currentBar);
+                    this.followSheet(true);
                 },
                 get canPlay() { return !!audio || !!this.videoId || this.clickOnly; },
                 get hasMusic() { return !!audio || !!this.videoId; },
@@ -1435,6 +1433,7 @@
                 playFromTickNow(tick) {
                     const time = Math.max(0, this.timeOfTick(tick));
                     this.currentTick = tick;
+                    this.followSheet(true);
                     if (audio) {
                         audio.currentTime = time;
                         audio.play();
@@ -1505,6 +1504,16 @@
                             section.scrollIntoView({ block: 'start', behavior: 'smooth' });
                         }
                     });
+                },
+                // The block at the current place: its section at the top of the chord sheet when it is not the one
+                // brought there last (or always, `force`, after a jump to a bar). True when it scrolled.
+                sheetShownSection: -1,
+                followSheet(force = false) {
+                    const section = this.currentSheetSection;
+                    if (section < 0 || (!force && section === this.sheetShownSection)) return false;
+                    this.sheetShownSection = section;
+                    this.scrollToSheetSection(section);
+                    return true;
                 },
                 // Where the toolbar ends once it sticks to the top of the screen (what scrolled content must stay below).
                 toolbarBottom() {
@@ -2336,12 +2345,16 @@
                     const andStarts = this.ticks[onBeat + 1] !== undefined && this.startsChord(onBeat + 1);
                     const onAnd = andStarts && (!!event?.target?.closest?.('.is-and') || !(onBeat === 0 || this.startsChord(onBeat)));
                     const tick = onBeat + (onAnd ? 1 : 0);
-                    if (this.mode === 'play') return this.canPlay ? this.playFromTick(tick) : (this.currentTick = tick);
+                    if (this.mode === 'play') {
+                        if (this.canPlay) return this.playFromTick(tick);
+                        this.currentTick = tick;
+                        return this.followSheet(true);
+                    }
                     // Edit mode: a click selects the beat (Backspace removes its change); a double click edits its chord.
                     // On a beat where no chord starts, the chord can be typed right there. A tap opens the editor.
                     if (!this.isPlaying()) this.currentTick = tick;
                     this.barMenu = null;
-                    this.scrollToSheetChord(this.currentSheetChord);
+                    if (!this.followSheet()) this.scrollToSheetChord(this.currentSheetChord);
                     if (this.touch) return this.openBeatEditor(bar, beat, cell, onAnd ? 1 : (andStarts && !this.chordStartsAt(onBeat) ? 1 : 0));
                     if (!this.isPlaying() && !andStarts && !this.chordStartsAt(onBeat)) this.openInline(onBeat, '');
                 },
