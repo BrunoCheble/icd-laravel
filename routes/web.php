@@ -2,8 +2,6 @@
 
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\PrayerController;
-use App\Http\Controllers\MemberController;
-use App\Http\Controllers\VisitorController;
 use App\Http\Controllers\MinistryController;
 use App\Http\Controllers\MinistryMemberController;
 use App\Http\Controllers\LockController;
@@ -28,10 +26,6 @@ Route::get('/announcement', [SiteController::class, 'announcement'])->name('site
 Route::get('/today-visitors', [SiteController::class, 'todayVisitor'])->name('site.todayVisitor');
 Route::get('/today-prayers', [SiteController::class, 'todayPrayer'])->name('site.todayPrayer');
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
 Route::middleware('auth')->group(function () {
     // Fingerprint / Face ID: this device registered on the profile, and the app's lock.
     Route::post('/passkeys/options', [PasskeyController::class, 'options'])->middleware('throttle:10,1')->name('passkeys.options');
@@ -47,16 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::resource('visitors', VisitorController::class);
-    Route::get('/visitors/{id}/activate', [VisitorController::class, 'activate'])->name('visitors.activate');
-
-    Route::resource('members', MemberController::class);
-    Route::patch('/members/{id}/photo', [MemberController::class, 'uploadPhoto'])->name('members.uploadPhoto');
-    Route::get('/members/{id}/activate', [MemberController::class, 'activate'])->name('members.activate');
-    Route::get('/members/{id}/card', [MemberController::class, 'generateMemberCard'])->name('members.generateMemberCard');
-
     Route::get('/report/families', [ReportController::class, 'families'])->name('report.families.index');
-    Route::get('/report/anniversaries', [ReportController::class, 'anniversaries'])->name('report.anniversaries.index');
 
     Route::resource('ministries', MinistryController::class);
 

@@ -5,9 +5,9 @@
         </h2>
     </x-slot>
 
-    @include('music::partials.ui')
+    @include('partials.ui')
 
-    <div class="m-page is-narrow">
+    <div class="m-page">
         <a href="{{ route('setlists.index') }}" class="m-back"><i class="fa-solid fa-arrow-left"></i> {{ __('Setlists') }}</a>
         <div class="m-head">
             <div>

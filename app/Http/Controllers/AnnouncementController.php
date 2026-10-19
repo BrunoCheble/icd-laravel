@@ -7,7 +7,7 @@ use App\Helpers\ArrayHelper;
 use App\Helpers\MemberHelper;
 use App\Http\Requests\AnnouncementRequest;
 use App\Models\Announcement;
-use App\Models\Member;
+use App\Modules\Members\Models\Member;
 use App\Services\RegisterAnnouncementService;
 use App\Services\SaveAnnouncementService;
 use Illuminate\Http\RedirectResponse;

@@ -7,7 +7,7 @@ use App\Enums\MaritalStatus;
 use App\Enums\MembershipStatus;
 use App\Helpers\NameHelper;
 use Illuminate\Console\Command;
-use App\Models\Member;
+use App\Modules\Members\Models\Member;
 
 class ImportMembers extends Command
 {

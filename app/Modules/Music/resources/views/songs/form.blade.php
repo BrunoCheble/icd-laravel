@@ -1,4 +1,4 @@
-@include('music::partials.ui')
+@include('partials.ui')
 
 <div class="m-form">
 

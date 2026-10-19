@@ -1,4 +1,4 @@
-@include('music::partials.ui')
+@include('partials.ui')
 
 <style>
     .sf-song { padding: .75rem; border: 1px solid #e5e7eb; border-radius: .75rem; background: #fff; }

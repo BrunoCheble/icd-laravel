@@ -53,9 +53,9 @@
         }
     </style>
 
-    @include('music::partials.ui')
+    @include('partials.ui')
 
-    <div class="m-page" style="max-width: 64rem;" x-data="{
+    <div class="m-page" x-data="{
             open: @js($open),
             ids: @js($setlists->pluck('id')),
             isOpen(id) { return this.open.includes(id); },

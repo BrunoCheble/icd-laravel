@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Announcement;
-use App\Models\Member;
+use App\Modules\Members\Models\Member;
 use Illuminate\Support\Facades\DB;
 use App\Services\FileUploadService;
 

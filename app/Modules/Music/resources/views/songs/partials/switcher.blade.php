@@ -2,7 +2,7 @@
      opened lately (on this device) and those of the next setlist. Ctrl/⌘+K opens it.
      $song (model), $current (tab: show, edit, sheet, layout, practice, lessons, history), $label (the tab's name),
      $suffix (optional, after the title) --}}
-@include('music::partials.ui')
+@include('partials.ui')
 @php
     // The song as a model, or as the practice page has it (an array).
     $songInfo = is_array($song)
