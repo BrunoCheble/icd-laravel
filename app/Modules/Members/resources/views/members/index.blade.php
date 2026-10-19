@@ -7,49 +7,6 @@
 
     @include('partials.ui')
 
-    <style>
-        [x-cloak] { display: none !important; }
-        /* Quick status choice over the list */
-        .members-status { display: flex; gap: .35rem; margin-bottom: .75rem; overflow-x: auto; scrollbar-width: none; }
-        .members-status::-webkit-scrollbar { display: none; }
-        .members-status a { display: inline-flex; align-items: center; gap: .4rem; min-height: 36px; padding: 0 .8rem; border: 1px solid #e5e7eb; border-radius: 999px; background: #fff; color: #4b5563; font-size: .85rem; font-weight: 600; white-space: nowrap; text-decoration: none; }
-        .members-status a:hover { border-color: #d1d5db; color: #111827; }
-        .members-status a.is-active { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-strong); }
-        .members-status small { font-size: .75rem; font-weight: 700; color: #9ca3af; }
-        .members-status a.is-active small { color: var(--brand-text); }
-
-        /* Large screens: a table; phones and tablets: a card per member */
-        .members-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .members-table th { padding: .65rem .75rem; border-bottom: 1px solid #e5e7eb; font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; text-align: left; white-space: nowrap; }
-        .members-table th a { color: inherit; text-decoration: none; }
-        .members-table th a:hover, .members-table th a.is-sorted { color: #111827; }
-        .members-table td { padding: .6rem .75rem; border-bottom: 1px solid #f1f2f4; font-size: .875rem; color: #4b5563; vertical-align: middle; }
-        .members-table tbody tr { transition: background .1s; }
-        .members-table tbody tr:hover { background: #fafafa; }
-        .member-name { display: flex; align-items: center; gap: .7rem; min-width: 0; text-decoration: none; }
-        .member-name strong { display: block; font-weight: 700; color: #111827; }
-        .member-name:hover strong { color: var(--brand-text); }
-        .member-name small { display: block; font-size: .8rem; color: #6b7280; }
-        .member-tags { display: flex; flex-wrap: wrap; gap: .3rem; }
-        .m-tag.is-danger { background: #fee2e2; color: #991b1b; }
-
-        .member-cards { display: none; }
-        .member-card { display: flex; align-items: center; gap: .75rem; padding: .8rem .9rem; border-bottom: 1px solid #f1f2f4; }
-        .member-card:last-child { border-bottom: 0; }
-        .member-card-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: .75rem; text-decoration: none; }
-        .member-card-text { min-width: 0; }
-        .member-card-text strong { display: block; font-weight: 700; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .member-card-text small { display: block; margin-top: .05rem; font-size: .82rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .member-card .member-tags { margin-top: .35rem; }
-        @media (max-width: 1023px) {
-            .members-table { display: none; }
-            .member-cards { display: block; }
-        }
-        .members-list { overflow: hidden; }
-        .members-empty { padding: 2.5rem 1rem; text-align: center; color: #6b7280; }
-        .members-empty i { display: block; margin-bottom: .5rem; font-size: 1.6rem; color: #d1d5db; }
-        .members-pages { padding: .75rem 1rem; border-top: 1px solid #f1f2f4; }
-    </style>
 
     @php
         $sort = $filters['sort'] ?? 'created';
@@ -94,7 +51,7 @@
         </div>
 
         {{-- Status at hand: all, active, pending (registered on the site), inactive --}}
-        <nav class="members-status" aria-label="{{ __('Status') }}">
+        <nav class="m-status" aria-label="{{ __('Status') }}">
             <a href="{{ route('members.index', request()->except(['page', 'membership_status'])) }}" @class(['is-active' => $status === ''])>{{ __('All') }} <small>{{ $total }}</small></a>
             @foreach ($statuses as $value => $label)
                 <a href="{{ route('members.index', array_merge(request()->except('page'), ['membership_status' => $value])) }}" @class(['is-active' => $status === $value])>{{ $label }} <small>{{ $statusCounts[$value] ?? 0 }}</small></a>
@@ -128,11 +85,11 @@
             </div>
         @endif
 
-        <div class="m-card members-list mt-3">
+        <div class="m-card m-list mt-3">
             @if ($members->isEmpty())
-                <div class="members-empty"><i class="fa-solid fa-users"></i>{{ $hasFilters ? __('No members match these filters.') : __('No members yet.') }}</div>
+                <div class="m-empty"><i class="fa-solid fa-users"></i>{{ $hasFilters ? __('No members match these filters.') : __('No members yet.') }}</div>
             @else
-                <table class="members-table">
+                <table class="m-table">
                     <thead>
                         <tr>
                             <th><a href="{{ $sortUrl('name') }}" @class(['is-sorted' => $sort === 'name'])>{{ __('Name') }}{{ $sortArrow('name') }}</a></th>
@@ -150,7 +107,7 @@
                         @foreach ($members as $member)
                             <tr>
                                 <td>
-                                    <a href="{{ route('members.show', $member) }}" class="member-name">
+                                    <a href="{{ route('members.show', $member) }}" class="m-name">
                                         @include('members::members.partials.avatar', ['class' => 'w-9 h-9'])
                                         <span>
                                             <strong>{{ $member->first_and_last_name }}</strong>
@@ -164,7 +121,7 @@
                                 <td class="whitespace-nowrap">{{ $member->years() ?? '—' }}</td>
                                 <td class="whitespace-nowrap">{{ $member->marital_status_name }}</td>
                                 <td>
-                                    <div class="member-tags">
+                                    <div class="m-tags">
                                         <span class="m-tag {{ $tagOf[$member->membership_status] ?? 'is-off' }}">{{ $statuses[$member->membership_status] ?? $member->membership_status }}</span>
                                         @if ($member->pendingInformations)
                                             <span class="m-tag is-part" title="{{ implode(' · ', $member->pendingInformations) }}"><i class="fa-solid fa-circle-exclamation"></i> {{ count($member->pendingInformations) }}</span>
@@ -179,15 +136,15 @@
                 </table>
 
                 {{-- Phones and tablets --}}
-                <div class="member-cards">
+                <div class="m-rows">
                     @foreach ($members as $member)
-                        <div class="member-card">
-                            <a href="{{ route('members.show', $member) }}" class="member-card-main">
+                        <div class="m-row">
+                            <a href="{{ route('members.show', $member) }}" class="m-row-main">
                                 @include('members::members.partials.avatar', ['class' => 'w-11 h-11'])
-                                <span class="member-card-text">
+                                <span class="m-row-text">
                                     <strong>{{ $member->first_and_last_name }}</strong>
                                     <small>{{ collect([$member->phone_number, $member->city])->filter()->implode(' · ') ?: '—' }}</small>
-                                    <span class="member-tags">
+                                    <span class="m-tags">
                                         @unless ($member->isActive())
                                             <span class="m-tag {{ $tagOf[$member->membership_status] ?? 'is-off' }}">{{ $statuses[$member->membership_status] ?? $member->membership_status }}</span>
                                         @endunless
@@ -203,7 +160,7 @@
                 </div>
 
                 @if ($members->hasPages())
-                    <div class="members-pages">{!! $members->links() !!}</div>
+                    <div class="m-pages">{!! $members->links() !!}</div>
                 @endif
             @endif
         </div>

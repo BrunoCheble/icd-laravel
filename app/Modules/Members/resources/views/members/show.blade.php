@@ -24,7 +24,6 @@
             .member-hero-actions { flex-basis: 100%; }
             .member-hero-actions .m-btn:not(.is-icon) { flex: 1; }
         }
-        .m-tag.is-danger { background: #fee2e2; color: #991b1b; }
 
         .member-cards-grid { display: grid; gap: 1rem; margin-top: 1rem; }
         @media (min-width: 768px) { .member-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .member-cards-grid .is-wide { grid-column: span 2; } }
