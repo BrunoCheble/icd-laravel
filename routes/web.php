@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/contact', [SiteController::class, 'contact'])->name('site.contact');
 Route::get('/new-visitor', [SiteController::class, 'registerVisitor'])->name('visitor.register');
-Route::post('/new-prayer-request', [SiteController::class, 'registerPrayerRequest'])->name('prayer.register');
 Route::post('/new-member', [SiteController::class, 'register'])->name('member.register');
 Route::post('/new-announcement', [SiteController::class, 'registerAnnouncement'])->name('announcement.register');
 
@@ -19,7 +18,6 @@ Route::get('/check-document-number/{document_number}', [SiteController::class, '
 
 Route::get('/', [SiteController::class, 'member'])->name('site.member');
 Route::get('/visitor', [SiteController::class, 'visitor'])->name('site.visitor');
-Route::get('/prayer-request', [SiteController::class, 'prayerRequest'])->name('site.prayer');
 Route::get('/announcement', [SiteController::class, 'announcement'])->name('site.announcement');
 Route::get('/today-visitors', [SiteController::class, 'todayVisitor'])->name('site.todayVisitor');
 Route::get('/today-prayers', [SiteController::class, 'todayPrayer'])->name('site.todayPrayer');

@@ -11,5 +11,6 @@ class Prayer extends Model
     protected $fillable = [
         'name',
         'request',
+        'phone_number',
     ];
 }
