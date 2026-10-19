@@ -1,123 +1,141 @@
-<div class="space-y-6">
+@include('music::partials.ui')
+
+<div class="m-form">
 
     {{-- Filled by the "Send to ICD" bookmarklet import (see the script at the end of this form) --}}
-    <div id="import-notice" class="rounded-md border border-gray-300 bg-gray-50 p-4 text-sm text-gray-700" style="display: none;"></div>
+    <div id="import-notice" class="m-card m-section text-sm text-gray-700" style="display: none;"></div>
 
-    <div>
-        <x-input-label for="title" :value="__('Title')" />
-        <x-text-input id="title" name="title" type="text" class="mt-1 block w-full" :value="old('title', $song?->title)" required />
-        <x-input-error class="mt-2" :messages="$errors->get('title')" />
-    </div>
-
-    <div>
-        <x-input-label for="artist" :value="__('Artist')" />
-        <x-text-input id="artist" name="artist" type="text" class="mt-1 block w-full" :value="old('artist', $song?->artist)" required />
-        <x-input-error class="mt-2" :messages="$errors->get('artist')" />
-    </div>
-
-    <div>
-        <x-input-label for="musical_key" :value="__('Key')" />
-        @php
-            // One option per pair of relative keys ("C / Am"), storing the key of the song's mode (new songs: major).
-            $selectedKey = old('musical_key', $song?->musical_key);
-            $minorSong = \App\Modules\Music\Enums\MusicalKey::isMinor($selectedKey);
-            $isListedKey = collect($keyOptions)->contains(fn ($pair) => $pair[$minorSong ? 'minor' : 'major'] === $selectedKey);
-        @endphp
-        <select id="musical_key" name="musical_key"
-            class="block w-full bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-10 py-2 mt-1">
-            <option value="">{{ __('Select') }}</option>
-            @if ($selectedKey && ! $isListedKey)
-                <option value="{{ $selectedKey }}" selected>{{ $selectedKey }}</option>
-            @endif
-            @foreach ($keyOptions as $pair)
-                <option value="{{ $pair[$minorSong ? 'minor' : 'major'] }}" @selected($pair[$minorSong ? 'minor' : 'major'] === $selectedKey)>{{ $pair['label'] }}</option>
-            @endforeach
-        </select>
-        <x-input-error class="mt-2" :messages="$errors->get('musical_key')" />
-        <p id="key-transpose-notice" class="mt-2 text-sm" style="display: none; color: var(--brand-strong);"></p>
-    </div>
-
-    {{-- Tempo: the live mode of the setlist app counts the bars with it --}}
-    <div>
-        <x-input-label for="bpm" :value="__('BPM')" />
-        <x-text-input id="bpm" name="bpm" type="number" step="0.1" min="30" max="300" class="mt-1 block w-full" :value="old('bpm', $song?->bpm ?? \App\Modules\Music\Services\CreateSongBarsService::DEFAULT_BPM)" />
-        <p class="mt-1 text-sm text-gray-500">{{ __('Beats per minute. Filled in by the study app (icd-chords) when it saves the map; the live mode of the setlist follows it.') }}</p>
-        <x-input-error class="mt-2" :messages="$errors->get('bpm')" />
-    </div>
-
-    {{-- Time signature: blocks without bars get them (one bar per chord) when the song is saved --}}
-    <div x-data="{ meter: @js(old('meter', $song ? \App\Modules\Music\Services\CreateSongBarsService::meterOf($song->structure) : '4/4')) }">
-        <x-input-label for="meter" :value="__('Time signature')" />
-        <select id="meter" name="meter" x-model="meter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-            @foreach (array_keys(\App\Modules\Music\Services\CreateSongBarsService::METERS) as $meter)
-                <option value="{{ $meter }}">{{ $meter }}</option>
-            @endforeach
-        </select>
-        <p class="mt-1 text-sm text-gray-500">{{ __('Blocks without bars get them when the song is saved: the chords of each block, one bar each, to be adjusted on the grid.') }} {{ __('Changing it moves only the bar lines: every chord stays on its beat.') }}</p>
-        <p class="mt-1 text-sm" style="color: var(--brand-strong);" x-show="meter === '6/8'" x-cloak>{{ __('In 6/8 the bars count the eighth notes: the BPM is of the eighths (a song felt at 60 is 180).') }}</p>
-        <x-input-error class="mt-2" :messages="$errors->get('meter')" />
-    </div>
-
-    <div>
-        <x-input-label for="youtube_url" :value="__('YouTube')" />
-        <x-text-input id="youtube_url" name="youtube_url" type="url" class="mt-1 block w-full" :value="old('youtube_url', $song?->youtube_url)" />
-        <x-input-error class="mt-2" :messages="$errors->get('youtube_url')" />
-    </div>
-
-    {{-- Audio file: played instead of the YouTube video in the setlist app, also offline --}}
-    <div x-data="songAudioField()">
-        <x-input-label for="audio" :value="__('Audio (MP3)')" />
-        @if ($song?->audioUrl())
-            <div class="mt-1 flex flex-wrap items-center gap-3" x-show="!remove">
-                <audio controls preload="none" src="{{ $song->audioUrl() }}" style="max-width: 100%;"></audio>
-                <button type="button" class="text-sm font-semibold" style="color: #dc2626;" @click="remove = true"><i class="fa-solid fa-trash"></i> {{ __('Remove audio') }}</button>
+    <section class="m-card m-section">
+        <h2 class="m-section-title"><i class="fa-solid fa-music"></i> {{ __('Song') }}</h2>
+        <div class="m-grid cols-2">
+            <div class="m-field">
+                <label class="m-label" for="title">{{ __('Title') }}</label>
+                <input id="title" name="title" type="text" class="m-input" value="{{ old('title', $song?->title) }}" required>
+                <x-input-error :messages="$errors->get('title')" />
             </div>
-            <p class="mt-1 text-sm" style="color: #dc2626;" x-show="remove" x-cloak>
-                {{ __('The audio will be removed when you save.') }}
-                <button type="button" class="font-semibold text-primary-700" @click="remove = false">{{ __('Undo') }}</button>
-            </p>
-            <input type="hidden" name="remove_audio" :value="remove ? 1 : 0">
-        @endif
-        <input id="audio" name="audio" type="file" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" class="mt-2 block w-full text-sm" @change="convert($event.target)" :disabled="converting">
-        <p class="mt-1 text-sm font-semibold" style="color: var(--brand-strong);" x-show="status" x-text="status" x-cloak></p>
-        <p class="mt-1 text-sm text-gray-500">{{ __('Up to :size MB. When the song has an audio file, the setlist app plays it instead of the YouTube video, also offline.', ['size' => \App\Modules\Music\Services\SaveSongAudioService::maxUploadMegabytes()]) }}</p>
-        <x-input-error class="mt-2" :messages="$errors->get('audio')" />
-    </div>
-
-    <div>
-        <x-input-label for="source_url" :value="__('Source')" />
-        <x-text-input id="source_url" name="source_url" type="url" class="mt-1 block w-full" :value="old('source_url', $song?->source_url)" />
-        <x-input-error class="mt-2" :messages="$errors->get('source_url')" />
-        <p id="source-duplicate" class="mt-2 text-sm font-semibold" style="display: none; color: #b45309;"></p>
-    </div>
-
-    <div>
-        <x-input-label for="structure" :value="__('Structure')" />
-        <p class="mt-1 text-sm text-gray-500">{{ __('JSON generated by the Música project. It is saved exactly as entered, as long as it is valid JSON.') }}</p>
-        <textarea id="structure" name="structure" rows="20" spellcheck="false" required
-            class="block mt-1 w-full border-gray-300 rounded-md shadow-sm text-sm" style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">{{ old('structure', $song->exists ? $song->structureAsJson() : '') }}</textarea>
-        <x-input-error class="mt-2" :messages="$errors->get('structure')" />
-    </div>
-
-    <div x-data="chordSheetImport(@js(route('songs.chord-sheet.parse')), @js(route('songs.chord-sheet.structure')))">
-        <x-input-label for="chord_sheet_source" :value="__('Chord sheet (optional)')" />
-        <p class="mt-1 text-sm text-gray-500">{{ __('Paste the HTML of the chord sheet <pre> or its text. It becomes a separate chord sheet: the structure above is not changed.') }}</p>
-        <textarea id="chord_sheet_source" x-model="source" rows="5" spellcheck="false"
-            class="block mt-1 w-full border-gray-300 rounded-md shadow-sm text-sm" style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace;"
-            placeholder="<pre>…</pre>"></textarea>
-        <div class="mt-2 flex items-center gap-4">
-            <x-secondary-button type="button" @click="parse()" x-bind:disabled="parsing || !source.trim()">{{ __('Interpret chord sheet') }}</x-secondary-button>
-            <span class="text-sm text-gray-600" x-show="message" x-text="message" :class="{ 'text-red-600': failed }"></span>
+            <div class="m-field">
+                <label class="m-label" for="artist">{{ __('Artist') }}</label>
+                <input id="artist" name="artist" type="text" class="m-input" value="{{ old('artist', $song?->artist) }}" required>
+                <x-input-error :messages="$errors->get('artist')" />
+            </div>
         </div>
+    </section>
 
-        <x-input-label for="chord_sheet" :value="__('Chord sheet')" class="mt-4" />
-        <textarea id="chord_sheet" name="chord_sheet" x-ref="sheet" rows="12" spellcheck="false"
-            class="block mt-1 w-full border-gray-300 rounded-md shadow-sm text-sm" style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">{{ old('chord_sheet', $song->exists ? $song->chordSheetAsJson() : '') }}</textarea>
-        <x-input-error class="mt-2" :messages="$errors->get('chord_sheet')" />
-        <div class="mt-2 flex items-center gap-4">
-            <x-secondary-button type="button" @click="toStructure()" x-bind:disabled="converting">{{ __('Generate structure from the chord sheet') }}</x-secondary-button>
+    <section class="m-card m-section">
+        <h2 class="m-section-title"><i class="fa-solid fa-sliders"></i> {{ __('Key and tempo') }}</h2>
+        <div class="m-grid cols-3">
+            <div class="m-field">
+                <label class="m-label" for="musical_key">{{ __('Key') }}</label>
+                @php
+                    // One option per pair of relative keys ("C / Am"), storing the key of the song's mode (new songs: major).
+                    $selectedKey = old('musical_key', $song?->musical_key);
+                    $minorSong = \App\Modules\Music\Enums\MusicalKey::isMinor($selectedKey);
+                    $isListedKey = collect($keyOptions)->contains(fn ($pair) => $pair[$minorSong ? 'minor' : 'major'] === $selectedKey);
+                @endphp
+                <select id="musical_key" name="musical_key" class="m-input">
+                    <option value="">{{ __('Select') }}</option>
+                    @if ($selectedKey && ! $isListedKey)
+                        <option value="{{ $selectedKey }}" selected>{{ $selectedKey }}</option>
+                    @endif
+                    @foreach ($keyOptions as $pair)
+                        <option value="{{ $pair[$minorSong ? 'minor' : 'major'] }}" @selected($pair[$minorSong ? 'minor' : 'major'] === $selectedKey)>{{ $pair['label'] }}</option>
+                    @endforeach
+                </select>
+                <x-input-error :messages="$errors->get('musical_key')" />
+            </div>
+
+            {{-- Tempo: the live mode of the setlist app counts the bars with it --}}
+            <div class="m-field">
+                <label class="m-label" for="bpm">{{ __('BPM') }}</label>
+                <input id="bpm" name="bpm" type="number" step="0.1" min="30" max="300" class="m-input" value="{{ old('bpm', $song?->bpm ?? \App\Modules\Music\Services\CreateSongBarsService::DEFAULT_BPM) }}">
+                <x-input-error :messages="$errors->get('bpm')" />
+            </div>
+
+            {{-- Time signature: blocks without bars get them (one bar per chord) when the song is saved --}}
+            <div class="m-field" x-data="{ meter: @js(old('meter', $song ? \App\Modules\Music\Services\CreateSongBarsService::meterOf($song->structure) : '4/4')) }">
+                <label class="m-label" for="meter">{{ __('Time signature') }}</label>
+                <select id="meter" name="meter" x-model="meter" class="m-input">
+                    @foreach (array_keys(\App\Modules\Music\Services\CreateSongBarsService::METERS) as $meter)
+                        <option value="{{ $meter }}">{{ $meter }}</option>
+                    @endforeach
+                </select>
+                <p class="m-help" style="color: var(--brand-strong);" x-show="meter === '6/8'" x-cloak>{{ __('In 6/8 the bars count the eighth notes: the BPM is of the eighths (a song felt at 60 is 180).') }}</p>
+                <x-input-error :messages="$errors->get('meter')" />
+            </div>
         </div>
-    </div>
+        <p id="key-transpose-notice" class="m-help mt-3" style="display: none; color: var(--brand-strong);"></p>
+        <p class="m-help mt-3">{{ __('Beats per minute. Filled in by the study app (icd-chords) when it saves the map; the live mode of the setlist follows it.') }} {{ __('Blocks without bars get them when the song is saved: the chords of each block, one bar each, to be adjusted on the grid.') }} {{ __('Changing it moves only the bar lines: every chord stays on its beat.') }}</p>
+    </section>
+
+    <section class="m-card m-section">
+        <h2 class="m-section-title"><i class="fa-solid fa-link"></i> {{ __('Audio and links') }}</h2>
+        <div class="m-grid cols-2">
+            <div class="m-field">
+                <label class="m-label" for="youtube_url">YouTube <span class="m-optional">· {{ __('optional') }}</span></label>
+                <input id="youtube_url" name="youtube_url" type="url" class="m-input" value="{{ old('youtube_url', $song?->youtube_url) }}" placeholder="https://youtu.be/…">
+                <x-input-error :messages="$errors->get('youtube_url')" />
+            </div>
+            <div class="m-field">
+                <label class="m-label" for="source_url">{{ __('Source') }} <span class="m-optional">· {{ __('optional') }}</span></label>
+                <input id="source_url" name="source_url" type="url" class="m-input" value="{{ old('source_url', $song?->source_url) }}" placeholder="https://www.cifraclub.com.br/…">
+                <x-input-error :messages="$errors->get('source_url')" />
+                <p id="source-duplicate" class="m-help" style="display: none; font-weight: 600; color: #b45309;"></p>
+            </div>
+
+            {{-- Audio file: played instead of the YouTube video in the setlist app, also offline --}}
+            <div class="m-field m-span-2" x-data="songAudioField()">
+                <label class="m-label" for="audio">{{ __('Audio (MP3)') }} <span class="m-optional">· {{ __('optional') }}</span></label>
+                @if ($song?->audioUrl())
+                    <div class="flex flex-wrap items-center gap-3" x-show="!remove">
+                        <audio controls preload="none" src="{{ $song->audioUrl() }}" style="max-width: 100%;"></audio>
+                        <button type="button" class="m-btn is-ghost" style="color: #dc2626;" @click="remove = true"><i class="fa-solid fa-trash"></i> {{ __('Remove audio') }}</button>
+                    </div>
+                    <p class="m-help" style="color: #dc2626;" x-show="remove" x-cloak>
+                        {{ __('The audio will be removed when you save.') }}
+                        <button type="button" class="m-link" @click="remove = false">{{ __('Undo') }}</button>
+                    </p>
+                    <input type="hidden" name="remove_audio" :value="remove ? 1 : 0">
+                @endif
+                <input id="audio" name="audio" type="file" accept=".mp3,.m4a,.aac,.ogg,.wav,audio/*" class="m-input" style="padding: .45rem;" @change="convert($event.target)" :disabled="converting">
+                <p class="m-help" style="font-weight: 600; color: var(--brand-strong);" x-show="status" x-text="status" x-cloak></p>
+                <p class="m-help">{{ __('Up to :size MB. When the song has an audio file, the setlist app plays it instead of the YouTube video, also offline.', ['size' => \App\Modules\Music\Services\SaveSongAudioService::maxUploadMegabytes()]) }}</p>
+                <x-input-error :messages="$errors->get('audio')" />
+            </div>
+        </div>
+    </section>
+
+    <section class="m-card m-section">
+        <h2 class="m-section-title"><i class="fa-solid fa-code"></i> {{ __('Chord map and chord sheet') }} <small>JSON</small></h2>
+        <div class="m-grid">
+            <div class="m-field">
+                <label class="m-label" for="structure">{{ __('Structure') }}</label>
+                <p class="m-help">{{ __('JSON generated by the Música project. It is saved exactly as entered, as long as it is valid JSON.') }}</p>
+                <textarea id="structure" name="structure" rows="14" spellcheck="false" required class="m-input is-code">{{ old('structure', $song->exists ? $song->structureAsJson() : '') }}</textarea>
+                <x-input-error :messages="$errors->get('structure')" />
+            </div>
+
+            <div class="m-grid" x-data="chordSheetImport(@js(route('songs.chord-sheet.parse')), @js(route('songs.chord-sheet.structure')))">
+                <div class="m-field">
+                    <label class="m-label" for="chord_sheet_source">{{ __('Chord sheet (optional)') }}</label>
+                    <p class="m-help">{{ __('Paste the HTML of the chord sheet <pre> or its text. It becomes a separate chord sheet: the structure above is not changed.') }}</p>
+                    <textarea id="chord_sheet_source" x-model="source" rows="5" spellcheck="false" class="m-input is-code" placeholder="<pre>…</pre>"></textarea>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button type="button" class="m-btn" @click="parse()" :disabled="parsing || !source.trim()"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('Interpret chord sheet') }}</button>
+                        <span class="m-help" x-show="message" x-text="message" :class="{ 'text-red-600': failed }"></span>
+                    </div>
+                </div>
+
+                <div class="m-field">
+                    <label class="m-label" for="chord_sheet">{{ __('Chord sheet') }}</label>
+                    <textarea id="chord_sheet" name="chord_sheet" x-ref="sheet" rows="10" spellcheck="false" class="m-input is-code">{{ old('chord_sheet', $song->exists ? $song->chordSheetAsJson() : '') }}</textarea>
+                    <x-input-error :messages="$errors->get('chord_sheet')" />
+                    <div>
+                        <button type="button" class="m-btn" @click="toStructure()" :disabled="converting"><i class="fa-solid fa-diagram-project"></i> {{ __('Generate structure from the chord sheet') }}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <script>
         // Sends the pasted sheet to the parser and puts the resulting JSON in the chord_sheet field for review.
@@ -231,8 +249,9 @@
         }
     </script>
 
-    <div class="flex items-center gap-4">
-        <x-primary-button>{{ __('Save') }}</x-primary-button>
+    <div class="m-form-actions">
+        <a href="{{ $song->exists ? route('songs.show', $song) : route('songs.index') }}" class="m-btn is-ghost">{{ __('Cancel') }}</a>
+        <button type="submit" class="m-btn is-primary"><i class="fa-solid fa-check"></i> {{ __('Save') }}</button>
     </div>
 </div>
 

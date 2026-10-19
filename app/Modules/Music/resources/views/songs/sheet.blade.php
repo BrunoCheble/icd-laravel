@@ -6,7 +6,7 @@
     <style>
         .sheet-page { --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding-bottom: 6rem;
             --type-intro: #0369a1; --type-verse: #047857; --type-prechorus: #b45309; --type-chorus: #be123c; --type-bridge: #6d28d9; --type-instrumental: #4338ca; --type-ending: #475569; --type-other: #111827; }
-        .sheet-toolbar { position: sticky; top: 0; z-index: 30; display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; padding: .5rem 0; background: #fff; border-bottom: 1px solid #e5e7eb; }
+        .sheet-toolbar { position: sticky; top: var(--app-sticky-top, 0px); z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; padding: .5rem 0; background: #fff; border-bottom: 1px solid #e5e7eb; }
         .sheet-toolbar .spacer { flex: 1; }
         .sb { display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .7rem; border: 1px solid #d1d5db; border-radius: .45rem; background: #fff; font-size: .85rem; font-weight: 600; color: #374151; cursor: pointer; white-space: nowrap; }
         .sb:hover { border-color: var(--brand-300); }
@@ -33,6 +33,10 @@
         .block-name-input { font-size: .8rem; font-weight: 800; text-transform: uppercase; width: 12rem; padding: .15rem .35rem; border: 1px solid var(--brand); border-radius: .35rem; }
         .block-head .tools { margin-left: auto; display: flex; flex-wrap: wrap; gap: .25rem; }
 
+        /* The lines of a block slide sideways when one is longer than the screen (each one stays on one line, so a
+           chord stays over its letter) */
+        .sheet-lines { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; padding-bottom: .15rem; }
+        @media (max-width: 639px) { .sheet-block { padding-left: .6rem; padding-right: .6rem; } }
         /* A line: its chords above the lyrics, both in a monospaced font so a chord sits over its letter. */
         .sl { position: relative; padding-left: 1.6rem; font-family: var(--mono); font-size: 1rem; }
         .sl + .sl { margin-top: .15rem; }
@@ -116,7 +120,7 @@
                             </template>
 
                             <template x-if="textEdit?.id !== block.id">
-                                <div>
+                                <div class="sheet-lines">
                                     <template x-for="(line, l) in block.lines" :key="line.id">
                                         <div>
                                             <template x-if="line.comment !== undefined"><div class="sl-comment" x-text="line.comment"></div></template>

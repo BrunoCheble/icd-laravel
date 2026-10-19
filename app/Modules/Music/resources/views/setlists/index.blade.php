@@ -6,16 +6,8 @@
     </x-slot>
 
     <style>
-        .sl-head { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
-        .sl-head .grow { flex: 1 1 14rem; }
-        .sl-btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 38px; padding: 0 .8rem; border: 1px solid #d1d5db; border-radius: .5rem; background: #fff; color: #374151; font-size: .875rem; font-weight: 600; white-space: nowrap; cursor: pointer; text-decoration: none; }
-        .sl-btn:hover { background: #f9fafb; }
-        .sl-btn.is-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
-        .sl-btn.is-primary:hover { background: var(--brand-hover); }
-        .sl-search { display: flex; gap: .5rem; margin-top: 1rem; max-width: 36rem; }
-        .sl-search input { flex: 1; min-width: 0; min-height: 38px; padding: 0 .75rem; border: 1px solid #d1d5db; border-radius: .5rem; font-size: .9rem; }
 
-        .sl-list { display: grid; gap: .6rem; margin-top: 1.25rem; }
+        .sl-list { display: grid; gap: .6rem; margin-top: 1rem; }
         .sl-card { border: 1px solid #e5e7eb; border-radius: .75rem; background: #fff; overflow: hidden; scroll-margin-top: 5rem; }
         .sl-card.is-next { border-color: var(--brand-300); box-shadow: 0 0 0 1px var(--brand-300); }
         .sl-card.is-past .sl-title, .sl-card.is-past .sl-date { color: #6b7280; }
@@ -61,46 +53,48 @@
         }
     </style>
 
-    <div class="py-12">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+    @include('music::partials.ui')
+
+    <div class="m-page" style="max-width: 64rem;" x-data="{
+            open: @js($open),
+            ids: @js($setlists->pluck('id')),
+            isOpen(id) { return this.open.includes(id); },
+            toggle(id) { this.open = this.isOpen(id) ? this.open.filter(item => item !== id) : [...this.open, id]; },
+            get allOpen() { return this.ids.length > 0 && this.ids.every(id => this.isOpen(id)); },
+            toggleAll() { this.open = this.allOpen ? [] : [...this.ids]; },
+        }" x-init="open.length && $nextTick(() => document.getElementById(`setlist-${open[0]}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }))">
                 @include('layouts.alert')
 
-                <div class="sl-head">
-                    <div class="grow">
-                        <h1 class="text-base font-semibold leading-6 text-gray-900">{{ __('Setlists') }}</h1>
-                        <p class="mt-1 text-sm text-gray-600">{{ __('Tap a setlist to see its songs.') }}</p>
+                <div class="m-head">
+                    <div>
+                        <h1>{{ __('Setlists') }}</h1>
+                        <p>{{ __('Tap a setlist to see its songs.') }}</p>
                     </div>
-                    <a href="{{ route('setlists.import') }}" class="sl-btn"><i class="fa-solid fa-paste"></i> {{ __('Import schedule') }}</a>
-                    <a href="{{ route('setlists.create') }}" class="sl-btn is-primary"><i class="fa-solid fa-plus"></i> {{ __('Add new') }}</a>
+                    <div class="m-head-actions">
+                        <a href="{{ route('setlists.import') }}" class="m-btn" title="{{ __('Import schedule') }}"><i class="fa-solid fa-paste"></i> <span class="m-hide-sm">{{ __('Import schedule') }}</span></a>
+                        <a href="{{ route('setlists.create') }}" class="m-btn is-primary"><i class="fa-solid fa-plus"></i> {{ __('Add new') }}</a>
+                    </div>
                 </div>
 
-                <form method="GET" action="{{ route('setlists.index') }}" class="sl-search">
-                    <input name="search" type="search" value="{{ $search }}" placeholder="{{ __('Search by title or minister...') }}" aria-label="{{ __('Search') }}">
-                    <button type="submit" class="sl-btn">{{ __('Search') }}</button>
-                    @if ($search)
-                        <a href="{{ route('setlists.index') }}" class="sl-btn">{{ __('Clear') }}</a>
+                <form method="GET" action="{{ route('setlists.index') }}" class="m-toolbar">
+                    <label class="m-search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input name="search" type="search" value="{{ $search }}" placeholder="{{ __('Search by title or minister...') }}" aria-label="{{ __('Search') }}">
+                    </label>
+                    @if ($setlists->isNotEmpty())
+                        <button type="button" class="m-btn" @click="toggleAll()" :title="allOpen ? @js(__('Collapse all')) : @js(__('Expand all'))">
+                            <i class="fa-solid" :class="allOpen ? 'fa-angles-up' : 'fa-angles-down'"></i>
+                            <span class="m-hide-sm" x-text="allOpen ? @js(__('Collapse all')) : @js(__('Expand all'))"></span>
+                        </button>
                     @endif
                 </form>
+                @if ($search)
+                    <div class="m-chips">
+                        <a class="m-chip" href="{{ route('setlists.index') }}" title="{{ __('Remove') }}">{{ __('Search') }}: "{{ $search }}" <i class="fa-solid fa-xmark"></i></a>
+                    </div>
+                @endif
 
-                <div x-data="{
-                        open: @js($open),
-                        ids: @js($setlists->pluck('id')),
-                        isOpen(id) { return this.open.includes(id); },
-                        toggle(id) { this.open = this.isOpen(id) ? this.open.filter(item => item !== id) : [...this.open, id]; },
-                        get allOpen() { return this.ids.length > 0 && this.ids.every(id => this.isOpen(id)); },
-                        toggleAll() { this.open = this.allOpen ? [] : [...this.ids]; },
-                    }" x-init="open.length && $nextTick(() => document.getElementById(`setlist-${open[0]}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }))">
-
-                    @if ($setlists->isNotEmpty())
-                        <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
-                            <button type="button" class="sl-btn" @click="toggleAll()">
-                                <i class="fa-solid" :class="allOpen ? 'fa-angles-up' : 'fa-angles-down'"></i>
-                                <span x-text="allOpen ? @js(__('Collapse all')) : @js(__('Expand all'))"></span>
-                            </button>
-                        </div>
-                    @endif
-
+                <div>
                     <div class="sl-list">
                         @forelse ($setlists as $setlist)
                             @php
@@ -174,7 +168,5 @@
                 <div class="mt-6">
                     {!! $setlists->withQueryString()->links() !!}
                 </div>
-            </div>
-        </div>
     </div>
 </x-app-layout>
