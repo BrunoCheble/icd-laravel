@@ -19,7 +19,7 @@ use App\Http\Requests\SitePrayerRequest;
 use App\Modules\Visitors\Http\Requests\VisitorRequest;
 use App\Models\Announcement;
 use App\Modules\Members\Models\Member;
-use App\Models\Prayer;
+use App\Modules\Prayers\Models\Prayer;
 use App\Modules\Visitors\Models\Visitor;
 use App\Services\RegisterAnnouncementService;
 use Illuminate\View\View;

@@ -1067,5 +1067,18 @@
     "No birthdays, wedding anniversaries, new visitors or missing details today.": "Hoje não há aniversários, aniversários de casamento, visitantes novos nem dados em falta.",
     "To keep your registration at the church up to date, we only need a few more details.": "Para mantermos o seu registo na igreja atualizado, só precisamos de mais alguns dados.",
     ":count detail is missing; it is marked \"Pending\" below.|:count details are missing; they are marked \"Pending\" below.": ":count dado em falta; está marcado como \"Pendente\" abaixo.|:count dados em falta; estão marcados como \"Pendente\" abaixo.",
-    "Pending detail": "Pendente"
+    "Pending detail": "Pendente",
+    ":count request|:count requests": ":count pedido|:count pedidos",
+    "Today on screen": "Hoje no ecrã",
+    "Period": "Período",
+    "This week": "Esta semana",
+    "Name or request": "Nome ou pedido",
+    "No requests match this search.": "Nenhum pedido corresponde a esta pesquisa.",
+    "No prayer requests in this period.": "Nenhum pedido de oração neste período.",
+    "No request written; pray for this person.": "Sem pedido escrito; ore por esta pessoa.",
+    "Copy request": "Copiar pedido",
+    "Delete this prayer request? It cannot be undone.": "Apagar este pedido de oração? Não pode ser desfeito.",
+    "Prayer deleted successfully.": "Pedido de oração apagado.",
+    "Failed to delete prayer.": "Não foi possível apagar o pedido.",
+    "Yesterday": "Ontem"
 }
