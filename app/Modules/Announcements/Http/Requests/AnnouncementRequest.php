@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Modules\Announcements\Http\Requests;
 
+use App\Enums\AnnouncementType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Enums\AnnouncementType;
 
 class AnnouncementRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // ou adicione sua lógica de permissão aqui
+        return true;
     }
 
     public function rules(): array
@@ -18,11 +18,11 @@ class AnnouncementRequest extends FormRequest
         return [
             'member_id'   => ['required', 'exists:members,id'],
             'title'       => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string'],
-            'link'        => ['nullable', 'string'],
-            'contact'     => ['required', 'string'],
+            'description' => ['required', 'string', 'max:5000'],
+            'link'        => ['nullable', 'string', 'max:255'],
+            'contact'     => ['required', 'string', 'max:255'],
             'type'        => ['required', 'string', Rule::in(array_keys(AnnouncementType::options()))],
-            'image_path'  => ['nullable', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'image_path'  => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
             'is_approved' => ['sometimes', 'boolean'],
             'expires_at'  => ['nullable', 'date'],
         ];

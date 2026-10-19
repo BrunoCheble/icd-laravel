@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
-use App\Models\Announcement;
+use App\Modules\Announcements\Models\Announcement;
 use Illuminate\Http\JsonResponse;
 
 class ApiController extends Controller

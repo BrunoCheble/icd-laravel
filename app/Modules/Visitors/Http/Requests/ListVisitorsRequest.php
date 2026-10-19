@@ -20,6 +20,7 @@ class ListVisitorsRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:100'],
+            'period' => ['nullable', Rule::in(ListVisitorsService::PERIODS)],
             'status' => ['nullable', Rule::in(array_keys(VisitorStatus::options()))],
             'gender' => ['nullable', Rule::in(array_keys(Gender::options()))],
             'group' => ['nullable', Rule::in(array_keys(VisitorGroup::options()))],
