@@ -117,26 +117,35 @@
         /* Phones and tablets: the block's menu slides up from the bottom (over a dimmed page), wide and with fields
            in 16px (so the phone does not zoom in) */
         .sheet-scrim { display: none; }
+        .info-btn { display: none; align-items: center; justify-content: center; width: 28px; height: 28px; margin: -.3rem 0; padding: 0; border: 0; border-radius: 999px; background: none; color: #9ca3af; font-size: .9rem; cursor: pointer; vertical-align: middle; }
+        .info-btn:hover, .info-btn.is-on { color: var(--brand-text); background: var(--brand-soft); }
+        .picker-select { display: none; }
+        .picker-select select { width: 100%; padding: .45rem .6rem; border: 1px solid #d1d5db; border-radius: .5rem; background-color: #fff; font-weight: 700; }
+        .bar-menu-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+        .bar-menu-head .title { margin: 0; }
         @media (max-width: 1023px) {
             .sheet-scrim { display: block; position: fixed; inset: 0; z-index: 49; background: rgba(17, 24, 39, .45); }
-            .popover.block-menu-pop { position: fixed !important; left: 0 !important; right: 0; top: auto !important; bottom: 0; width: min(34rem, 100%); max-height: 88vh; margin: 0 auto; overflow-y: auto; border: 0; border-radius: 1.1rem 1.1rem 0 0; padding: 1rem 1rem max(1.1rem, env(safe-area-inset-bottom)); box-shadow: 0 -12px 40px rgba(0, 0, 0, .25); }
-            .popover.block-menu-pop::before { content: ''; display: block; width: 2.5rem; height: 4px; margin: -.35rem auto .75rem; border-radius: 999px; background: #e5e7eb; }
-            .block-menu-pop .block-menu-head { margin: -.4rem -1rem .75rem; padding: .6rem 1rem .6rem; border-radius: 0; }
-            .block-menu-pop input[type=text], .block-menu-pop .stepper input, .block-menu-pop .block-menu-time input { font-size: 16px; }
-            .block-menu-pop .stepper button { width: 2.75rem; }
-            .block-menu-pop .stepper input, .block-menu-pop .block-menu-time input, .block-menu-pop .block-menu-time .nudge { min-height: 44px; }
-            .block-menu-pop .block-menu-name-row .ws-btn { min-height: 44px; min-width: 3rem; }
-            .block-menu-pop .block-menu-close { width: 40px; height: 40px; font-size: 1.1rem; }
+            .popover.is-sheet { position: fixed !important; left: 0 !important; right: 0; top: auto !important; bottom: 0; width: min(34rem, 100%); max-height: 88vh; margin: 0 auto; overflow-y: auto; border: 0; border-radius: 1.1rem 1.1rem 0 0; padding: 1rem 1rem max(1.1rem, env(safe-area-inset-bottom)); box-shadow: 0 -12px 40px rgba(0, 0, 0, .25); }
+            .popover.is-sheet::before { content: ''; display: block; width: 2.5rem; height: 4px; margin: -.35rem auto .75rem; border-radius: 999px; background: #e5e7eb; }
+            .is-sheet .block-menu-head { margin: -.4rem -1rem .75rem; padding: .6rem 1rem .6rem; border-radius: 0; }
+            .is-sheet input[type=text], .is-sheet select, .is-sheet .stepper input, .is-sheet .block-menu-time input { font-size: 16px; }
+            .is-sheet .stepper button { width: 2.75rem; }
+            .is-sheet .stepper input, .is-sheet .block-menu-time input, .is-sheet .block-menu-time .nudge, .is-sheet .row .ws-btn, .is-sheet input[type=text], .is-sheet select { min-height: 44px; }
+            .is-sheet .block-menu-name-row .ws-btn { min-height: 44px; min-width: 3rem; }
+            .is-sheet .block-menu-close { width: 40px; height: 40px; font-size: 1.1rem; }
+            /* Long explanations behind an (i) to tap; the chords to pick in one list */
+            .info-btn { display: inline-flex; }
+            .info-text:not(.is-open) { display: none; }
+            .picker-chips { display: none; }
+            .picker-select { display: grid; }
         }
         /* Phones and tablets: the block's and the bar's buttons big enough for a finger, apart from each other */
         @media (max-width: 1023px) {
             .bar-group-head { gap: .4rem; }
             .bar-group-head .group-action, .bar-group-head .block-more { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 36px; padding: 0; border-radius: .5rem; font-size: .9rem; }
             .bar-group-head .group-action + .group-action { margin-left: .35rem; }
-            .bars-page.is-editing .bars-grid .bar { padding-top: 1.7rem; }
-            .bar-tools { top: .2rem; right: 1.6rem; gap: .5rem; }
-            .bar-tools button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border-radius: .45rem; background: #f3f4f6; font-size: .8rem; color: #6b7280; }
-            .bar .number { top: .55rem; }
+            /* A bar is duplicated or removed from its menu (long press), not from tiny icons */
+            .bar-tools { display: none !important; }
         }
         .menu-chords { display: flex; flex-wrap: wrap; gap: .3rem; }
         .menu-chords button { padding: .2rem .55rem; border: 1px solid #d1d5db; border-radius: 999px; background: #fff; font-weight: 700; font-size: .85rem; cursor: pointer; }
@@ -526,7 +535,7 @@
                     </div>
 
                     {{-- Chord of a beat (double click, or a tap on touch screens): one of the song's chords, one of the key, or typed --}}
-                    <div class="popover chord-picker" x-show="editor" x-cloak x-ref="editor" @click.outside="editor = null" @keydown.escape.stop="editor = null" :style="editor ? typeVars(editorBlockName()) : {}">
+                    <div class="popover is-sheet chord-picker" x-show="editor" x-cloak x-ref="editor" @click.outside="editor = null" @keydown.escape.stop="editor = null" :style="editor ? typeVars(editorBlockName()) : {}">
                         <div class="block-menu-head">
                             <div>
                                 <p class="block-menu-name" x-text="editorBlockName()"></p>
@@ -541,7 +550,21 @@
                         </div>
                         <p class="help" x-show="editorError" x-text="editorError" style="color: #dc2626;"></p>
                         <template x-if="editor">
-                            <div>
+                            <div class="block-menu-field picker-select" x-show="pickerChords('song').length || pickerChords('key').length">
+                                <span class="block-menu-label">{{ __('Choose a chord') }}</span>
+                                <select @change="if ($event.target.value) pickChord($event.target.value)" :aria-label="@js(__('Choose a chord'))">
+                                    <option value="">{{ __('Choose…') }}</option>
+                                    <optgroup :label="@js(__('In the song'))" x-show="pickerChords('song').length">
+                                        <template x-for="chord in pickerChords('song')" :key="'s' + chord"><option :value="chord" x-text="chord === editorChordNow() ? chord + ' ✓' : chord"></option></template>
+                                    </optgroup>
+                                    <optgroup :label="`${@js(__('In the key of'))} ${key}`" x-show="pickerChords('key').length">
+                                        <template x-for="chord in pickerChords('key')" :key="'k' + chord"><option :value="chord" x-text="chord"></option></template>
+                                    </optgroup>
+                                </select>
+                            </div>
+                        </template>
+                        <template x-if="editor">
+                            <div class="picker-chips">
                                 <div class="block-menu-field" x-show="pickerChords('song').length">
                                     <span class="block-menu-label">{{ __('In the song') }}</span>
                                     <div class="menu-chords">
@@ -614,8 +637,11 @@
                     </div>
 
                     {{-- Block of a bar: new, rename, join; play from the bar --}}
-                    <div class="popover" x-show="barMenu" x-cloak x-ref="barMenu" @click.outside="barMenu = null" @keydown.escape.stop="barMenu = null">
-                        <p class="title" x-text="barMenuTitle()"></p>
+                    <div class="popover is-sheet" x-show="barMenu" x-cloak x-ref="barMenu" @click.outside="if (barMenu && performance.now() - (barMenu.at || 0) > 400) barMenu = null" @keydown.escape.stop="barMenu = null">
+                        <div class="bar-menu-head">
+                            <p class="title" x-text="barMenuTitle()"></p>
+                            <button type="button" class="block-menu-close" @click="barMenu = null" :aria-label="@js(__('Close'))"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
                         {{-- A new block from this bar (renaming a block is in its own menu) --}}
                         <input type="text" x-ref="blockName" list="block-names" x-show="!versionId && barMenu && !blockAtBar(barMenu.bar)" autocomplete="off" spellcheck="false" placeholder="{{ __('E.g. CHORUS') }}" style="text-transform: uppercase" @keydown.enter.prevent="saveBlockName()">
                         <datalist id="block-names">
@@ -630,9 +656,10 @@
                         </div>
                         {{-- Passing chords of the bar: underlined in the bars and on the public page --}}
                         <template x-if="!versionId && barMenu && barChords(barMenu.bar).length">
-                            <div>
+                            <div x-data="{ info: false }">
                                 <hr>
-                                <p class="title">{{ __('Passing chords') }}</p>
+                                <p class="title">{{ __('Passing chords') }} <button type="button" class="info-btn" :class="{ 'is-on': info }" @click="info = !info" :aria-label="@js(__('What is it?'))"><i class="fa-solid fa-circle-info"></i></button></p>
+                                <p class="help info-text" :class="{ 'is-open': info }" style="margin: -.2rem 0 .4rem;">{{ __('Underlined in the bars and on the public page.') }}</p>
                                 <div class="menu-chords">
                                     <template x-for="chord in barChords(barMenu.bar)" :key="chord.tick">
                                         <button type="button" :class="{ 'is-on': chord.passing }" @click="togglePassing(chord.tick)" :aria-pressed="chord.passing" x-text="transposeName(chord.name)"
@@ -643,9 +670,10 @@
                         </template>
                         {{-- Bars added (the chord sounding there goes on one bar longer) or removed --}}
                         <template x-if="!versionId">
-                            <div>
+                            <div x-data="{ info: false }">
                                 <hr>
-                                <p class="title">{{ __('Bar') }}</p>
+                                <p class="title">{{ __('Bar') }} <button type="button" class="info-btn" :class="{ 'is-on': info }" @click="info = !info" :aria-label="@js(__('What is it?'))"><i class="fa-solid fa-circle-info"></i></button></p>
+                                <p class="help info-text" :class="{ 'is-open': info }" style="margin: -.2rem 0 .4rem;">{{ __('Before / After: the chord at the start (or at the end) of this bar lasts one bar longer.') }}</p>
                                 <div class="row" style="margin-top: 0;">
                                     <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, false)" title="{{ __('Insert a bar before: the chord at the start of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('Before') }}</button>
                                     <button type="button" class="ws-btn" @click="insertBar(barMenu.bar, true)" title="{{ __('Insert a bar after: the chord at the end of this bar lasts one bar longer') }}"><i class="fa-solid fa-plus"></i> {{ __('After') }}</button>
@@ -654,7 +682,10 @@
                             </div>
                         </template>
                         <hr>
-                        <p class="title" x-text="barMenu ? menuBarsLabel() : ''"></p>
+                        <div x-data="{ info: false }">
+                        <p class="title"><span x-text="barMenu ? menuBarsLabel() : ''"></span> <button type="button" class="info-btn" x-show="clipboard" :class="{ 'is-on': info }" @click="info = !info" :aria-label="@js(__('What is it?'))"><i class="fa-solid fa-circle-info"></i></button></p>
+                        <p class="help info-text" :class="{ 'is-open': info }" x-show="clipboard" style="margin: -.2rem 0 .4rem;">{{ __('Paste: only the chord names. With the rhythm: where each chord changes, too.') }}</p>
+                        </div>
                         <div class="row">
                             <button type="button" class="ws-btn" @click="copyBars(barMenu.bar); barMenu = null"><i class="fa-solid fa-copy"></i> {{ __('Copy') }}</button>
                         </div>
@@ -669,8 +700,8 @@
 
                     {{-- The menu of a block (its "..." next to its name): name, bars, repetitions (it is moved by dragging its head,
                          duplicated and removed with the buttons on its right) --}}
-                    <div class="sheet-scrim" x-show="blockMenu" x-cloak x-transition.opacity></div>
-                    <div class="popover block-menu-pop" x-show="blockMenu" x-cloak x-ref="blockMenu" @click.outside="blockMenu = null" @keydown.escape.stop="blockMenu = null">
+                    <div class="sheet-scrim" x-show="blockMenu || barMenu || editor" x-cloak x-transition.opacity></div>
+                    <div class="popover is-sheet" x-show="blockMenu" x-cloak x-ref="blockMenu" @click.outside="blockMenu = null" @keydown.escape.stop="blockMenu = null">
                         <template x-if="blockMenu && menuBlock()">
                             <div x-data="{ name: menuBlockInfo().name }" class="block-menu" :style="typeStyle(menuBlockInfo().name)">
                                 <div class="block-menu-head">
@@ -708,8 +739,8 @@
                                     </div>
                                 </div>
                                 {{-- Start time: where the block starts in the recording --}}
-                                <div class="block-menu-field">
-                                    <span class="block-menu-label">{{ __('Starts at') }}</span>
+                                <div class="block-menu-field" x-data="{ info: false }">
+                                    <span class="block-menu-label">{{ __('Starts at') }} <button type="button" class="info-btn" :class="{ 'is-on': info }" @click="info = !info" :aria-label="@js(__('What is it?'))"><i class="fa-solid fa-circle-info"></i></button></span>
                                     <div class="block-menu-time">
                                         <button type="button" class="nudge" @click="setBlockTime(menuBlock(), blockStart(menuBlock()) - 0.1)" title="{{ __('0.1 s earlier') }}">−0,1</button>
                                         <input type="text" inputmode="decimal" :value="formatClock(blockStart(menuBlock()))" @change="setBlockTime(menuBlock(), $event.target.value); $event.target.value = formatClock(blockStart(menuBlock()))"
@@ -718,7 +749,7 @@
                                         <button type="button" class="nudge now" x-show="hasMusic && !clickOnly" @click="const block = menuBlock(); blockMenu = null; openMark(block, $event)"
                                             title="{{ __('Mark the start of this block now') }}"><i class="fa-regular fa-clock"></i> {{ __('Now') }}</button>
                                     </div>
-                                    <p class="help" x-text="menuTimeHelp()"></p>
+                                    <p class="help info-text" :class="{ 'is-open': info }" x-text="menuTimeHelp()"></p>
                                     <button type="button" class="link-btn" x-show="menuBlockInfo().index > 0 && freeTiming && menuBlock()?.data.free_start !== undefined"
                                         @click="setBlockTime(menuBlock(), null)">{{ __('Back to right after the block before') }}</button>
                                 </div>
@@ -3291,6 +3322,9 @@
                 },
 
                 startPress(bar, event) {
+                    // A new touch: the tap that ended a long press before (which may have landed on the menu's dim
+                    // backdrop instead of the bar) is no longer waited for.
+                    this.pressOpened = false;
                     if (event.pointerType !== 'touch') return;
                     const target = event.currentTarget;
                     this.pressTimer = setTimeout(() => { this.pressTimer = null; this.pressOpened = true; this.openBarMenu(bar, target); }, 550);
@@ -3299,7 +3333,7 @@
                 openBarMenu(bar, element) {
                     this.inline = null;
                     this.editor = null;
-                    this.barMenu = { bar };
+                    this.barMenu = { bar, at: performance.now() };
                     this.place(this.ref('barMenu'), element);
                     const block = this.blockAtBar(bar);
                     this.ref('blockName').value = block ? this.blockName(block) : '';

@@ -896,5 +896,11 @@
     "Change song": "Trocar de música",
     "Opens on the same tab.": "Abre na mesma aba.",
     "Recent": "Recentes",
-    "Next setlist": "Próximo repertório"
+    "Next setlist": "Próximo repertório",
+    "What is it?": "O que é?",
+    "Underlined in the bars and on the public page.": "Ficam sublinhados nos compassos e na página pública.",
+    "Before / After: the chord at the start (or at the end) of this bar lasts one bar longer.": "Antes / Depois: o acorde do início (ou do fim) deste compasso dura mais um compasso.",
+    "Paste: only the chord names. With the rhythm: where each chord changes, too.": "Colar: só os nomes dos acordes. Com o ritmo: também onde cada acorde muda.",
+    "Choose a chord": "Escolher um acorde",
+    "Choose…": "Escolher…"
 }
