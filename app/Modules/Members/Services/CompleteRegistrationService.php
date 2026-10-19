@@ -2,16 +2,22 @@
 
 namespace App\Modules\Members\Services;
 
+use App\Enums\MembershipStatus;
 use App\Helpers\NameHelper;
 use App\Modules\Members\Models\Member;
 use Carbon\Carbon;
 
 class CompleteRegistrationService
 {
+    public function __construct(private GetMemberPendingInformationService $pending)
+    {
+    }
+
     /**
      * Saves what a pending member filled in on the "complete your registration" page (only the fields still
      * missing; empty ones are left as they are). The spouse is linked when its mobile number finds them (see
      * findSpouse()); otherwise the name is kept as the spouse's (spouse_name) and the number goes to the notes.
+     * A pending member with nothing left to send becomes active.
      */
     public function execute(Member $member, array $data): void
     {
@@ -52,7 +58,15 @@ class CompleteRegistrationService
             $data['email'] = strtolower($data['email']);
         }
 
-        $member->fill($data)->save();
+        $member->fill($data);
+
+        // Everything sent: the registration is complete, the member is active.
+        if ($member->isPending() && ! $this->pending->fields($member)) {
+            $member->membership_status = MembershipStatus::ACTIVED;
+            $member->notes = trim($member->notes . "\n" . 'Registo completado pelo próprio membro em ' . now()->format('d/m/Y'));
+        }
+
+        $member->save();
     }
 
     /**

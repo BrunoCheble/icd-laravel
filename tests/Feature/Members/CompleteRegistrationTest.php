@@ -63,7 +63,7 @@ class CompleteRegistrationTest extends TestCase
 
     public function test_only_the_missing_fields_are_saved(): void
     {
-        $member = $this->pending(['email' => 'carla@example.com']);
+        $member = $this->pending(['email' => 'carla@example.com', 'document_number' => '']);
         $link = $this->link($member);
 
         $this->post($link, [
@@ -169,6 +169,31 @@ class CompleteRegistrationTest extends TestCase
         // The form keeps the language: errors and the page after saving
         $this->post($link, ['lang' => 'en', 'date_of_birth' => now()->addDay()->toDateString()])->assertSessionHasErrors('date_of_birth');
         $this->post($link, ['lang' => 'en', 'date_of_birth' => '1990-05-04'])->assertRedirect("{$link}&lang=en");
+    }
+
+    public function test_a_pending_member_who_sends_everything_becomes_active(): void
+    {
+        $member = $this->pending(['email' => 'carla@example.com', 'phone_number' => '912345678', 'address' => 'Rua A', 'zip_code' => '1000-001', 'city' => 'Lisboa']);
+        $link = $this->link($member);
+
+        // Something still missing: stays pending
+        $this->post($link, ['email' => 'x@example.com']); // not missing: ignored, and nothing filled
+        $this->assertSame(MembershipStatus::PENDING, $member->fresh()->membership_status);
+
+        $this->post($link, ['date_of_birth' => '1990-05-04'])->assertRedirect($link);
+        $member->refresh();
+        $this->assertSame(MembershipStatus::ACTIVED, $member->membership_status);
+        $this->assertStringContainsString('Registo completado pelo próprio membro em', $member->notes);
+        $this->get($link)->assertSee('Obrigado, Carla!');
+    }
+
+    public function test_an_active_member_stays_active(): void
+    {
+        $member = $this->member(['first_name' => 'Rui', 'date_of_birth' => null, 'email' => 'rui@example.com', 'phone_number' => '912345678', 'address' => 'Rua A', 'zip_code' => '1000-001', 'city' => 'Lisboa']);
+
+        $this->post($this->link($member), ['date_of_birth' => '1980-01-01']);
+        $this->assertSame(MembershipStatus::ACTIVED, $member->fresh()->membership_status);
+        $this->assertStringNotContainsString('Registo completado', (string) $member->fresh()->notes);
     }
 
     private function link(Member $member): string
