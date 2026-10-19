@@ -34,15 +34,17 @@
         .setlist-row .setlist-title a { font-weight: 600; color: #111827; }
         .setlist-row .setlist-title small { display: block; color: #6b7280; }
 
-        /* Chord map preview, as the public page splits and colors it */
-        .preview-block { padding: .5rem 0 .6rem; border-top: 1px solid #f3f4f6; }
-        .preview-name { font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, var(--brand-text)); }
-        .preview-block { border-left: 3px solid var(--type-color, transparent); padding-left: .6rem; }
-        .preview-name small { margin-left: .4rem; font-weight: 500; letter-spacing: 0; color: #9ca3af; }
-        .preview-anchor { font-size: .85rem; font-style: italic; color: #6b7280; }
-        .preview-line .is-passing { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .22em; }
-        .preview-return { padding: .35rem .6rem; border-top: 1px solid #f3f4f6; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
-        .preview-line { white-space: pre; display: flex; flex-wrap: wrap; gap: .1rem 1rem; font-weight: 700; color: var(--type-color, #111827); }
+        /* Chord sheet, as on the layout page (songs/bars.blade.php) */
+        .sheet-box { padding: .75rem; border: 1px solid #e5e7eb; border-radius: .5rem; background: #fafafa; overflow-x: auto; }
+        .sheet-section { padding: .35rem .5rem; border-radius: .4rem; border-left: 3px solid transparent; }
+        .sheet-section + .sheet-section { margin-top: .6rem; }
+        .sheet-label { font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, #6b7280); }
+        .sheet-line { display: flex; flex-wrap: wrap; margin-top: .15rem; font-size: .92rem; line-height: 1.15; }
+        .sheet-seg { display: inline-flex; flex-direction: column; }
+        .sheet-seg .c { min-height: 1.05em; font-size: .82rem; font-weight: 800; color: var(--brand-text); padding-right: .3rem; }
+        .sheet-seg .t { white-space: pre; }
+        .sheet-comment { margin-top: .15rem; font-size: .82rem; font-style: italic; color: #6b7280; }
+        .sheet-head { display: flex; align-items: center; gap: .35rem; }
     </style>
 
     <div class="py-12">
@@ -118,57 +120,29 @@
                     <p class="text-sm text-gray-500">{{ __('This song is not in any setlist yet.') }}</p>
                 @endforelse
 
-                {{-- Chord map, as the musicians see it --}}
-                <h3 class="overview-title">{{ __('Map') }}</h3>
-                @if ($overview['blocks'] === [])
-                    <p class="text-sm text-gray-500">{{ __('No structure available for this song.') }}</p>
+                {{-- Chord sheet, as on the layout page --}}
+                <h3 class="overview-title">{{ __('Chord sheet') }}</h3>
+                @if ($overview['sheet'] === [])
+                    <p class="text-sm text-gray-500">{{ __('This song has no chord sheet yet.') }}</p>
                 @else
-                    <div x-data="songPreview(@js($overview['blocks']))">
-                        <template x-for="(block, b) in blocks" :key="b">
-                            <div>
-                            <div class="preview-return" x-show="block.return"><i class="fa-solid fa-rotate-left"></i> {{ __('Back to the start') }}</div>
-                            <div class="preview-block" x-show="!block.return" :style="`--type-color: var(--type-${blockType(block.name)})`">
-                                <div class="preview-name"><span x-text="block.name"></span><small x-show="block.start" x-text="block.start"></small></div>
-                                <div class="preview-anchor" x-show="block.anchor" x-text="block.anchor"></div>
-                                <template x-for="(line, l) in lines[b]" :key="l">
-                                    <div class="preview-line">
-                                        <template x-for="(cell, c) in line" :key="c">
-                                            <span><template x-for="(chord, i) in cell" :key="i"><span :class="{ 'is-passing': chord.passing }" x-text="(i ? ' ' : '') + chord.name"></span></template></span>
-                                        </template>
-                                    </div>
-                                </template>
+                    <div class="sheet-box">
+                        @foreach ($overview['sheet'] as $section)
+                            <div class="sheet-section" x-data :style="`--type-color: var(--type-${blockType(@js($section['label']))})`">
+                                <div class="sheet-head"><div class="sheet-label">{{ $section['label'] }}</div></div>
+                                @foreach ($section['lines'] as $line)
+                                    @if (isset($line['comment']))
+                                        <div class="sheet-comment">{{ $line['comment'] }}</div>
+                                    @else
+                                        <div class="sheet-line">@foreach ($line['units'] as [$chord, $text])<span class="sheet-seg"><span class="c"><span>{{ $chord }}</span></span><span class="t">{{ $text }}</span></span>@endforeach</div>
+                                    @endif
+                                @endforeach
                             </div>
-                            </div>
-                        </template>
+                        @endforeach
                     </div>
                 @endif
             </div>
         </div>
     </div>
 
-    <script>
-        // Chord map preview: lines and block colors as on the public page (see chord-lines.js);
-        // an identical chord repeated in a line is shown once (G G -> G).
-        function songPreview(blocks) {
-            const raw = blocks.map(block => block.chords);
-            const passing = blocks.map(block => block.passing || []);
-            const cycles = songCyclesOf(raw, passing);
-            const lines = raw.map((chords, b) => chordSegments(chords, cycles, passing[b]).map(line => {
-                const cells = [];
-                line.forEach(step => {
-                    const previous = cells[cells.length - 1];
-                    const items = step.chords
-                        .map((name, i) => ({ name, passing: passing[b].includes(step.positions[i]) }))
-                        .filter((chord, i, list) => chord.name !== (i === 0 ? previous?.[previous.length - 1]?.name : list[i - 1].name));
-                    if (items.length) cells.push(items);
-                });
-                return cells;
-            }).filter(line => line.length));
 
-            return {
-                blocks,
-                lines,
-            };
-        }
-    </script>
 </x-app-layout>
