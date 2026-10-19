@@ -197,6 +197,11 @@
                 <main class="app-main">
                     {{ $slot }}
                 </main>
+
+                {{-- Locks itself after a while away, for users who unlock with a fingerprint / Face ID --}}
+                @if (app(\App\Services\Passkeys\SessionLock::class)->applies(request()))
+                    @include('layouts.partials.app-lock')
+                @endif
             </div>
         </div>
     </body>

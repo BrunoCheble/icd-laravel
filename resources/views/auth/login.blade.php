@@ -44,4 +44,48 @@
             </x-primary-button>
         </div>
     </form>
+
+    {{-- Fingerprint / Face ID: a passkey registered on the profile of this device --}}
+    <div class="mt-6" x-data="passkeySignIn(@js([
+            'options' => route('passkeys.sign-in.options'),
+            'signIn' => route('passkeys.sign-in'),
+            'texts' => [
+                'cancelled' => __('Cancelled on the device. Try again.'),
+                'already' => __('This device is already registered.'),
+                'failed' => __('The fingerprint could not be checked. Try again.'),
+            ],
+        ]))" x-show="supported" x-cloak>
+        <div class="flex items-center gap-3 text-xs uppercase tracking-wide text-gray-400"><span class="h-px flex-1 bg-gray-200"></span>{{ __('or') }}<span class="h-px flex-1 bg-gray-200"></span></div>
+        <button type="button" @click="go()" :disabled="busy"
+            class="mt-4 flex w-full items-center justify-center gap-3 rounded-xl bg-gray-900 px-4 py-3 text-base font-bold text-white hover:bg-gray-800 disabled:opacity-60">
+            <i class="fa-solid fa-fingerprint text-xl"></i>
+            <span x-text="busy ? @js(__('Waiting for the device…')) : @js(__('Sign in with fingerprint / Face ID'))"></span>
+        </button>
+        <p class="mt-3 text-center text-sm font-semibold text-red-600" x-show="error" x-text="error"></p>
+        <p class="mt-2 text-center text-xs text-gray-500">{{ __('First turn it on in your profile, on this device.') }}</p>
+    </div>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>[x-cloak] { display: none !important; }</style>
+    <script src="{{ asset('js/passkeys.js') }}?v={{ filemtime(public_path('js/passkeys.js')) }}"></script>
+    <script>
+        function passkeySignIn({ options, signIn, texts }) {
+            return {
+                supported: window.Passkeys && Passkeys.supported(),
+                busy: false,
+                error: '',
+                async go() {
+                    this.busy = true;
+                    this.error = '';
+                    try {
+                        const result = await Passkeys.signIn(options, signIn);
+                        location.href = result.redirect;
+                    } catch (error) {
+                        this.error = Passkeys.message(error, texts);
+                        this.busy = false;
+                    }
+                },
+            };
+        }
+    </script>
 </x-guest-layout>

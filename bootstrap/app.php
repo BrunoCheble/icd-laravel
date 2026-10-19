@@ -12,7 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // The app's lock for passkey users (fingerprint / face to come back after a while away).
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsureSessionUnlocked::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
