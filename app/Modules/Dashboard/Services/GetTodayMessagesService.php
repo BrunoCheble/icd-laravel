@@ -74,19 +74,22 @@ class GetTodayMessagesService
                 'text' => 'A paz, ' . Str::before(trim($visitor->name), ' ') . '! Foi uma alegria ter você conosco. Volte sempre, que Deus te abençoe! 🙏',
             ]));
 
-        $reminded = $sent->where('kind', SentMessage::PENDING)->groupBy('recipient_id');
+        // Reminders: members with missing details, and those reminded in the last days (listed as sent, with
+        // whether they already answered: "waiting" while something is missing, "completed" once nothing is).
+        $reminded = $sent->where('kind', SentMessage::PENDING)->sortByDesc('created_at')->unique('recipient_id')->keyBy('recipient_id');
         $reminders = Member::query()
-            ->where('membership_status', '!=', MembershipStatus::INACTIVED)
+            ->where(fn ($q) => $q->where('membership_status', '!=', MembershipStatus::INACTIVED)->orWhereIn('id', $reminded->keys()))
             ->orderByRaw('membership_status = ? DESC', [MembershipStatus::PENDING])
             ->orderBy('created_at')
             ->get()
-            ->map(fn (Member $member) => [$member, $this->pending->execute($member)])
-            ->filter(fn ($pair) => count($pair[1]) > 0)
-            // Reminded in the last days: listed (as sent) only on the day of the reminder.
-            ->filter(fn ($pair) => ! isset($reminded[$pair[0]->id]) || $reminded[$pair[0]->id]->contains(fn ($m) => $m->period === $today->toDateString()))
-            ->map(fn ($pair) => $this->item(SentMessage::PENDING, $pair[0]->id, $pair[0]->first_and_last_name, [$pair[0]], $sentOn(SentMessage::PENDING, $pair[0]->id), [
-                'subtitle' => trans_choice(':count pending item|:count pending items', count($pair[1]), ['count' => count($pair[1])]),
-                'text' => self::reminderText($this->sibling($pair[0]), $pair[0]->first_name, $pair[1], $this->registrationLink->execute($pair[0]), $pair[0]->isPending()),
+            ->map(fn (Member $member) => [$member, $this->pending->execute($member), $reminded[$member->id] ?? null])
+            ->filter(fn ($row) => count($row[1]) > 0 || $row[2])
+            ->map(fn ($row) => $this->item(SentMessage::PENDING, $row[0]->id, $row[0]->first_and_last_name, [$row[0]], $row[2], [
+                'subtitle' => count($row[1])
+                    ? trans_choice(':count pending item|:count pending items', count($row[1]), ['count' => count($row[1])])
+                    : __('Nothing missing now'),
+                'text' => self::reminderText($this->sibling($row[0]), $row[0]->first_name, $row[1], $this->registrationLink->execute($row[0]), $row[0]->isPending()),
+                'progress' => $row[2] ? (count($row[1]) ? 'waiting' : 'completed') : null,
             ]));
 
         return [
@@ -117,7 +120,13 @@ class GetTodayMessagesService
      */
     public static function sentInfo(?SentMessage $sent): ?array
     {
-        return $sent ? ['by' => $sent->user?->name, 'at' => $sent->created_at->timezone(config('app.timezone'))->format('H:i')] : null;
+        if (! $sent) {
+            return null;
+        }
+        $at = $sent->created_at->timezone(config('app.timezone'));
+
+        // Undoing is for today's mark only; an older one says its day.
+        return ['by' => $sent->user?->name, 'at' => $at->format($at->isToday() ? 'H:i' : 'd/m H:i'), 'today' => $at->isToday()];
     }
 
     // One message of the page: who it is for (with their photo or initials and WhatsApp), the text, and if it was sent.
