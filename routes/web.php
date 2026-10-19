@@ -6,6 +6,8 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\VisitorController;
 use App\Http\Controllers\MinistryController;
 use App\Http\Controllers\MinistryMemberController;
+use App\Http\Controllers\LockController;
+use App\Http\Controllers\PasskeyController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Site\SiteController;
@@ -31,6 +33,16 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    // Fingerprint / Face ID: this device registered on the profile, and the app's lock.
+    Route::post('/passkeys/options', [PasskeyController::class, 'options'])->middleware('throttle:10,1')->name('passkeys.options');
+    Route::post('/passkeys', [PasskeyController::class, 'store'])->middleware('throttle:10,1')->name('passkeys.store');
+    Route::delete('/passkeys/{passkey}', [PasskeyController::class, 'destroy'])->name('passkeys.destroy');
+    Route::get('/lock', [LockController::class, 'show'])->name('lock');
+    Route::post('/lock/ping', [LockController::class, 'ping'])->middleware('throttle:30,1')->name('lock.ping');
+    Route::post('/lock/options', [LockController::class, 'options'])->middleware('throttle:20,1')->name('lock.options');
+    Route::post('/lock/unlock', [LockController::class, 'unlock'])->middleware('throttle:10,1')->name('lock.unlock');
+    Route::post('/lock/password', [LockController::class, 'password'])->middleware('throttle:5,1')->name('lock.password');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -54,6 +66,12 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('announcements', AnnouncementController::class);
     Route::resource('prayers', PrayerController::class);
+});
+
+// Signing in with fingerprint / Face ID (a passkey registered on the profile).
+Route::middleware(['guest', 'throttle:10,1'])->group(function () {
+    Route::post('/passkeys/sign-in/options', [PasskeyController::class, 'signInOptions'])->name('passkeys.sign-in.options');
+    Route::post('/passkeys/sign-in', [PasskeyController::class, 'signIn'])->name('passkeys.sign-in');
 });
 
 require __DIR__.'/auth.php';

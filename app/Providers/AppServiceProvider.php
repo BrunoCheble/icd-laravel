@@ -19,6 +19,17 @@ class AppServiceProvider extends ServiceProvider
     {
         // The side menu: one section per module (the music module adds its own).
         $this->app->singleton(Menu::class);
+
+        // The WebAuthn (passkeys) library kept in lib/webauthn (no Composer on the production server).
+        spl_autoload_register(function (string $class) {
+            $prefix = 'lbuchs\\WebAuthn\\';
+            if (str_starts_with($class, $prefix)) {
+                $file = base_path('lib/webauthn/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php');
+                if (is_file($file)) {
+                    require $file;
+                }
+            }
+        });
     }
 
     /**
