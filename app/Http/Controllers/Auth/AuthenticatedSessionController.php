@@ -42,6 +42,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        // Back to the admin's sign-in (the site's home "/" is the public members page).
+        return redirect()->route('login');
     }
 }
