@@ -40,10 +40,10 @@ class CompleteRegistrationTest extends TestCase
 
         // Another member's number with Carla's signature
         $this->get(str_replace("/completar-registo/{$carla->id}?", "/completar-registo/{$other->id}?", $link))
-            ->assertOk()->assertSee('This link is no longer valid.')->assertDontSee('Outra')->assertDontSee('name="email"', false);
+            ->assertOk()->assertSee('Este link já não é válido.')->assertDontSee('Outra')->assertDontSee('name="email"', false);
         // No signature, or a member that does not exist: the same answer
         $this->get("/completar-registo/{$carla->id}")->assertOk()->assertDontSee('Carla');
-        $this->get(str_replace("/completar-registo/{$carla->id}?", '/completar-registo/999999?', $link))->assertOk()->assertSee('This link is no longer valid.');
+        $this->get(str_replace("/completar-registo/{$carla->id}?", '/completar-registo/999999?', $link))->assertOk()->assertSee('Este link já não é válido.');
         // Expired
         Carbon::setTestNow(now()->addDays(GetRegistrationLinkService::DAYS + 1));
         $this->get($link)->assertOk()->assertDontSee('Carla');
@@ -106,11 +106,26 @@ class CompleteRegistrationTest extends TestCase
             'address' => 'Rua A', 'zip_code' => '1000-001', 'city' => 'Lisboa', 'date_of_birth' => '1990-01-01', 'document_number' => '987654321']);
         $link = $this->link($member);
 
-        $this->get($link)->assertSee('Full name of your husband');
+        $this->get($link)->assertSee('Nome completo do seu marido');
         $this->post($link, ['spouse_name' => 'joão silva', 'date_joined' => '2015-06-20'])->assertRedirect($link);
 
         $this->assertStringContainsString('Cônjuge (indicado pelo membro): João Silva', $member->fresh()->notes);
-        $this->get($link)->assertSee('Thank you, Carla!')->assertDontSee('<form', false);
+        $this->get($link)->assertSee('Obrigado, Carla!')->assertDontSee('<form', false);
+    }
+
+    public function test_the_page_is_in_portuguese_and_in_english_when_asked(): void
+    {
+        $member = $this->pending();
+        $link = $this->link($member);
+
+        $this->get($link)->assertOk()->assertSee('<html lang="pt">', false)->assertSee('Olá, Carla!');
+        // "lang" is not part of the signature: the link still works, in English
+        $this->get("{$link}&lang=en")->assertOk()->assertSee('<html lang="en">', false)->assertSee('Hello, Carla!')->assertSee('Date of Birth');
+        $this->get("{$link}&lang=xx")->assertOk()->assertSee('Olá, Carla!');
+
+        // The form keeps the language: errors and the page after saving
+        $this->post($link, ['lang' => 'en', 'date_of_birth' => now()->addDay()->toDateString()])->assertSessionHasErrors('date_of_birth');
+        $this->post($link, ['lang' => 'en', 'date_of_birth' => '1990-05-04'])->assertRedirect("{$link}&lang=en");
     }
 
     private function link(Member $member): string

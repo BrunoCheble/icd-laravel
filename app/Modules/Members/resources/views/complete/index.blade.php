@@ -3,9 +3,10 @@
 @php
     $date = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('Y-m-d') : '';
     $done = $member && empty($fields);
+    $lang = app()->getLocale();
 @endphp
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -41,11 +42,19 @@
         .cr-state i { display: block; margin-bottom: .75rem; font-size: 2.5rem; }
         .cr-state strong { display: block; font-size: 1.15rem; }
         .cr-state p { margin: .4rem 0 0; color: #4b5563; line-height: 1.45; }
+        .cr-lang { display: flex; justify-content: flex-end; gap: .25rem; }
+        .cr-lang a { padding: .3rem .65rem; border-radius: 999px; color: #6b7280; font-size: .8rem; font-weight: 700; text-decoration: none; }
+        .cr-lang a.is-active { background: #fff; color: #111827; box-shadow: 0 1px 2px rgba(0, 0, 0, .1); }
         .cr-foot { margin-top: 1rem; text-align: center; font-size: .8rem; color: #9ca3af; }
     </style>
 </head>
 <body>
     <main class="cr">
+        {{-- Language: the signature does not cover "lang", so the link keeps working --}}
+        <nav class="cr-lang" aria-label="Language">
+            <a href="{{ request()->fullUrlWithQuery(['lang' => 'pt']) }}" @class(['is-active' => $lang === 'pt']) lang="pt" hreflang="pt">PT</a>
+            <a href="{{ request()->fullUrlWithQuery(['lang' => 'en']) }}" @class(['is-active' => $lang === 'en']) lang="en" hreflang="en">EN</a>
+        </nav>
         <img class="cr-logo" src="{{ asset('icons/icon-192.png') }}" alt="">
 
         @if (! $member)
@@ -70,8 +79,9 @@
             @endif
             @error('form')<div class="cr-alert is-error">{{ $message }}</div>@enderror
 
-            <form method="POST" action="{{ route('members.complete.update', ['member' => $member->id] + request()->query()) }}" class="cr-card">
+            <form method="POST" action="{{ route('members.complete.update', ['member' => $member->id] + request()->except('lang')) }}" class="cr-card">
                 @csrf
+                <input type="hidden" name="lang" value="{{ $lang }}">
                 @foreach ($fields as $field)
                     @switch($field)
                         @case('spouse')

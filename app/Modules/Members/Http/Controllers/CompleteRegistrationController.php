@@ -13,7 +13,8 @@ use Illuminate\View\View;
 
 /**
  * The public page a pending member opens from the link sent by WhatsApp, to fill in what is missing. The link is
- * signed and expires (GetRegistrationLinkService); without a valid one the page only says so.
+ * signed and expires (GetRegistrationLinkService); without a valid one the page only says so. In Portuguese, or in
+ * English with "lang=en" (outside the signature).
  */
 class CompleteRegistrationController extends Controller
 {
@@ -21,7 +22,8 @@ class CompleteRegistrationController extends Controller
     // the member exists.
     public function show(Request $request, string $member, GetMemberPendingInformationService $pending): View
     {
-        $member = $request->hasValidSignature() ? Member::find($member) : null;
+        app()->setLocale(CompleteRegistrationRequest::locale($request));
+        $member = $request->hasValidSignatureWhileIgnoring(['lang']) ? Member::find($member) : null;
 
         return view('members::complete.index', ['member' => $member, 'fields' => $member ? $pending->fields($member) : []]);
     }
@@ -31,6 +33,7 @@ class CompleteRegistrationController extends Controller
     {
         $service->execute($request->member(), $request->validated());
 
-        return redirect()->to($request->fullUrl())->with('success', true);
+        $locale = CompleteRegistrationRequest::locale($request);
+        return redirect()->to($locale === 'pt' ? $request->fullUrl() : $request->fullUrlWithQuery(['lang' => $locale]))->with('success', true);
     }
 }

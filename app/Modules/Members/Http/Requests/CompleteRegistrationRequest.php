@@ -18,8 +18,17 @@ class CompleteRegistrationRequest extends FormRequest
         return true;
     }
 
+    // The page's language: Portuguese, or English when asked ("lang=en", in the link or sent with the form).
+    public const LOCALES = ['pt', 'en'];
+
+    public static function locale(\Illuminate\Http\Request $request): string
+    {
+        return in_array($request->input('lang'), self::LOCALES, true) ? $request->input('lang') : 'pt';
+    }
+
     public function prepareForValidation(): void
     {
+        app()->setLocale(self::locale($this));
         $phone = preg_replace('/\D+/', '', (string) $this->phone_number);
         $phone = preg_replace('/^(00)?351(?=\d{9}$)/', '', $phone);
         $zip = preg_replace('/\D+/', '', (string) $this->zip_code);
