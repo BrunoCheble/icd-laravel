@@ -116,6 +116,16 @@
         /* The menu of a block, next to its name in the bars */
         .block-more { border: 0; background: none; padding: 0 .25rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
         .block-more:hover { background: var(--brand-soft); color: var(--brand-text); }
+        /* Phones and tablets: the block's and the bar's buttons big enough for a finger, apart from each other */
+        @media (max-width: 1023px) {
+            .bar-group-head { gap: .4rem; }
+            .bar-group-head .group-action, .bar-group-head .block-more { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 36px; padding: 0; border-radius: .5rem; font-size: .9rem; }
+            .bar-group-head .group-action + .group-action { margin-left: .35rem; }
+            .bars-page.is-editing .bars-grid .bar { padding-top: 1.7rem; }
+            .bar-tools { top: .2rem; right: 1.6rem; gap: .5rem; }
+            .bar-tools button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border-radius: .45rem; background: #f3f4f6; font-size: .8rem; color: #6b7280; }
+            .bar .number { top: .55rem; }
+        }
         .menu-chords { display: flex; flex-wrap: wrap; gap: .3rem; }
         .menu-chords button { padding: .2rem .55rem; border: 1px solid #d1d5db; border-radius: 999px; background: #fff; font-weight: 700; font-size: .85rem; cursor: pointer; }
         .menu-chords button.is-on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-text); text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .2em; }

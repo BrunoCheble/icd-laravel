@@ -7,9 +7,14 @@ use App\Modules\Music\Models\Song;
 
 class GetSongOverviewService
 {
+    public function __construct(private SyncChordSheetWithStructureService $syncSheet)
+    {
+    }
+
     /**
      * What the song page shows: what is done and what is missing (review, section times, video, chord sheet,
-     * lines set by hand, lessons), the setlists with it and its chord map blocks for a preview.
+     * lines set by hand, lessons), the setlists with it and its chord sheet (split like the map's blocks, as on the
+     * layout page).
      */
     public function execute(Song $song): array
     {
@@ -42,14 +47,32 @@ class GetSongOverviewService
                     'position' => $setlist->pivot->position,
                 ])
                 ->all(),
-            'blocks' => array_map(fn (array $block) => [
-                'name'   => str_replace('_', ' ', (string) ($block['section'] ?? '')),
-                'start'  => $block['start'] ?? null,
-                'anchor' => $block['anchor'] ?? null,
-                'chords' => array_map('strval', $block['chords'] ?? []),
-                'passing' => array_values(array_filter($block['passing'] ?? [], 'is_int')),
-                'return' => Song::isReturnMarker($block),
-            ], $blocks),
+            'sheet' => self::sheet($song->chord_sheet['sections'] ?? [] ? $this->syncSheet->execute($song->chord_sheet['sections'], $song->structure) : []),
         ];
+    }
+
+    /**
+     * Chord sheet sections to show: each line as a note ("{c: 2x}") or as pieces of a chord and the lyrics after it
+     * ("[G]Santo [D]é" -> [G, "Santo "], [D, "é"]).
+     */
+    private static function sheet(array $sections): array
+    {
+        return array_map(fn (array $section) => [
+            'label'  => (string) ($section['label'] ?? str_replace('_', ' ', (string) ($section['section'] ?? ''))),
+            'marker' => ($section['jump'] ?? null) === 'start',
+            'lines'  => array_map(function ($line) {
+                $text = (string) $line;
+                if (preg_match('/^\s*\{\s*(?:c|comment)?\s*:?\s*(.*?)\s*\}\s*$/iu', $text, $note)) {
+                    return ['comment' => $note[1]];
+                }
+                $parts = preg_split('/\[([^\]]+)\]/u', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+                $units = $parts[0] !== '' ? [[null, $parts[0]]] : [];
+                for ($i = 1; $i < count($parts); $i += 2) {
+                    $units[] = [$parts[$i], $parts[$i + 1] ?? ''];
+                }
+
+                return ['units' => $units];
+            }, array_values($section['lines'] ?? [])),
+        ], $sections);
     }
 }

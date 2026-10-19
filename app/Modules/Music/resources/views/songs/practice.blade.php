@@ -12,7 +12,7 @@
         [x-cloak] { display: none !important; }
         .practice {
             --surface: #ffffff; --surface-2: #f3f4f6; --border: #d1d5db; --text: #111827; --muted: #6b7280;
-            --accent: var(--brand); --accent-text: #ffffff; --accent-soft: rgba(79, 70, 229, .08); --chord: #111827;
+            --accent: var(--brand); --accent-text: #ffffff; --accent-soft: var(--brand-soft); --chord: #111827;
             color: var(--text);
         }
 
@@ -81,10 +81,17 @@
         .sheet-line.only-chords .seg-text { display: none; }
         .sheet-line.only-chords .seg { padding-right: .4em; }
 
-        /* Chord map */
+        /* Chord map: the bars of each block, the chord (or "/" while it goes on) on each beat */
+        .practice { --type-intro: #0369a1; --type-verse: #047857; --type-prechorus: #b45309; --type-chorus: #be123c; --type-bridge: #6d28d9; --type-instrumental: #4338ca; --type-ending: #475569; --type-other: #374151; }
         .map-anchor { margin-top: .15rem; font-size: calc(.95rem * var(--scale, 1)); font-style: italic; color: var(--muted); }
-        .map-line { display: flex; flex-wrap: wrap; gap: .25rem 1.1rem; margin-top: .35rem; font-size: calc(1.15rem * var(--scale, 1)); }
-        .map-step { display: inline-flex; gap: .45rem; }
+        .pbars { display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); gap: .35rem; margin-top: .4rem; }
+        @media (max-width: 639px) { .pbars { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        .pbar { display: flex; align-items: center; gap: .15rem; min-height: 2.6rem; padding: .3rem .4rem; border: 1px solid #e5e7eb; border-top: 3px solid var(--type-color, #d1d5db); border-radius: .5rem; background: #fff; font-size: calc(1rem * var(--scale, 1)); }
+        @media (max-width: 639px) { .pbar { padding: .3rem; font-size: calc(.9rem * var(--scale, 1)); } }
+        .pbeat { flex: 1 0 auto; display: flex; align-items: baseline; gap: .1rem; min-width: .9em; }
+        .pbeat .chord { min-width: 1.6em; padding-right: .1em; white-space: nowrap; }
+        .pbeat .chord.is-and { font-size: .8em; }
+        .pcont { color: #c4c8cf; font-weight: 600; }
 
         /* A chord; hidden ones keep their width and show a "?" */
         .chord { position: relative; align-self: flex-start; display: inline-block; min-width: 1.5em; padding-right: .35em; font-weight: 700; color: var(--chord); cursor: default; }
@@ -285,19 +292,23 @@
                                 <template x-if="view === 'map'">
                                     <div>
                                         <div class="map-anchor" x-show="section.anchor" x-text="section.anchor"></div>
-                                        <template x-for="(line, l) in section.lines" :key="l">
-                                            <div class="map-line">
-                                                <template x-for="(step, i) in line" :key="i">
-                                                    <span class="map-step">
-                                                        <template x-for="item in step.filter(item => !hidesPassing(item.g))" :key="item.g">
-                                                            <span class="chord" :data-g="item.g" :class="chordClasses(item.g)" @click="pick(item.g)" :title="answers[item.g] && !answers[item.g].right ? @js(__('Your answer')) + ': ' + answers[item.g].chosen : ''">
-                                                                <span class="chord-name" x-text="chordName(item.chord)"></span><span class="chord-mask">?</span>
-                                                            </span>
-                                                        </template>
-                                                    </span>
-                                                </template>
-                                            </div>
-                                        </template>
+                                        <div class="pbars" :style="`--type-color: var(--type-${section.type})`">
+                                            <template x-for="(bar, bi) in section.bars" :key="bi">
+                                                <div class="pbar">
+                                                    <template x-for="(beat, i) in bar" :key="i">
+                                                        <span class="pbeat">
+                                                            <template x-if="beat.item && !hidesPassing(beat.item.g)">
+                                                                <span class="chord" :data-g="beat.item.g" :class="chordClasses(beat.item.g)" @click="pick(beat.item.g)"><span class="chord-name" x-text="chordName(beat.item.chord)"></span><span class="chord-mask">?</span></span>
+                                                            </template>
+                                                            <span class="pcont" x-show="!beat.item || hidesPassing(beat.item.g)" x-text="beat.empty ? '–' : '/'"></span>
+                                                            <template x-if="beat.and && !hidesPassing(beat.and.g)">
+                                                                <span class="chord is-and" :data-g="beat.and.g" :class="chordClasses(beat.and.g)" @click="pick(beat.and.g)"><span class="chord-name" x-text="chordName(beat.and.chord)"></span><span class="chord-mask">?</span></span>
+                                                            </template>
+                                                        </span>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
                                     </div>
                                 </template>
                             </section>
@@ -401,25 +412,46 @@
             }));
         }
 
-        // Chord map sections -> [{ label, start, lines: [[[{ chord, g }]]] }] (lines of steps of chords), split
-        // into lines like the public page (see chord-lines.js).
+        // Chord map as bars, block by block -> [{ label, type, anchor, start, bars: [[beat]] }]: each beat of a bar
+        // has the chord starting on it ({ chord, g, passing }), or a "/" while one goes on ("cont") or "–" when
+        // empty, and the chord starting on its "and". Chord n of the map is number g = n (hidden, tested, played).
         function practiceMap(structure) {
-            const list = (Array.isArray(structure) ? structure : []).filter(section => section && typeof section === 'object');
-            const raw = list.map(section => Array.isArray(section.chords) ? section.chords.map(String) : []);
-            const passing = list.map(section => Array.isArray(section.passing) ? section.passing : []);
-            const cycles = songCyclesOf(raw, passing);
+            const list = (Array.isArray(structure) ? structure : []).filter(section => section && typeof section === 'object' && section.jump !== 'start');
+            const perBar = Number(list.find(section => Number(section.beats_per_bar) > 0)?.beats_per_bar) || 4;
             let offset = 0;
             return list.map((section, index) => {
-                const lines = chordSegments(raw[index], cycles, passing[index])
-                    .map(line => line.map(step => step.chords.map((chord, i) => ({ chord, g: offset + step.positions[i], passing: passing[index].includes(step.positions[i]) }))));
-                offset += chordsOnly(raw[index]).length;
+                const chords = chordsOnly(Array.isArray(section.chords) ? section.chords.map(String) : []);
+                const passing = Array.isArray(section.passing) ? section.passing : [];
+                const durations = Array.isArray(section.durations) ? section.durations.map(Number) : [];
+                // Without durations: a bar per chord.
+                const beatsOf = (i) => (durations.length === chords.length && durations[i] > 0 ? durations[i] : perBar);
+                const ticks = [];
+                if (index === 0) for (let k = 0; k < Math.round((Number(section.lead_beats) || 0) * 2); k++) ticks.push(null);
+                chords.forEach((chord, i) => {
+                    const item = { chord, g: offset + i, passing: passing.includes(i) };
+                    const length = Math.max(1, Math.round(beatsOf(i) * 2));
+                    for (let k = 0; k < length; k++) ticks.push({ item, starts: k === 0 });
+                });
+                offset += chords.length;
+                const bars = [];
+                for (let start = 0; start < ticks.length; start += perBar * 2) {
+                    const bar = [];
+                    for (let beat = 0; beat < perBar; beat++) {
+                        const on = ticks[start + beat * 2];
+                        const and = ticks[start + beat * 2 + 1];
+                        if (on === undefined && and === undefined) break;
+                        bar.push({ item: on?.starts ? on.item : null, cont: !!on && !on.starts, empty: !on, and: and?.starts ? and.item : null });
+                    }
+                    bars.push(bar);
+                }
                 return {
                     label: String(section.section ?? '').replaceAll('_', ' '),
+                    type: blockType(String(section.section ?? '')),
                     anchor: typeof section.anchor === 'string' ? section.anchor.trim() : '',
                     start: toSeconds(section.start),
-                    lines,
+                    bars,
                 };
-            }).filter(section => section.lines.length);
+            }).filter(section => section.bars.length);
         }
 
         // Start time (seconds) of each chord of the map, in order, from the blocks' times and the chords' beats; null
@@ -450,17 +482,20 @@
             const sheet = practiceSheet(song.chord_sheet);
             const map = practiceMap(song.structure);
             const countSheet = sheet.reduce((total, section) => total + section.lines.reduce((sum, line) => sum + (line.units || []).filter(unit => unit.g !== null).length, 0), 0);
-            const countMap = map.reduce((total, section) => total + section.lines.flat(2).length, 0);
+            // Every chord of the map, by its number.
+            const mapItems = [];
+            map.forEach(section => section.bars.flat().forEach(beat => [beat.item, beat.and].forEach(item => { if (item) mapItems[item.g] = item; })));
+            const countMap = mapItems.length;
             // Chord of each number, per view.
             const sheetChords = [];
             sheet.forEach(section => section.lines.forEach(line => (line.units || []).forEach(unit => { if (unit.g !== null) sheetChords[unit.g] = unit.chord; })));
             const mapChords = [];
-            map.forEach(section => section.lines.flat(2).forEach(item => mapChords[item.g] = item.chord));
+            mapItems.forEach(item => { mapChords[item.g] = item.chord; });
             const shuffled = (list) => list.map(item => [Math.random(), item]).sort((a, b) => a[0] - b[0]).map(pair => pair[1]);
             // Passing chords by number: in the map they are marked; the chord sheet takes them from the map when both
             // have the same chords (chord n of the sheet is chord n of the map).
             const mapPassing = new Set();
-            map.forEach(section => section.lines.flat(2).forEach(item => { if (item.passing) mapPassing.add(item.g); }));
+            mapItems.forEach(item => { if (item.passing) mapPassing.add(item.g); });
             const sheetFollowsMap = JSON.stringify(sheetChords) === JSON.stringify(mapChords.filter(chord => chord !== undefined));
             const sheetPassing = sheetFollowsMap ? mapPassing : new Set();
 

@@ -37,13 +37,22 @@
         .badge.outdated { background: #fef3c7; color: #92400e; }
         .badge.applied { background: #dcfce7; color: #166534; }
         .badge.rejected { background: #f3f4f6; color: #6b7280; }
+        .change input { flex: none; }
+        /* Phones: where the change is goes over it; the chord sheet in one column */
+        @media (max-width: 639px) {
+            .change { flex-wrap: wrap; gap: .25rem .5rem; padding: .45rem 0; border-bottom: 1px dashed #f3f4f6; }
+            .change .where { min-width: 0; flex-basis: calc(100% - 2rem); }
+            .sheet-sections { grid-template-columns: minmax(0, 1fr); overflow-x: auto; }
+        }
     </style>
 
-    <div class="py-6">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-6">
+    @include('music::partials.ui')
+
+    <div class="m-page" style="max-width: 64rem;">
+        <div class="space-y-4">
             @include('layouts.alert')
 
-            <div class="bg-white shadow sm:rounded-lg p-4 sm:p-6">
+            <div class="m-card m-card-body">
                 <h3 class="font-semibold text-gray-800">{{ __('Waiting for review') }} ({{ count($pending) }})</h3>
                 <p class="text-sm text-gray-500 mt-1">{{ __('Sent from the public setlist page. Uncheck the changes you do not want and approve; the map changes, and the chord sheet too when it has the map\'s chords (the version before stays in the song\'s history).') }}</p>
 
@@ -122,7 +131,7 @@
             </div>
 
             @if (count($reviewed))
-                <div class="bg-white shadow sm:rounded-lg p-4 sm:p-6">
+                <div class="m-card m-card-body">
                     <h3 class="font-semibold text-gray-800">{{ __('Last reviewed') }}</h3>
                     @foreach ($reviewed as $item)
                         @php $suggestion = $item['suggestion']; @endphp

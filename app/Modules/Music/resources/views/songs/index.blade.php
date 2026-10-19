@@ -5,268 +5,322 @@
         </h2>
     </x-slot>
 
+    @include('music::partials.ui')
+
     <style>
         [x-cloak] { display: none !important; }
-        .song-menu-button { width: 2.25rem; height: 2.25rem; border: 1px solid #d1d5db; border-radius: .375rem; background: #fff; font-size: 1.1rem; font-weight: 700; line-height: 1; color: #374151; }
-        .song-menu-button:hover { background: #f3f4f6; }
-        .song-modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; }
-        .song-modal-overlay { position: absolute; inset: 0; background: rgba(17, 24, 39, .5); }
-        .song-modal-box { position: relative; width: min(24rem, 100%); padding: 1.25rem; border-radius: .75rem; background: #fff; box-shadow: 0 20px 40px rgba(0, 0, 0, .2); }
-        .song-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
-        .song-modal-actions { display: grid; gap: .5rem; }
-        .song-modal-actions a, .song-modal-actions button { display: block; width: 100%; padding: .65rem .9rem; border: 1px solid #e5e7eb; border-radius: .5rem; background: #fff; font-size: .9rem; font-weight: 600; color: #374151; text-align: left; }
-        .song-modal-actions a:hover, .song-modal-actions button:hover { background: #f3f4f6; }
-        .song-modal-actions .is-danger { color: #dc2626; }
+        /* Large screens: a table; phones and tablets: a card per song */
+        .songs-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .songs-table th { padding: .65rem .75rem; border-bottom: 1px solid #e5e7eb; font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; text-align: left; white-space: nowrap; }
+        .songs-table th a { color: inherit; text-decoration: none; }
+        .songs-table th a:hover, .songs-table th a.is-sorted { color: #111827; }
+        .songs-table td { padding: .7rem .75rem; border-bottom: 1px solid #f1f2f4; font-size: .875rem; color: #4b5563; vertical-align: middle; }
+        .songs-table tbody tr { transition: background .1s; }
+        .songs-table tbody tr:hover { background: #fafafa; }
+        .songs-table tbody tr.is-selected { background: #fef2f2; }
+        .songs-table .song-title { display: block; font-weight: 700; color: #111827; text-decoration: none; }
+        .songs-table .song-title:hover { color: var(--brand-text); }
+        .songs-table .song-artist { display: block; font-size: .8rem; color: #6b7280; }
+        .songs-table .is-check { width: 2.5rem; padding-right: 0; }
+        .songs-media { display: flex; flex-wrap: wrap; gap: .3rem; }
+
+        .song-cards { display: none; }
+        .song-card { display: flex; align-items: flex-start; gap: .7rem; padding: .85rem .9rem; border-bottom: 1px solid #f1f2f4; }
+        .song-card:last-child { border-bottom: 0; }
+        .song-card.is-selected { background: #fef2f2; }
+        .song-card input[type=checkbox] { margin-top: .2rem; }
+        .song-card-main { flex: 1; min-width: 0; text-decoration: none; }
+        .song-card-title { display: flex; align-items: center; gap: .5rem; font-weight: 700; color: #111827; }
+        .song-card-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .song-card-artist { margin-top: .1rem; font-size: .82rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .song-card-tags { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; }
+        @media (max-width: 1023px) {
+            .songs-table { display: none; }
+            .song-cards { display: block; }
+        }
+        .songs-list { overflow: hidden; }
+        .songs-empty { padding: 2.5rem 1rem; text-align: center; color: #6b7280; }
+        .songs-empty i { display: block; margin-bottom: .5rem; font-size: 1.6rem; color: #d1d5db; }
+        .songs-pages { padding: .75rem 1rem; border-top: 1px solid #f1f2f4; }
     </style>
 
-    <div class="py-12">
-        <div class="max-w-full mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg" x-data="songsIndex(@js(['all' => $allIds, 'page' => $songs->pluck('id')->all()]))" @keydown.escape.window="actions = null; filtersOpen = false">
-                @include('layouts.alert')
+    @php
+        $sort = $filters['sort'] ?? 'title';
+        $direction = $filters['direction'] ?? 'asc';
+        $hasFilters = collect($filters)->except(['sort', 'direction'])->filter()->isNotEmpty();
+        // Header link: sorts by the column, reversing the direction when it is already the sort.
+        $sortUrl = fn (string $column) => route('songs.index', array_merge(request()->except('page'), [
+            'sort' => $column,
+            'direction' => $sort === $column && $direction === 'asc' ? 'desc' : 'asc',
+        ]));
+        $sortArrow = fn (string $column) => new \Illuminate\Support\HtmlString(' <i class="fa-solid ' . ($sort === $column ? ($direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort" style="opacity: .35;') . '"></i>');
+        $statusFilters = ['reviewed' => __('Reviewed'), 'times' => __('Times'), 'youtube' => 'YouTube', 'mp3' => 'MP3'];
+        $sortOptions = [
+            'title' => __('Title'), 'artist' => __('Artist'), 'key' => __('Key'), 'reviewed' => __('Reviewed'),
+            'times' => __('Times'), 'youtube' => 'YouTube', 'mp3' => 'MP3', 'lessons' => __('Lessons'), 'updated' => __('Updated At'),
+        ];
+        // Active status filters, each one removable: "Reviewed: Yes".
+        $activeFilters = collect($statusFilters)
+            ->filter(fn ($label, $name) => in_array($filters[$name] ?? null, ['yes', 'no'], true))
+            ->map(fn ($label, $name) => [
+                'text' => $label . ': ' . ($filters[$name] === 'yes' ? __('Yes') : __('No')),
+                'url' => route('songs.index', request()->except(['page', $name])),
+            ]);
+        $statusCount = $activeFilters->count();
+        // Tags of a song: reviewed, block times, media.
+        $tags = function ($song) {
+            [$timed, $sections] = $song->timedSections();
+            return [
+                'reviewed' => $song->isReviewed(),
+                'timed' => $timed,
+                'sections' => $sections,
+                'timesClass' => $sections && $timed === $sections ? 'is-ok' : ($timed ? 'is-part' : 'is-off'),
+            ];
+        };
+        $actions = fn ($song) => [
+            'title' => $song->title,
+            'artist' => $song->artist,
+            'show' => route('songs.show', $song),
+            'edit' => route('songs.edit', $song),
+            'layout' => route('songs.layout.edit', $song),
+            'practice' => route('songs.practice', $song),
+            'destroy' => route('songs.destroy', $song),
+        ];
+    @endphp
 
-                    @php
-                        $sort = $filters['sort'] ?? 'title';
-                        $direction = $filters['direction'] ?? 'asc';
-                        $hasFilters = collect($filters)->except(['sort', 'direction'])->filter()->isNotEmpty();
-                        // Header link: sorts by the column, reversing the direction when it is already the sort.
-                        $sortUrl = fn (string $column) => route('songs.index', array_merge(request()->except('page'), [
-                            'sort' => $column,
-                            'direction' => $sort === $column && $direction === 'asc' ? 'desc' : 'asc',
-                        ]));
-                        $sortArrow = fn (string $column) => new \Illuminate\Support\HtmlString(' <i class="fa-solid ' . ($sort === $column ? ($direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort" style="opacity: .35;') . '"></i>');
-                    @endphp
-                    @php
-                        $statusFilters = ['reviewed' => __('Reviewed'), 'times' => __('Times'), 'youtube' => 'YouTube', 'mp3' => 'MP3'];
-                        $sortOptions = [
-                            'title' => __('Title'), 'artist' => __('Artist'), 'key' => __('Key'), 'reviewed' => __('Reviewed'),
-                            'times' => __('Times'), 'youtube' => 'YouTube', 'mp3' => 'MP3', 'lessons' => __('Lessons'), 'updated' => __('Updated At'),
-                        ];
-                        // Active filters shown next to the button, e.g. "Reviewed: Yes".
-                        $activeFilters = collect($statusFilters)
-                            ->filter(fn ($label, $name) => in_array($filters[$name] ?? null, ['yes', 'no'], true))
-                            ->map(fn ($label, $name) => $label . ': ' . ($filters[$name] === 'yes' ? __('Yes') : __('No')));
-                        if (($filters['search'] ?? '') !== '') {
-                            $activeFilters->prepend(__('Search') . ': "' . $filters['search'] . '"', 'search');
-                        }
-                    @endphp
+    <div class="m-page" x-data="songsIndex(@js(['all' => $allIds, 'page' => $songs->pluck('id')->all()]))" @keydown.escape.window="actions = null; filtersOpen = false">
+        @include('layouts.alert')
 
-                {{-- Actions of the song picked in the list --}}
-                <div class="song-modal" x-show="actions" x-cloak role="dialog" aria-modal="true" :aria-label="actions?.title">
-                    <div class="song-modal-overlay" @click="actions = null"></div>
-                    <div class="song-modal-box">
-                        <div class="song-modal-head">
-                            <div>
-                                <div class="text-base font-semibold text-gray-900" x-text="actions?.title"></div>
-                                <div class="text-sm text-gray-500" x-text="actions?.artist"></div>
-                            </div>
-                            <button type="button" class="song-menu-button" @click="actions = null" aria-label="{{ __('Close') }}"><i class="fa-solid fa-xmark"></i></button>
-                        </div>
-                        <div class="song-modal-actions" x-show="!confirmDelete">
-                            <a :href="actions?.show"><i class="fa-solid fa-eye"></i> {{ __('Show') }}</a>
-                            <a :href="actions?.edit"><i class="fa-solid fa-pen"></i> {{ __('Edit') }}</a>
-                            <a :href="actions?.layout"><i class="fa-solid fa-layer-group"></i> {{ __('Layout') }}</a>
-                            <a :href="actions?.practice"><i class="fa-solid fa-graduation-cap"></i> {{ __('Practice') }}</a>
-                            <button type="button" class="is-danger" @click="confirmDelete = true"><i class="fa-solid fa-trash"></i> {{ __('Delete') }}</button>
-                        </div>
-                        <form method="POST" :action="actions?.destroy" x-show="confirmDelete" class="song-modal-confirm">
-                            @csrf
-                            @method('DELETE')
-                            <p class="text-sm text-gray-700">{{ __('Are you sure to delete?') }}</p>
-                            <div class="mt-4 flex justify-end gap-2">
-                                <button type="button" class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50" @click="confirmDelete = false">{{ __('Cancel') }}</button>
-                                <button type="submit" class="rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm" style="background: #dc2626;">{{ __('Delete') }}</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                <div class="w-full">
-                    <div class="sm:flex sm:items-center">
-                        <div class="sm:flex-auto">
-                            <h1 class="text-base font-semibold leading-6 text-gray-900">{{ __('Songs') }}</h1>
-                            <p class="mt-2 text-sm text-gray-700">{{ __('A list of all the songs.') }}</p>
-                        </div>
-                        <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex sm:flex-none sm:gap-4">
-                            <button type="button" @click="filtersOpen = true; setTimeout(() => $refs.search.focus(), 50)"
-                                class="block rounded-md bg-primary-500 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
-                                <i class="fa fa-filter"></i>
-                                {{ __('Filter') }}@if ($activeFilters->isNotEmpty()) ({{ $activeFilters->count() }})@endif
-                            </button>
-                            <a type="button" href="{{ route('songs.bookmarklet') }}"
-                                class="block rounded-md bg-white px-3 py-2 text-center text-sm font-semibold text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50">{{ __('Import from a chord site') }}</a>
-                            <a type="button" href="{{ route('songs.create') }}"
-                                class="block rounded-md bg-primary-500 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">{{ __('Add new') }}</a>
-                        </div>
-                    </div>
-
-
-
-                    {{-- Active filters; they are changed in the Filter modal --}}
-                    <div class="mt-6 flex items-center" style="flex-wrap: wrap; gap: .5rem .75rem;">
-                        @foreach ($activeFilters as $text)
-                            <span class="rounded-full px-3 py-1 text-xs font-semibold" style="background: var(--brand-soft); color: var(--brand-strong);">{{ $text }}</span>
-                        @endforeach
-                        @if ($hasFilters)
-                            <a href="{{ route('songs.index', ['sort' => $sort, 'direction' => $direction]) }}" class="text-sm font-semibold text-primary-700 hover:text-primary-900">{{ __('Clear Filters') }}</a>
-                        @endif
-                        <span class="text-sm text-gray-500">{{ trans_choice(':count song|:count songs', $songs->total(), ['count' => $songs->total()]) }}</span>
-                    </div>
-
-                    {{-- Filter modal --}}
-                    <div class="song-modal" x-show="filtersOpen" x-cloak role="dialog" aria-modal="true" aria-label="{{ __('Filter') }}">
-                        <div class="song-modal-overlay" @click="filtersOpen = false"></div>
-                        <div class="song-modal-box space-y-6" style="width: min(36rem, 100%); padding: 1.5rem;">
-                            <div class="flex justify-between items-center">
-                                <h2 class="text-xl font-semibold">{{ __('Filter') }}</h2>
-                                <button type="button" class="text-gray-400 hover:text-gray-600" style="font-size: 1.5rem; line-height: 1;" @click="filtersOpen = false" aria-label="{{ __('Close') }}">&times;</button>
-                            </div>
-
-                            <form method="GET" action="{{ route('songs.index') }}" class="space-y-4">
-                                <div>
-                                    <x-input-label for="filter_search" :value="__('Search')" />
-                                    <x-text-input id="filter_search" name="search" type="search" x-ref="search" :value="$filters['search'] ?? ''"
-                                        :placeholder="__('Title or artist')" class="mt-1 w-full" />
-                                </div>
-                                <div class="grid gap-4 sm:grid-cols-3">
-                                    @foreach ($statusFilters as $name => $label)
-                                        <div>
-                                            <x-input-label :for="'filter_' . $name" :value="$label" />
-                                            <select id="filter_{{ $name }}" name="{{ $name }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                                <option value="">{{ __('All') }}</option>
-                                                <option value="yes" @selected(($filters[$name] ?? null) === 'yes')>{{ __('Yes') }}</option>
-                                                <option value="no" @selected(($filters[$name] ?? null) === 'no')>{{ __('No') }}</option>
-                                            </select>
-                                        </div>
-                                    @endforeach
-                                </div>
-                                <div class="grid gap-4 sm:grid-cols-2">
-                                    <div>
-                                        <x-input-label for="filter_sort" :value="__('Sort by')" />
-                                        <select id="filter_sort" name="sort" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                            @foreach ($sortOptions as $value => $label)
-                                                <option value="{{ $value }}" @selected($sort === $value)>{{ $label }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <x-input-label for="filter_direction" :value="__('Order by')" />
-                                        <select id="filter_direction" name="direction" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                            <option value="asc" @selected($direction === 'asc')>{{ __('Ascending') }}</option>
-                                            <option value="desc" @selected($direction === 'desc')>{{ __('Descending') }}</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="flex justify-end">
-                                    <a href="{{ route('songs.index') }}" class="text-sm text-gray-600 hover:text-gray-900 mr-4 py-2">{{ __('Clear Filters') }}</a>
-                                    <x-primary-button>{{ __('Apply Filters') }}</x-primary-button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    {{-- Several songs selected (on any page): deleted together --}}
-                    <div class="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm" style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem;" x-show="selected.length" x-cloak>
-                        <strong x-text="@js(__(':count selected')).replace(':count', selected.length)"></strong>
-                        <button type="button" class="font-semibold text-primary-700 hover:underline" x-show="selected.length < all.length" @click="selectAll()" x-text="@js(__('Select all :count songs')).replace(':count', all.length)"></button>
-                        <button type="button" class="font-semibold text-gray-600 hover:underline" @click="clear()">{{ __('Clear selection') }}</button>
-                        <span style="flex: 1;"></span>
-                        <template x-if="!bulkConfirm">
-                            <button type="button" class="rounded-md bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700" @click="bulkConfirm = true"><i class="fa-solid fa-trash"></i> {{ __('Delete selected') }}</button>
-                        </template>
-                        <template x-if="bulkConfirm">
-                            <form method="POST" action="{{ route('songs.bulk-destroy') }}" style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;" @submit="forget()">
-                                @csrf
-                                @method('DELETE')
-                                <template x-for="id in selected" :key="id"><input type="hidden" name="ids[]" :value="id"></template>
-                                <span class="text-red-800" x-text="@js(__('Delete :count songs? Their versions, suggestions, history and places in setlists go too. This cannot be undone.')).replace(':count', selected.length)"></span>
-                                <button type="submit" class="rounded-md bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700">{{ __('Yes, delete') }}</button>
-                                <button type="button" class="font-semibold text-gray-600 hover:underline" @click="bulkConfirm = false">{{ __('Cancel') }}</button>
-                            </form>
-                        </template>
-                    </div>
-
-                    <div class="flow-root">
-                        <div class="mt-4 overflow-x-auto">
-                            <div class="inline-block min-w-full py-2 align-middle">
-                                <table class="w-full divide-y divide-gray-300">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col" class="py-3 pl-4 pr-1 text-left"><input type="checkbox" class="rounded border-gray-300" :checked="pageSelected()" @change="togglePage($event.target.checked)" aria-label="{{ __('Select the songs of this page') }}"></th>
-                                            <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('title') }}" class="hover:text-gray-900" @if ($sort === 'title') style="color: #111827;" @endif>{{ __('Title') }}{{ $sortArrow('title') }}</a></th>
-                                            <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('artist') }}" class="hover:text-gray-900" @if ($sort === 'artist') style="color: #111827;" @endif>{{ __('Artist') }}{{ $sortArrow('artist') }}</a></th>
-                                            <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('key') }}" class="hover:text-gray-900" @if ($sort === 'key') style="color: #111827;" @endif>{{ __('Key') }}{{ $sortArrow('key') }}</a></th>
-                                            <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('reviewed') }}" class="hover:text-gray-900" @if ($sort === 'reviewed') style="color: #111827;" @endif>{{ __('Reviewed') }}{{ $sortArrow('reviewed') }}</a></th>
-                                            <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('times') }}" class="hover:text-gray-900" @if ($sort === 'times') style="color: #111827;" @endif>{{ __('Times') }}{{ $sortArrow('times') }}</a></th>
-                                            <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('youtube') }}" class="hover:text-gray-900" @if ($sort === 'youtube') style="color: #111827;" @endif>YouTube{{ $sortArrow('youtube') }}</a></th>
-                                            <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('mp3') }}" class="hover:text-gray-900" @if ($sort === 'mp3') style="color: #111827;" @endif>MP3{{ $sortArrow('mp3') }}</a></th>
-                                            <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('lessons') }}" class="hover:text-gray-900" @if ($sort === 'lessons') style="color: #111827;" @endif>{{ __('Lessons') }}{{ $sortArrow('lessons') }}</a></th>
-                                            <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><a href="{{ $sortUrl('updated') }}" class="hover:text-gray-900" @if ($sort === 'updated') style="color: #111827;" @endif>{{ __('Updated At') }}{{ $sortArrow('updated') }}</a></th>
-                                            <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-200 bg-white">
-                                        @foreach ($songs as $song)
-                                            <tr class="even:bg-gray-50" :style="selected.includes({{ $song->id }}) ? 'background: #fef2f2;' : ''">
-                                                <td class="py-4 pl-4 pr-1"><input type="checkbox" class="rounded border-gray-300" :checked="selected.includes({{ $song->id }})" @change="toggle({{ $song->id }})" aria-label="{{ __('Select') }} {{ $song->title }}"></td>
-                                                <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-semibold text-gray-900">{{ $song->title }}</td>
-                                                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $song->artist }}</td>
-                                                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $song->musical_key }}</td>
-                                                <td class="whitespace-nowrap px-3 py-4 text-sm">
-                                                    @if ($song->isReviewed())
-                                                        <span class="font-semibold" style="color: #15803d;" title="{{ __('Saved as reviewed on :date', ['date' => $song->reviewed_at->format('d/m/Y')]) }}"><i class="fa-solid fa-check"></i> {{ __('Yes') }}</span>
-                                                    @else
-                                                        <span style="color: #9ca3af;">—</span>
-                                                    @endif
-                                                </td>
-                                                @php
-                                                    [$timed, $sections] = $song->timedSections();
-                                                @endphp
-                                                <td class="whitespace-nowrap px-3 py-4 text-sm">
-                                                    <a href="{{ route('songs.layout.edit', ['song' => $song, 'mode' => 'time']) }}" class="font-semibold"
-                                                        style="color: {{ $sections && $timed === $sections ? '#15803d' : ($timed ? '#b45309' : '#9ca3af') }};"
-                                                        title="{{ __(':timed of :total blocks have a start time', ['timed' => $timed, 'total' => $sections]) }}">{{ $sections ? "$timed/$sections" : '—' }}</a>
-                                                </td>
-                                                <td class="whitespace-nowrap px-3 py-4 text-sm">
-                                                    @if ($song->youtube_url)
-                                                        <a href="{{ $song->youtube_url }}" target="_blank" rel="noopener" class="font-semibold" style="color: #15803d;"><i class="fa-brands fa-youtube"></i> {{ __('Open') }}</a>
-                                                    @else
-                                                        <span style="color: #9ca3af;">—</span>
-                                                    @endif
-                                                </td>
-                                                <td class="whitespace-nowrap px-3 py-4 text-sm">
-                                                    @if ($song->audio_path)
-                                                        <span class="font-semibold" style="color: #15803d;" title="{{ $song->audio_path }}"><i class="fa-solid fa-music"></i> {{ __('Yes') }}</span>
-                                                    @else
-                                                        <span style="color: #9ca3af;">—</span>
-                                                    @endif
-                                                </td>
-                                                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $song->lessons_count ?: '—' }}</td>
-                                                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $song->updated_at?->format('d/m/Y H:i') }}</td>
-                                                <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-right">
-                                                    <button type="button" class="song-menu-button" aria-label="{{ __('Actions') }}" @click="actions = @js([
-                                                        'title' => $song->title,
-                                                        'artist' => $song->artist,
-                                                        'show' => route('songs.show', $song),
-                                                        'edit' => route('songs.edit', $song),
-                                                        'layout' => route('songs.layout.edit', $song),
-                                                        'practice' => route('songs.practice', $song),
-                                                        'destroy' => route('songs.destroy', $song),
-                                                    ]); confirmDelete = false"><i class="fa-solid fa-ellipsis"></i></button>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-
-                                <div class="mt-4 px-4">
-                                    {!! $songs->withQueryString()->links() !!}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="m-head">
+            <div>
+                <h1>{{ __('Songs') }}</h1>
+                <p>{{ trans_choice(':count song|:count songs', $songs->total(), ['count' => $songs->total()]) }}</p>
+            </div>
+            <div class="m-head-actions">
+                <a href="{{ route('songs.bookmarklet') }}" class="m-btn" title="{{ __('Import from a chord site') }}"><i class="fa-solid fa-file-import"></i> <span class="m-hide-sm">{{ __('Import from a chord site') }}</span></a>
+                <a href="{{ route('songs.create') }}" class="m-btn is-primary"><i class="fa-solid fa-plus"></i> {{ __('Add new') }}</a>
             </div>
         </div>
+
+        {{-- Search (always at hand) and the filters --}}
+        <form method="GET" action="{{ route('songs.index') }}" class="m-toolbar">
+            @foreach (request()->except(['search', 'page']) as $name => $value)
+                @if (is_string($value))<input type="hidden" name="{{ $name }}" value="{{ $value }}">@endif
+            @endforeach
+            <label class="m-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="{{ __('Title or artist') }}" aria-label="{{ __('Search') }}">
+            </label>
+            <button type="button" class="m-btn" @click="filtersOpen = true">
+                <i class="fa-solid fa-sliders"></i> <span class="m-hide-sm">{{ __('Filter') }}</span>
+                @if ($statusCount)<span class="m-count">{{ $statusCount }}</span>@endif
+            </button>
+        </form>
+
+        @if ($activeFilters->isNotEmpty() || $hasFilters)
+            <div class="m-chips">
+                @if (($filters['search'] ?? '') !== '')
+                    <a class="m-chip" href="{{ route('songs.index', request()->except(['page', 'search'])) }}" title="{{ __('Remove') }}">{{ __('Search') }}: "{{ $filters['search'] }}" <i class="fa-solid fa-xmark"></i></a>
+                @endif
+                @foreach ($activeFilters as $chip)
+                    <a class="m-chip" href="{{ $chip['url'] }}" title="{{ __('Remove') }}">{{ $chip['text'] }} <i class="fa-solid fa-xmark"></i></a>
+                @endforeach
+                <a href="{{ route('songs.index', ['sort' => $sort, 'direction' => $direction]) }}" class="m-link">{{ __('Clear Filters') }}</a>
+            </div>
+        @endif
+
+        {{-- Several songs selected (on any page): deleted together --}}
+        <div class="m-card mt-3" style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; padding: .7rem .9rem; border-color: #fecaca; background: #fef2f2;" x-show="selected.length" x-cloak>
+            <strong class="text-sm" x-text="@js(__(':count selected')).replace(':count', selected.length)"></strong>
+            <button type="button" class="m-link" x-show="selected.length < all.length" @click="selectAll()" x-text="@js(__('Select all :count songs')).replace(':count', all.length)"></button>
+            <button type="button" class="m-link" style="color: #6b7280;" @click="clear()">{{ __('Clear selection') }}</button>
+            <span style="flex: 1;"></span>
+            <template x-if="!bulkConfirm">
+                <button type="button" class="m-btn is-danger" @click="bulkConfirm = true"><i class="fa-solid fa-trash"></i> {{ __('Delete selected') }}</button>
+            </template>
+            <template x-if="bulkConfirm">
+                <form method="POST" action="{{ route('songs.bulk-destroy') }}" style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;" @submit="forget()">
+                    @csrf
+                    @method('DELETE')
+                    <template x-for="id in selected" :key="id"><input type="hidden" name="ids[]" :value="id"></template>
+                    <span class="text-sm text-red-800" x-text="@js(__('Delete :count songs? Their versions, suggestions, history and places in setlists go too. This cannot be undone.')).replace(':count', selected.length)"></span>
+                    <button type="submit" class="m-btn is-danger">{{ __('Yes, delete') }}</button>
+                    <button type="button" class="m-btn is-ghost" @click="bulkConfirm = false">{{ __('Cancel') }}</button>
+                </form>
+            </template>
+        </div>
+
+        <div class="m-card songs-list mt-3">
+            @if ($songs->isEmpty())
+                <div class="songs-empty"><i class="fa-solid fa-music"></i>{{ $hasFilters ? __('No songs match these filters.') : __('No songs yet.') }}</div>
+            @else
+                <table class="songs-table">
+                    <thead>
+                        <tr>
+                            <th class="is-check"><input type="checkbox" class="rounded border-gray-300" :checked="pageSelected()" @change="togglePage($event.target.checked)" aria-label="{{ __('Select the songs of this page') }}"></th>
+                            <th><a href="{{ $sortUrl('title') }}" @class(['is-sorted' => $sort === 'title'])>{{ __('Title') }}{{ $sortArrow('title') }}</a></th>
+                            <th><a href="{{ $sortUrl('key') }}" @class(['is-sorted' => $sort === 'key'])>{{ __('Key') }}{{ $sortArrow('key') }}</a></th>
+                            <th><a href="{{ $sortUrl('reviewed') }}" @class(['is-sorted' => $sort === 'reviewed'])>{{ __('Reviewed') }}{{ $sortArrow('reviewed') }}</a></th>
+                            <th><a href="{{ $sortUrl('times') }}" @class(['is-sorted' => $sort === 'times'])>{{ __('Times') }}{{ $sortArrow('times') }}</a></th>
+                            <th>{{ __('Media') }}</th>
+                            <th><a href="{{ $sortUrl('updated') }}" @class(['is-sorted' => $sort === 'updated'])>{{ __('Updated At') }}{{ $sortArrow('updated') }}</a></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($songs as $song)
+                            @php $tag = $tags($song); @endphp
+                            <tr :class="{ 'is-selected': selected.includes({{ $song->id }}) }">
+                                <td class="is-check"><input type="checkbox" class="rounded border-gray-300" :checked="selected.includes({{ $song->id }})" @change="toggle({{ $song->id }})" aria-label="{{ __('Select') }} {{ $song->title }}"></td>
+                                <td>
+                                    <a href="{{ route('songs.show', $song) }}" class="song-title">{{ $song->title }}</a>
+                                    <span class="song-artist">{{ $song->artist ?: '—' }}</span>
+                                </td>
+                                <td>@if ($song->musical_key)<span class="m-tag is-key">{{ $song->musical_key }}</span>@else<span class="m-tag is-off">—</span>@endif</td>
+                                <td>
+                                    @if ($tag['reviewed'])
+                                        <span class="m-tag is-ok" title="{{ __('Saved as reviewed on :date', ['date' => $song->reviewed_at->format('d/m/Y')]) }}"><i class="fa-solid fa-check"></i> {{ __('Yes') }}</span>
+                                    @else
+                                        <span class="m-tag is-off">—</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <a href="{{ route('songs.layout.edit', ['song' => $song, 'mode' => 'time']) }}" class="m-tag {{ $tag['timesClass'] }}"
+                                        title="{{ __(':timed of :total blocks have a start time', ['timed' => $tag['timed'], 'total' => $tag['sections']]) }}">{{ $tag['sections'] ? "{$tag['timed']}/{$tag['sections']}" : '—' }}</a>
+                                </td>
+                                <td>
+                                    <div class="songs-media">
+                                        @if ($song->youtube_url)<a href="{{ $song->youtube_url }}" target="_blank" rel="noopener" class="m-tag is-media" title="YouTube"><i class="fa-brands fa-youtube"></i></a>@endif
+                                        @if ($song->audio_path)<span class="m-tag is-media" title="MP3: {{ $song->audio_path }}"><i class="fa-solid fa-headphones"></i></span>@endif
+                                        @if ($song->lessons_count)<span class="m-tag is-media" title="{{ __('Lessons') }}"><i class="fa-solid fa-chalkboard-user"></i> {{ $song->lessons_count }}</span>@endif
+                                        @if (! $song->youtube_url && ! $song->audio_path && ! $song->lessons_count)<span class="m-tag is-off">—</span>@endif
+                                    </div>
+                                </td>
+                                <td class="whitespace-nowrap">{{ $song->updated_at?->format('d/m/Y H:i') }}</td>
+                                <td style="text-align: right;">
+                                    <button type="button" class="m-btn is-ghost is-icon" aria-label="{{ __('Actions') }}" @click="actions = @js($actions($song)); confirmDelete = false"><i class="fa-solid fa-ellipsis"></i></button>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+
+                {{-- Phones and tablets --}}
+                <div class="song-cards">
+                    <label class="song-card" style="align-items: center; padding-top: .6rem; padding-bottom: .6rem; background: #fafafa;">
+                        <input type="checkbox" class="rounded border-gray-300" style="margin: 0;" :checked="pageSelected()" @change="togglePage($event.target.checked)">
+                        <span class="m-muted">{{ __('Select the songs of this page') }}</span>
+                    </label>
+                    @foreach ($songs as $song)
+                        @php $tag = $tags($song); @endphp
+                        <div class="song-card" :class="{ 'is-selected': selected.includes({{ $song->id }}) }">
+                            <input type="checkbox" class="rounded border-gray-300" :checked="selected.includes({{ $song->id }})" @change="toggle({{ $song->id }})" aria-label="{{ __('Select') }} {{ $song->title }}">
+                            <a href="{{ route('songs.show', $song) }}" class="song-card-main">
+                                <div class="song-card-title"><span>{{ $song->title }}</span>@if ($song->musical_key)<span class="m-tag is-key">{{ $song->musical_key }}</span>@endif</div>
+                                <div class="song-card-artist">{{ $song->artist ?: '—' }}</div>
+                                <div class="song-card-tags">
+                                    @if ($tag['reviewed'])<span class="m-tag is-ok"><i class="fa-solid fa-check"></i> {{ __('Reviewed') }}</span>@endif
+                                    @if ($tag['sections'])<span class="m-tag {{ $tag['timesClass'] }}" title="{{ __('Times') }}"><i class="fa-regular fa-clock"></i> {{ $tag['timed'] }}/{{ $tag['sections'] }}</span>@endif
+                                    @if ($song->youtube_url)<span class="m-tag is-media"><i class="fa-brands fa-youtube"></i></span>@endif
+                                    @if ($song->audio_path)<span class="m-tag is-media"><i class="fa-solid fa-headphones"></i></span>@endif
+                                    @if ($song->lessons_count)<span class="m-tag is-media"><i class="fa-solid fa-chalkboard-user"></i> {{ $song->lessons_count }}</span>@endif
+                                </div>
+                            </a>
+                            <button type="button" class="m-btn is-ghost is-icon" aria-label="{{ __('Actions') }}" @click="actions = @js($actions($song)); confirmDelete = false"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                        </div>
+                    @endforeach
+                </div>
+
+                @if ($songs->hasPages())
+                    <div class="songs-pages">{!! $songs->withQueryString()->links() !!}</div>
+                @endif
+            @endif
+        </div>
+
+        {{-- Actions of the song picked in the list --}}
+        <div class="m-sheet" x-show="actions" x-cloak role="dialog" aria-modal="true" :aria-label="actions?.title">
+            <div class="m-sheet-overlay" @click="actions = null"></div>
+            <div class="m-sheet-box" x-show="actions" x-transition.opacity>
+                <div class="m-sheet-head">
+                    <div>
+                        <h2 x-text="actions?.title"></h2>
+                        <p x-text="actions?.artist"></p>
+                    </div>
+                    <button type="button" class="m-btn is-ghost is-icon" @click="actions = null" aria-label="{{ __('Close') }}"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="m-menu" x-show="!confirmDelete">
+                    <a :href="actions?.show"><i class="fa-solid fa-eye"></i> {{ __('Show') }}</a>
+                    <a :href="actions?.edit"><i class="fa-solid fa-pen"></i> {{ __('Edit') }}</a>
+                    <a :href="actions?.layout"><i class="fa-solid fa-layer-group"></i> {{ __('Layout') }}</a>
+                    <a :href="actions?.practice"><i class="fa-solid fa-graduation-cap"></i> {{ __('Practice') }}</a>
+                    <button type="button" class="is-danger" @click="confirmDelete = true"><i class="fa-solid fa-trash"></i> {{ __('Delete') }}</button>
+                </div>
+                <form method="POST" :action="actions?.destroy" x-show="confirmDelete">
+                    @csrf
+                    @method('DELETE')
+                    <p class="text-sm text-gray-700">{{ __('Are you sure to delete?') }}</p>
+                    <div class="m-sheet-foot">
+                        <button type="button" class="m-btn" @click="confirmDelete = false">{{ __('Cancel') }}</button>
+                        <button type="submit" class="m-btn is-danger">{{ __('Delete') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {{-- Filters and order --}}
+        <div class="m-sheet" x-show="filtersOpen" x-cloak role="dialog" aria-modal="true" aria-label="{{ __('Filter') }}">
+            <div class="m-sheet-overlay" @click="filtersOpen = false"></div>
+            <form method="GET" action="{{ route('songs.index') }}" class="m-sheet-box" x-show="filtersOpen" x-transition.opacity>
+                <div class="m-sheet-head">
+                    <div>
+                        <h2>{{ __('Filter') }}</h2>
+                        <p>{{ __('Show only the songs you need, in the order you want.') }}</p>
+                    </div>
+                    <button type="button" class="m-btn is-ghost is-icon" @click="filtersOpen = false" aria-label="{{ __('Close') }}"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="m-grid">
+                    <div class="m-field">
+                        <label class="m-label" for="filter_search">{{ __('Search') }}</label>
+                        <input id="filter_search" name="search" type="search" class="m-input" value="{{ $filters['search'] ?? '' }}" placeholder="{{ __('Title or artist') }}">
+                    </div>
+                    <div class="m-grid cols-2">
+                        @foreach ($statusFilters as $name => $label)
+                            <div class="m-field">
+                                <span class="m-label">{{ $label }}</span>
+                                <div class="m-seg" role="radiogroup" aria-label="{{ $label }}">
+                                    @foreach (['' => __('All'), 'yes' => __('Yes'), 'no' => __('No')] as $value => $text)
+                                        <label><input type="radio" name="{{ $name }}" value="{{ $value }}" @checked(($filters[$name] ?? '') === $value)><span>{{ $text }}</span></label>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="m-grid cols-2">
+                        <div class="m-field">
+                            <label class="m-label" for="filter_sort">{{ __('Sort by') }}</label>
+                            <select id="filter_sort" name="sort" class="m-input">
+                                @foreach ($sortOptions as $value => $label)
+                                    <option value="{{ $value }}" @selected($sort === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="m-field">
+                            <span class="m-label">{{ __('Order by') }}</span>
+                            <div class="m-seg">
+                                <label><input type="radio" name="direction" value="asc" @checked($direction === 'asc')><span><i class="fa-solid fa-arrow-up-short-wide"></i> {{ __('Ascending') }}</span></label>
+                                <label><input type="radio" name="direction" value="desc" @checked($direction === 'desc')><span><i class="fa-solid fa-arrow-down-wide-short"></i> {{ __('Descending') }}</span></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="m-sheet-foot">
+                    <a href="{{ route('songs.index') }}" class="m-btn is-ghost">{{ __('Clear Filters') }}</a>
+                    <button type="submit" class="m-btn is-primary">{{ __('Apply Filters') }}</button>
+                </div>
+            </form>
+        </div>
     </div>
+
     <script>
         // Songs list: the actions menu, and songs selected for deleting together (kept while moving between pages).
         function songsIndex({ all, page }) {
