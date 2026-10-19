@@ -1,10 +1,7 @@
 {{-- The "⋯" button of a visitor: opens the actions sheet (visitors::visitors.partials.actions, included once on the
      page). $visitor, $icon (optional, default "fa-ellipsis") --}}
 @php
-    // WhatsApp wants the number with its country code: Portuguese numbers (9 digits) get 351.
-    $digits = preg_replace('/\D+/', '', (string) $visitor->phone_number);
-    $digits = str_starts_with($digits, '00') ? substr($digits, 2) : $digits;
-    $whatsapp = $digits === '' ? null : 'https://wa.me/' . (strlen($digits) === 9 ? '351' . $digits : $digits);
+    $whatsapp = \App\Helpers\WhatsAppHelper::url($visitor->phone_number);
     $visitorActions = [
         'name' => $visitor->name,
         'firstName' => \Illuminate\Support\Str::before(trim($visitor->name), ' '),

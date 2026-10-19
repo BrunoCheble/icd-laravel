@@ -2,10 +2,7 @@
      $member, $icon (optional, default "fa-ellipsis") --}}
 @php
     $pending = $member->pendingInformations ?? app(\App\Modules\Members\Services\GetMemberPendingInformationService::class)->execute($member);
-    // WhatsApp wants the number with its country code: Portuguese numbers (9 digits) get 351.
-    $digits = preg_replace('/\D+/', '', (string) $member->phone_number);
-    $digits = str_starts_with($digits, '00') ? substr($digits, 2) : $digits;
-    $whatsapp = $digits === '' ? null : 'https://wa.me/' . (strlen($digits) === 9 ? '351' . $digits : $digits);
+    $whatsapp = \App\Helpers\WhatsAppHelper::url($member->phone_number);
     $memberActions = [
         'name' => $member->first_and_last_name,
         'firstName' => $member->first_name,

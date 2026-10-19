@@ -26,10 +26,6 @@ Route::get('/announcement', [SiteController::class, 'announcement'])->name('site
 Route::get('/today-visitors', [SiteController::class, 'todayVisitor'])->name('site.todayVisitor');
 Route::get('/today-prayers', [SiteController::class, 'todayPrayer'])->name('site.todayPrayer');
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
 Route::middleware('auth')->group(function () {
     // Fingerprint / Face ID: this device registered on the profile, and the app's lock.
     Route::post('/passkeys/options', [PasskeyController::class, 'options'])->middleware('throttle:10,1')->name('passkeys.options');
