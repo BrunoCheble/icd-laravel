@@ -63,7 +63,7 @@
     </style>
 
     <div class="py-6">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-full mx-auto sm:px-6 lg:px-8">
             <div class="bg-white shadow sm:rounded-lg p-3 sm:p-6">
                 @include('music::songs.partials.tabs', ['song' => $song, 'current' => 'sheet'])
                 @include('layouts.alert')
