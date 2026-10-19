@@ -29,6 +29,8 @@ return [
     // grid offers "suggest the ? chords" here and never in production.
     'chords_helper' => [
         'url' => env('CHORDS_HELPER_URL'),
+        // The same, as the server reaches it (from Docker: http://host.docker.internal:8765).
+        'internal_url' => env('CHORDS_HELPER_INTERNAL_URL', env('CHORDS_HELPER_URL')),
     ],
 
     'study' => [
