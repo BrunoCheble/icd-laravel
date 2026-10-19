@@ -6,6 +6,10 @@ use App\Modules\Members\Models\Member;
 
 class GetMemberPendingInformationService
 {
+    // Written in the notes when the member gives the spouse's name on the "complete your registration" page; the
+    // spouse is then linked by hand (and is no longer asked of the member).
+    public const SPOUSE_NOTE = 'Cônjuge (indicado pelo membro): ';
+
     /**
      * What a pending member (registered on the site) still has to send, to ask by WhatsApp. Empty for other members.
      *
@@ -13,40 +17,57 @@ class GetMemberPendingInformationService
      */
     public function execute(Member $member): array
     {
-        $pendingInformations = [];
+        return array_values(array_map(fn ($field) => $this->label($field, $member), $this->fields($member)));
+    }
 
-        if (!$member->isPending()) {
-            return $pendingInformations;
+    /**
+     * The same, as the fields to fill: spouse, date_joined, email, phone_number, address (with zip code and city),
+     * date_of_birth, document_number.
+     *
+     * @return string[]
+     */
+    public function fields(Member $member): array
+    {
+        if (! $member->isPending()) {
+            return [];
         }
 
-        if ($member->marital_status == 'M' && !$member->spouse_id) {
-            $pendingInformations[] = $member->gender == 'M' ? 'Nome completo da esposa' : 'Nome completo do marido';
+        $fields = [];
+        if ($member->marital_status == 'M' && ! $member->spouse_id && ! str_contains((string) $member->notes, self::SPOUSE_NOTE)) {
+            $fields[] = 'spouse';
+        }
+        if ($member->marital_status == 'M' && ! $member->date_joined) {
+            $fields[] = 'date_joined';
+        }
+        if (! $member->email || ! filter_var($member->email, FILTER_VALIDATE_EMAIL)) {
+            $fields[] = 'email';
+        }
+        if (! $member->phone_number || ! preg_match('/^(?!([0-9])\1{8})\d{9}$/', $member->phone_number)) {
+            $fields[] = 'phone_number';
+        }
+        if (! $member->address || ! $member->zip_code || ! $member->city) {
+            $fields[] = 'address';
+        }
+        if (! $member->date_of_birth) {
+            $fields[] = 'date_of_birth';
+        }
+        if (! $member->document_number && (! $member->date_of_birth || $member->years() >= 18)) {
+            $fields[] = 'document_number';
         }
 
-        if ($member->marital_status == 'M' && !$member->date_joined) {
-            $pendingInformations[] = 'Data de casamento';
-        }
+        return $fields;
+    }
 
-        if (!$member->email || !filter_var($member->email, FILTER_VALIDATE_EMAIL) ) {
-            $pendingInformations[] = 'E-mail';
-        }
-
-        if (!$member->phone_number || !preg_match('/^(?!([0-9])\1{8})\d{9}$/', $member->phone_number)) {
-            $pendingInformations[] = 'Número do telemovel';
-        }
-
-        if (!$member->address || !$member->zip_code || !$member->city) {
-            $pendingInformations[] = 'Endereço, código postal e localidade';
-        }
-
-        if (!$member->date_of_birth) {
-            $pendingInformations[] = 'Data de nascimento';
-        }
-
-        if (!$member->document_number && (!$member->date_of_birth || $member->years() >= 18)) {
-            $pendingInformations[] = 'NIF (para associar as ofertas e dízimos)';
-        }
-
-        return $pendingInformations;
+    public function label(string $field, Member $member): string
+    {
+        return match ($field) {
+            'spouse' => $member->gender == 'M' ? 'Nome completo da esposa' : 'Nome completo do marido',
+            'date_joined' => 'Data de casamento',
+            'email' => 'E-mail',
+            'phone_number' => 'Número do telemovel',
+            'address' => 'Endereço, código postal e localidade',
+            'date_of_birth' => 'Data de nascimento',
+            'document_number' => 'NIF (para associar as ofertas e dízimos)',
+        };
     }
 }

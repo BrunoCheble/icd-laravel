@@ -10,6 +10,8 @@
         'sibling' => $member->gender === 'M' ? 'irmão' : 'irmã',
         'status' => $member->membership_status,
         'pending' => array_values($pending),
+        // The link for the member to fill in what is missing (signed, it expires).
+        'complete' => $pending ? app(\App\Modules\Members\Services\GetRegistrationLinkService::class)->execute($member) : null,
         'whatsapp' => $whatsapp,
         'show' => route('members.show', $member),
         'edit' => route('members.edit', $member),

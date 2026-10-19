@@ -59,6 +59,16 @@
                             <li><i class="fa-solid fa-circle-exclamation"></i> <span x-text="item"></span></li>
                         </template>
                     </ul>
+                    <div class="m-field mt-4" x-show="member?.complete">
+                        <span class="m-label">{{ __('Link for the member to fill it in') }}</span>
+                        <div class="flex gap-2">
+                            <input type="text" class="m-input" readonly :value="member?.complete" @focus="$el.select()">
+                            <button type="button" class="m-btn" @click="navigator.clipboard?.writeText(member.complete); copied = true; setTimeout(() => copied = false, 2000)">
+                                <i class="fa-solid" :class="copied ? 'fa-check' : 'fa-copy'"></i> <span x-text="copied ? @js(__('Copied')) : @js(__('Copy'))"></span>
+                            </button>
+                        </div>
+                        <p class="m-help">{{ __('Personal link, valid for :count days.', ['count' => \App\Modules\Members\Services\GetRegistrationLinkService::DAYS]) }}</p>
+                    </div>
                     <div class="m-field mt-4" x-show="member?.whatsapp">
                         <label class="m-label" for="member_pending_message">{{ __('Message') }}</label>
                         <textarea id="member_pending_message" class="m-input" rows="7" x-model="pendingText"></textarea>
@@ -107,12 +117,14 @@
                 panel: 'menu',
                 text: '',
                 pendingText: '',
+                copied: false,
                 open(member) {
                     this.member = member;
                     this.panel = 'menu';
                     this.text = `A paz, ${member.sibling} ${member.firstName}! Tudo bem ?`;
-                    this.pendingText = `A paz, ${member.sibling} ${member.firstName}! Tudo bem ? Para concluir o seu registo como membro da igreja, precisamos de algumas informações adicionais. Por favor, responda às perguntas a seguir:\n`
-                        + member.pending.map(item => `- ${item};`).join('\n');
+                    this.pendingText = `A paz, ${member.sibling} ${member.firstName}! Tudo bem ? Para concluir o seu registo como membro da igreja, faltam-nos alguns dados:\n`
+                        + member.pending.map(item => `- ${item};`).join('\n')
+                        + (member.complete ? `\n\nPode preenchê-los aqui, é rápido: ${member.complete}` : '');
                 },
                 close() { this.member = null; },
                 subtitle() {

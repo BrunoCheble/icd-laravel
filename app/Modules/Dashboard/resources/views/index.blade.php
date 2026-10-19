@@ -66,6 +66,9 @@
             .today-actions.is-many .m-btn.is-whatsapp { flex: 1; }
         }
 
+        .today-pager { order: 2; display: flex; align-items: center; justify-content: center; gap: .75rem; padding: .6rem 1rem; border-top: 1px solid #f1f2f4; font-size: .85rem; font-weight: 600; color: #6b7280; }
+        .today-pager .m-btn { min-height: 36px; width: 36px; }
+
         .today-done { padding: 2.5rem 1rem; text-align: center; }
         .today-done i { display: block; margin-bottom: .6rem; font-size: 2rem; color: #16a34a; }
         .today-done strong { display: block; font-size: 1.05rem; color: #111827; }
@@ -90,6 +93,7 @@
         ])->filter(fn ($section) => $section[3]->isNotEmpty());
         $all = $sections->flatMap(fn ($section) => $section[3]);
         $toSend = $all->whereNull('sent')->count();
+        $perPage = 5;
         $weekday = fn ($date) => rtrim($date->locale(app()->getLocale())->isoFormat('ddd'), '.');
     @endphp
 
@@ -126,14 +130,14 @@
             @endif
 
             @foreach ($sections as $name => [$icon, $title, $short, $items])
-                <section id="today-{{ $name }}" class="m-card m-list today-section" x-data="{ section: @js($name), total: {{ $items->count() }} }">
+                <section id="today-{{ $name }}" class="m-card m-list today-section" x-data="{ section: @js($name), total: {{ $items->count() }}, page: 0, perPage: {{ $perPage }}, pages: {{ (int) ceil($items->count() / $perPage) }} }">
                     <h3 class="today-title">
                         <i class="fa-solid {{ $icon }}"></i> {{ $title }}
                         <small :class="{ 'is-done': left[section] === 0 }" x-text="left[section] === 0 ? '✓ ' + @js(__('All sent')) : (total - left[section]) + '/' + total + ' ' + @js(__('sent'))"></small>
                     </h3>
                     @foreach ($items as $item)
                         @php($withPhone = collect($item['people'])->whereNotNull('whatsapp'))
-                        <div class="today-item" x-data="todayMessage(@js($item))" :class="{ 'is-sent': sent }">
+                        <div class="today-item" x-data="todayMessage(@js($item))" :class="{ 'is-sent': sent }" x-show="Math.floor({{ $loop->index }} / perPage) === page">
                             <span class="today-faces">
                                 @foreach ($item['people'] as $person)
                                     @if ($person['photo'])
@@ -189,6 +193,14 @@
                             </div>
                         </div>
                     @endforeach
+                    {{-- Pages of the section --}}
+                    @if ($items->count() > $perPage)
+                        <div class="today-pager">
+                            <button type="button" class="m-btn is-icon" @click="page--" :disabled="page === 0" aria-label="{{ __('Previous') }}"><i class="fa-solid fa-chevron-left"></i></button>
+                            <span x-text="(page * perPage + 1) + '–' + Math.min((page + 1) * perPage, total) + ' ' + @js(__('of')) + ' ' + total"></span>
+                            <button type="button" class="m-btn is-icon" @click="page++" :disabled="page === pages - 1" aria-label="{{ __('Next') }}"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    @endif
                 </section>
             @endforeach
 

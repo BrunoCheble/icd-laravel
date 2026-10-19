@@ -8,6 +8,7 @@ use App\Helpers\WhatsAppHelper;
 use App\Modules\Dashboard\Models\SentMessage;
 use App\Modules\Members\Models\Member;
 use App\Modules\Members\Services\GetMemberPendingInformationService;
+use App\Modules\Members\Services\GetRegistrationLinkService;
 use App\Modules\Visitors\Models\Visitor;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -23,7 +24,7 @@ class GetTodayMessagesService
     public const REMIND_EVERY_DAYS = 7;
     public const UPCOMING_DAYS = 7;
 
-    public function __construct(private GetMemberPendingInformationService $pending)
+    public function __construct(private GetMemberPendingInformationService $pending, private GetRegistrationLinkService $registrationLink)
     {
     }
 
@@ -84,8 +85,7 @@ class GetTodayMessagesService
             ->filter(fn ($pair) => ! isset($reminded[$pair[0]->id]) || $reminded[$pair[0]->id]->contains(fn ($m) => $m->period === $today->toDateString()))
             ->map(fn ($pair) => $this->item(SentMessage::PENDING, $pair[0]->id, $pair[0]->first_and_last_name, [$pair[0]], $sentOn(SentMessage::PENDING, $pair[0]->id), [
                 'subtitle' => trans_choice(':count pending item|:count pending items', count($pair[1]), ['count' => count($pair[1])]),
-                'text' => "A paz, {$this->sibling($pair[0])} {$pair[0]->first_name}! Tudo bem ? Para concluir o seu registo como membro da igreja, precisamos de algumas informações adicionais. Por favor, responda às perguntas a seguir:\n"
-                    . collect($pair[1])->map(fn ($item) => "- {$item};")->implode("\n"),
+                'text' => self::reminderText($this->sibling($pair[0]), $pair[0]->first_name, $pair[1], $this->registrationLink->execute($pair[0])),
             ]));
 
         return [
@@ -96,6 +96,16 @@ class GetTodayMessagesService
             'reminders' => $reminders->values(),
             'upcoming' => $this->upcoming($today),
         ];
+    }
+
+    /**
+     * The message that asks a pending member for what is missing, with the link to fill it in on their own.
+     */
+    public static function reminderText(string $sibling, string $firstName, array $pending, string $link): string
+    {
+        return "A paz, {$sibling} {$firstName}! Tudo bem ? Para concluir o seu registo como membro da igreja, faltam-nos alguns dados:\n"
+            . collect($pending)->map(fn ($item) => "- {$item};")->implode("\n")
+            . "\n\nPode preenchê-los aqui, é rápido: {$link}";
     }
 
     /**

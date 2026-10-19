@@ -42,14 +42,14 @@ class TodayMessagesTest extends TestCase
         Visitor::create(['name' => 'Lucas Andrade', 'gender' => 'M', 'created_by' => 'ZZ Teste', 'status' => VisitorStatus::ACTIVED, 'phone_number' => '933333333']);
         $old = Visitor::create(['name' => 'Antigo Visitante', 'gender' => 'M', 'created_by' => 'ZZ Teste', 'status' => VisitorStatus::ACTIVED]);
         $old->forceFill(['created_at' => now()->subDays(20)])->save();
-        $this->member(['first_name' => 'Carla', 'gender' => 'F', 'membership_status' => MembershipStatus::PENDING, 'email' => null]);
+        $this->member(['first_name' => 'Carla', 'gender' => 'F', 'membership_status' => MembershipStatus::PENDING, 'email' => null, 'phone_number' => '922222222']);
 
         $response = $this->actingAs(User::factory()->create())->get('/dashboard')->assertOk();
 
         $response->assertSee('Helena')->assertSee('Feliz aniversário, irmã Helena!')->assertSee('https://wa.me/351912345678');
         $response->assertSee('João &amp; Ana', false)->assertSee('São 16 anos de bênçãos');
         $response->assertSee('Lucas Andrade')->assertDontSee('Antigo Visitante');
-        $response->assertSee('Carla')->assertSee('Para concluir o seu registo');
+        $response->assertSee('Carla')->assertSee('Para concluir o seu registo')->assertSee('/completar-registo/');
         $response->assertSee('Rui')->assertDontSee('Velho');
     }
 
