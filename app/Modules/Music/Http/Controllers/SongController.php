@@ -9,6 +9,7 @@ use App\Modules\Music\Models\Song;
 use App\Modules\Music\Services\FindSongBySourceService;
 use App\Modules\Music\Services\GetSongOverviewService;
 use App\Modules\Music\Services\ListSongsService;
+use App\Modules\Music\Services\RequestSongAudioDownloadService;
 use App\Modules\Music\Services\SaveSongAudioService;
 use App\Modules\Music\Services\CreateSongBarsService;
 use App\Modules\Music\Services\DeleteSongsService;
@@ -39,7 +40,7 @@ class SongController extends Controller
         return view('music::songs.create', compact('song', 'keyOptions', 'existingSources', 'existingTitles'));
     }
 
-    public function store(SongRequest $request, SaveSongService $service, SaveSongAudioService $audioService, CreateSongBarsService $bars): RedirectResponse
+    public function store(SongRequest $request, SaveSongService $service, SaveSongAudioService $audioService, CreateSongBarsService $bars, RequestSongAudioDownloadService $download): RedirectResponse
     {
         try {
             $song = $service->execute(collect($request->validated())->except(['audio', 'remove_audio', 'meter'])->all());
@@ -50,8 +51,11 @@ class SongController extends Controller
                 ->with('error', __('Something went wrong'));
         }
 
+        // On a local computer, the link's audio downloaded by icd-chords (unless an MP3 came with the form).
+        $downloading = ! $request->hasFile('audio') && $download->execute($song);
+
         return Redirect::route('songs.index')
-            ->with('success', __('Song created successfully.'));
+            ->with('success', __('Song created successfully.') . ($downloading ? ' ' . __('icd-chords is downloading its audio.') : ''));
     }
 
     public function show(Song $song, GetSongOverviewService $service): View
@@ -67,8 +71,9 @@ class SongController extends Controller
         return view('music::songs.edit', compact('song', 'keyOptions', 'existingSources'));
     }
 
-    public function update(SongRequest $request, Song $song, SaveSongService $service, SaveSongAudioService $audioService, CreateSongBarsService $bars): RedirectResponse
+    public function update(SongRequest $request, Song $song, SaveSongService $service, SaveSongAudioService $audioService, CreateSongBarsService $bars, RequestSongAudioDownloadService $download): RedirectResponse
     {
+        $link = $song->youtube_url;
         try {
             $service->execute(collect($request->validated())->except(['audio', 'remove_audio', 'meter'])->all(), $song);
             $audioService->execute($song, $request->file('audio'), $request->boolean('remove_audio'));
@@ -83,8 +88,13 @@ class SongController extends Controller
                 ->with('error', __('Something went wrong'));
         }
 
+        // On a local computer, the audio of a new link (or of a song still without audio) downloaded by icd-chords;
+        // not when an MP3 came with the form or the audio was just removed.
+        $wanted = ! $request->hasFile('audio') && ! $request->boolean('remove_audio') && ($song->youtube_url !== $link || ! $song->audio_path);
+        $downloading = $wanted && $download->execute($song);
+
         return Redirect::route('songs.index')
-            ->with('success', __('Song updated successfully.'));
+            ->with('success', __('Song updated successfully.') . ($downloading ? ' ' . __('icd-chords is downloading its audio.') : ''));
     }
 
     public function bulkDestroy(BulkDestroySongsRequest $request, DeleteSongsService $service): RedirectResponse

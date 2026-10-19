@@ -128,13 +128,22 @@ class Song extends Model
     }
 
     /**
-     * Address of the song's audio file (played instead of the YouTube video), or null.
+     * Address of the song's audio file (played instead of the YouTube video), or null. On a local computer whose
+     * database is production's, the file is on the production server: it is played from there
+     * (services.music.audio_fallback_url, set only in a local .env).
      */
     public function audioUrl(): ?string
     {
-        return $this->audio_path && is_file(public_path(SaveSongAudioService::FOLDER . '/' . $this->audio_path))
-            ? asset(SaveSongAudioService::FOLDER . '/' . $this->audio_path)
-            : null;
+        if (! $this->audio_path) {
+            return null;
+        }
+        $path = SaveSongAudioService::FOLDER . '/' . $this->audio_path;
+        if (is_file(public_path($path))) {
+            return asset($path);
+        }
+        $fallback = config('services.music.audio_fallback_url');
+
+        return app()->environment('local') && $fallback ? rtrim($fallback, '/') . '/' . SaveSongAudioService::FOLDER . '/' . rawurlencode($this->audio_path) : null;
     }
 
     /**

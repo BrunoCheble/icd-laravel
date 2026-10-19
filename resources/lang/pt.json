@@ -1121,5 +1121,14 @@
     "Completed": "Completo",
     "Waiting": "À espera",
     "We use it only to check whether your wife is already registered at the church.": "Serve apenas para verificarmos se a sua esposa já está registada na igreja.",
-    "We use it only to check whether your husband is already registered at the church.": "Serve apenas para verificarmos se o seu marido já está registado na igreja."
+    "We use it only to check whether your husband is already registered at the church.": "Serve apenas para verificarmos se o seu marido já está registado na igreja.",
+    "icd-chords is not running on this computer: start it with ./serve.sh": "O icd-chords não está a correr neste computador: inicie-o com ./serve.sh",
+    "Use the first option in all": "Usar a 1ª opção em todos",
+    "Every suggestion was used.": "Todas as sugestões foram usadas.",
+    "Listening to the recording…": "A ouvir a gravação…",
+    "The recording is in :key (:n semitones from the song): the chords were converted to the song's key.": "A gravação está em :key (:n meios-tons da música): os acordes foram convertidos para o tom da música.",
+    "The recording seems :n semitones from the song: the chords were converted to the song's key.": "A gravação parece estar a :n meios-tons da música: os acordes foram convertidos para o tom da música.",
+    "icd-chords is downloading its audio.": "O icd-chords está a descarregar o áudio.",
+    "Check again": "Verificar de novo",
+    "off": "desligado"
 }
