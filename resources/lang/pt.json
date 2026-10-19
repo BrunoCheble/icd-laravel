@@ -943,5 +943,9 @@
     "Hide the password": "Esconder a palavra-passe",
     "Show the password": "Mostrar a palavra-passe",
     "Keep me signed in": "Manter sessão iniciada",
-    "Email": "Email"
+    "Email": "Email",
+    "Double or halve the bars": "Dobrar ou dividir os compassos",
+    "Halve every bar": "Dividir todos os compassos",
+    "Not halved: some chords change on the \"and\" of a beat, which halving would lose. Move them to a beat first.": "Não dividido: alguns acordes mudam no \"e\" de um tempo e perder-se-iam ao dividir. Passe-os primeiro para um tempo.",
+    "Every bar halved: each chord lasts half as long. Undo goes back.": "Compassos divididos: cada acorde dura metade. Desfazer volta atrás."
 }
