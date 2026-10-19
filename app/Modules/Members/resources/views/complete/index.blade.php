@@ -90,6 +90,12 @@
                                 <input id="spouse_name" name="spouse_name" class="cr-input" value="{{ old('spouse_name') }}" autocomplete="off">
                                 @error('spouse_name')<p class="cr-error">{{ $message }}</p>@enderror
                             </div>
+                            <div class="cr-field">
+                                <label for="spouse_phone">{{ $member->gender === 'M' ? __('Mobile number of your wife') : __('Mobile number of your husband') }}</label>
+                                <input id="spouse_phone" name="spouse_phone" type="tel" class="cr-input" value="{{ old('spouse_phone') }}" autocomplete="off" inputmode="tel" placeholder="912 345 678">
+                                <small>{{ __('If they are also a member of the church, we link you both.') }}</small>
+                                @error('spouse_phone')<p class="cr-error">{{ $message }}</p>@enderror
+                            </div>
                             @break
                         @case('date_joined')
                             <div class="cr-field">

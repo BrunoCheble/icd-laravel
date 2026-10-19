@@ -29,12 +29,14 @@ class CompleteRegistrationRequest extends FormRequest
     public function prepareForValidation(): void
     {
         app()->setLocale(self::locale($this));
-        $phone = preg_replace('/\D+/', '', (string) $this->phone_number);
-        $phone = preg_replace('/^(00)?351(?=\d{9}$)/', '', $phone);
+        $mobile = fn ($value) => preg_replace('/^(00)?351(?=\d{9}$)/', '', preg_replace('/\D+/', '', (string) $value));
+        $phone = $mobile($this->phone_number);
+        $spousePhone = $mobile($this->spouse_phone);
         $zip = preg_replace('/\D+/', '', (string) $this->zip_code);
 
         $this->merge([
             'phone_number' => $phone ?: null,
+            'spouse_phone' => $spousePhone ?: null,
             'zip_code' => strlen($zip) === 7 ? substr($zip, 0, 4) . '-' . substr($zip, 4) : ($this->zip_code ?: null),
             'document_number' => preg_replace('/\D+/', '', (string) $this->document_number) ?: null,
         ]);
@@ -43,7 +45,10 @@ class CompleteRegistrationRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'spouse' => ['spouse_name' => ['nullable', 'string', 'max:255']],
+            'spouse' => [
+                'spouse_name' => ['nullable', 'string', 'max:255'],
+                'spouse_phone' => ['nullable', 'regex:/^9\d{8}$/'],
+            ],
             'date_joined' => ['date_joined' => ['nullable', 'date', 'after:1900-01-01', 'before_or_equal:today']],
             'email' => ['email' => ['nullable', 'email', 'max:255']],
             'phone_number' => ['phone_number' => ['nullable', 'regex:/^9\d{8}$/']],
@@ -72,6 +77,7 @@ class CompleteRegistrationRequest extends FormRequest
     {
         return [
             'spouse_name' => __('Spouse'),
+            'spouse_phone' => __('Spouse'),
             'date_joined' => __('Wedding Date'),
             'email' => __('Email'),
             'phone_number' => __('Phone Number'),
@@ -87,6 +93,7 @@ class CompleteRegistrationRequest extends FormRequest
     {
         return [
             'phone_number.regex' => __('Write the 9 digits of the mobile number.'),
+            'spouse_phone.regex' => __('Write the 9 digits of the mobile number.'),
             'zip_code.regex' => __('Write the zip code as 1234-567.'),
         ];
     }

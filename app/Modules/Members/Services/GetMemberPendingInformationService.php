@@ -61,7 +61,7 @@ class GetMemberPendingInformationService
     public function label(string $field, Member $member): string
     {
         return match ($field) {
-            'spouse' => $member->gender == 'M' ? 'Nome completo da esposa' : 'Nome completo do marido',
+            'spouse' => $member->gender == 'M' ? 'Nome completo e telemóvel da esposa' : 'Nome completo e telemóvel do marido',
             'date_joined' => 'Data de casamento',
             'email' => 'E-mail',
             'phone_number' => 'Número do telemovel',

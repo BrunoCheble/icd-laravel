@@ -113,6 +113,44 @@ class CompleteRegistrationTest extends TestCase
         $this->get($link)->assertSee('Obrigado, Carla!')->assertDontSee('<form', false);
     }
 
+    public function test_the_spouse_s_mobile_links_the_couple(): void
+    {
+        $husband = $this->member(['first_name' => 'João', 'marital_status' => 'M', 'phone_number' => '+351 913 333 333', 'date_joined' => '2012-09-01']);
+        $member = $this->pending(['marital_status' => 'M']);
+        $link = $this->link($member);
+
+        $this->get($link)->assertSee('name="spouse_phone"', false);
+        $this->post($link, ['spouse_name' => 'João', 'spouse_phone' => '913 333 333'])->assertRedirect($link);
+
+        $member->refresh();
+        $this->assertSame((string) $husband->id, (string) $member->spouse_id);
+        $this->assertSame((string) $member->id, (string) $husband->fresh()->spouse_id);
+        // The husband's wedding date is kept, for both
+        $this->assertSame('2012-09-01', Carbon::parse($member->date_joined)->toDateString());
+        $this->assertSame('2012-09-01', Carbon::parse($husband->fresh()->date_joined)->toDateString());
+        $this->assertStringContainsString('Cônjuge associado pelo próprio membro (telemóvel 913333333)', $member->notes);
+        $this->assertNotContains('spouse', app(\App\Modules\Members\Services\GetMemberPendingInformationService::class)->fields($member));
+    }
+
+    public function test_a_mobile_that_cannot_be_the_spouse_links_nobody(): void
+    {
+        // Already married to someone else, the same gender, or a number two members share: nobody is linked
+        $wife = $this->member(['first_name' => 'Maria', 'gender' => 'F', 'marital_status' => 'M']);
+        $this->member(['first_name' => 'Casado', 'marital_status' => 'M', 'phone_number' => '914444444', 'spouse_id' => $wife->id]);
+        $this->member(['first_name' => 'Amiga', 'gender' => 'F', 'phone_number' => '915555555']);
+        $this->member(['first_name' => 'Pai', 'phone_number' => '916666666']);
+        $this->member(['first_name' => 'Filho', 'phone_number' => '916666666']);
+
+        foreach (['914444444', '915555555', '916666666', '917777777'] as $phone) {
+            $member = $this->pending(['marital_status' => 'M']);
+            $this->post($this->link($member), ['spouse_name' => 'Alguém', 'spouse_phone' => $phone]);
+            $member->refresh();
+            $this->assertNull($member->spouse_id, $phone);
+            $this->assertStringContainsString("Cônjuge (indicado pelo membro): Alguém · telemóvel {$phone}", $member->notes);
+        }
+        $this->post($this->link($this->pending(['marital_status' => 'M'])), ['spouse_phone' => '123'])->assertSessionHasErrors('spouse_phone');
+    }
+
     public function test_the_page_is_in_portuguese_and_in_english_when_asked(): void
     {
         $member = $this->pending();

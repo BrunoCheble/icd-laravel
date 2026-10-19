@@ -135,7 +135,7 @@ class MembersTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get("/members/{$member->id}")
             ->assertOk()
-            ->assertSee('Nome completo da esposa')
+            ->assertSee('Nome completo e telemóvel da esposa')
             ->assertSee('E-mail');
     }
 
