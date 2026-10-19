@@ -305,9 +305,6 @@
                             {{-- The music on, or only the BPM click (the bars play on their own clock) --}}
                             <button type="button" class="ws-btn" x-show="hasMusic && bpm > 0" :class="{ 'is-active': !musicOff }" @click="toggleMusic()"
                                 :title="musicOff ? @js(__('Playing only with the BPM: click to play with the music')) : @js(__('Playing with the music: click to play only with the BPM'))"><i class="fa-solid" :class="musicOff ? 'fa-volume-xmark' : 'fa-music'"></i><span class="ws-label"> {{ __('Song sound') }}</span></button>
-                            {{-- Click on every beat, or doubled (also on each "and") for the drummer: only the sound changes --}}
-                            <button type="button" class="ws-btn" x-show="!versionId && (clickOnly || metronome)" :class="{ 'is-active': clickDouble }" @click="clickDouble = !clickDouble; markDirty(); clickUntil = null"
-                                :title="clickDouble ? @js(__('Doubled click: it also sounds on each "and" (the bars keep the BPM). Click for one click per beat')) : @js(__('One click per beat. Click to double it (the drummer\'s tempo); the bars keep the BPM'))"><i class="fa-solid fa-stopwatch"></i> 2×</button>
                             {{-- Where bar 1 starts in the recording (seconds): typed, or marked on the beat while it plays --}}
                             <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId && !clickOnly">
                                 <button type="button" @click="markStartNow()" :disabled="!canPlay" title="{{ __('Click on the first beat of bar 1 while the song plays') }}" style="border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;" aria-label="{{ __('Start') }}"><span class="ws-label">{{ __('Start') }} </span><i class="fa-solid fa-flag"></i></button>
@@ -826,10 +823,13 @@
                             <p class="ws-panel-help mt-2">{{ __('One line per bar: the block that starts in it and the chord of each beat ("/" or empty: the chord goes on; "G D": G on the beat and D on the "and"). Importing needs the same number of bars and is not saved until you save; in a version only the chords are imported.') }}</p>
                             <p class="ws-panel-help mt-2" x-show="csvMessage" x-text="csvMessage" :style="csvError ? 'color: #dc2626' : ''"></p>
                         </div>
-                        {{-- Fast songs (a chord over two bars): every chord twice as long; the extra bars are then removed by hand --}}
+                        {{-- Every chord twice as long (fast songs, a chord over two bars) or half as long (two bars become one) --}}
                         <div class="ws-panel-section" x-show="!versionId">
-                            <div class="ws-panel-label"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> {{ __('Double the bars') }}</div>
-                            <button type="button" class="ws-btn" @click="doubleBars(); optionsOpen = false" :disabled="!ticks.length"><i class="fa-solid fa-clone"></i> {{ __('Double every bar') }}</button>
+                            <div class="ws-panel-label"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> {{ __('Double or halve the bars') }}</div>
+                            <div class="ws-panel-row">
+                                <button type="button" class="ws-btn" @click="doubleBars(); optionsOpen = false" :disabled="!ticks.length"><i class="fa-solid fa-clone"></i> {{ __('Double every bar') }}</button>
+                                <button type="button" class="ws-btn" @click="halveBars(); optionsOpen = false" :disabled="!ticks.length"><i class="fa-solid fa-down-left-and-up-right-to-center"></i> {{ __('Halve every bar') }}</button>
+                            </div>
                             <p class="ws-panel-help mt-2">{{ __('Every chord lasts twice as long (one bar becomes two), for fast songs where a chord takes two bars. The BPM and the empty beats before the first chord stay; remove the extra bars afterwards. Undo goes back; nothing is kept until you save.') }}</p>
                         </div>
                         {{-- Wrong chord sheet: the chords out, to write them by ear (blocks and bars stay) --}}
@@ -3522,6 +3522,30 @@
                     this.currentTick = this.currentTick < 0 ? this.currentTick : place(this.currentTick);
                     this.revision++;
                     this.notice = @js(__('Every bar doubled: remove the extra ones (right click on a bar). Undo goes back.'));
+                },
+                // Every chord half as long (two bars become one), the opposite of doubleBars: each pair of half beats after
+                // the empty beats of bar 1 becomes one. Only when every chord, split and block starts on a whole beat
+                // counted from there (a change on an "and" would fall on a quarter beat and be lost); the BPM and those
+                // empty beats stay.
+                halveBars() {
+                    if (this.versionId || !this.ticks.length) return;
+                    const lead = this.leadTicks;
+                    const starts = [...this.chordStarts(), ...this.splits, ...this.blocks.map(block => block.startTick)].filter(tick => tick > lead);
+                    if (starts.some(tick => (tick - lead) % 2)) {
+                        this.notice = @js(__('Not halved: some chords change on the "and" of a beat, which halving would lose. Move them to a beat first.'));
+                        return;
+                    }
+                    const place = (tick) => (tick <= lead ? tick : lead + (tick - lead) / 2);
+                    this.remember();
+                    this.ticks = this.ticks.filter((chord, tick) => tick < lead || (tick - lead) % 2 === 0);
+                    this.splits = this.splits.map(place);
+                    this.blocks = this.blocks.map(block => ({ ...block, startTick: place(block.startTick) }));
+                    this.originalTicks = [];
+                    this.selection = { anchor: null, from: null, to: null };
+                    this.loop = null;
+                    this.currentTick = this.currentTick < 0 ? this.currentTick : Math.min(this.ticks.length - 1, Math.floor(place(this.currentTick)));
+                    this.revision++;
+                    this.notice = @js(__('Every bar halved: each chord lasts half as long. Undo goes back.'));
                 },
                 insertTicks(at, after) {
                     const size = this.perBar * 2;
