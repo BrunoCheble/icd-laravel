@@ -54,7 +54,7 @@
         <div class="m-head">
             <div>
                 <h1 style="text-transform: capitalize;">{{ __('Anniversaries') }} · {{ $monthName($month) }}</h1>
-                <p>{{ trans_choice(':count birthday|:count birthdays', $birthdays->count(), ['count' => $birthdays->count()]) }} · {{ trans_choice(':count wedding anniversary|:count wedding anniversaries', $weddings->count(), ['count' => $weddings->count()]) }}</p>
+                <p><strong style="color: #111827; text-transform: capitalize;">{{ $monthName($month) }}</strong> · {{ trans_choice(':count birthday|:count birthdays', $birthdays->count(), ['count' => $birthdays->count()]) }} · {{ trans_choice(':count wedding anniversary|:count wedding anniversaries', $weddings->count(), ['count' => $weddings->count()]) }}</p>
             </div>
             <div class="m-head-actions">
                 <a href="{{ route('report.anniversaries.index', ['month' => $month === 1 ? 12 : $month - 1]) }}" class="m-btn is-icon" aria-label="{{ __('Previous month') }}"><i class="fa-solid fa-chevron-left"></i></a>
