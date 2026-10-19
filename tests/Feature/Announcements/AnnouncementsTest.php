@@ -88,6 +88,17 @@ class AnnouncementsTest extends TestCase
         $this->assertModelMissing($announcement);
     }
 
+    public function test_the_site_api_lists_only_approved_announcements_not_expired(): void
+    {
+        $this->announcement(['title' => 'Pendente Um', 'is_approved' => false]);
+        $this->announcement(['title' => 'Publicado Dois', 'is_approved' => true, 'expires_at' => now()->addWeek()]);
+        $this->announcement(['title' => 'Sem Prazo', 'is_approved' => true]);
+        $this->announcement(['title' => 'Expirado Tres', 'is_approved' => true, 'expires_at' => now()->subDay()]);
+
+        $titles = collect($this->getJson('/api/public/announcements')->assertOk()->json('data'))->pluck('title')->sort()->values()->all();
+        $this->assertSame(['Publicado Dois', 'Sem Prazo'], $titles);
+    }
+
     private function announcement(array $data = []): Announcement
     {
         return Announcement::create($data + [
