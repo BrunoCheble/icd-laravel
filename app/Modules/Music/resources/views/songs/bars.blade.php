@@ -395,7 +395,9 @@
                         <span x-show="hasSelection" x-text="`${@js(__('Marked'))}: ${barsLabel(selection.from, selection.to)}`"></span>
                         <button type="button" class="ws-btn" x-show="hasSelection" @click="copyBars()"><i class="fa-solid fa-copy"></i> {{ __('Copy') }}</button>
                         <button type="button" class="ws-btn" x-show="hasSelection && !versionId" @click="removeBar()" :disabled="selection.to - selection.from + 1 >= bars.length"><i class="fa-solid fa-trash"></i> {{ __('Remove') }}</button>
-                        <button type="button" class="ws-btn" x-show="hasSelection && canSuggest" x-cloak @click="suggestBars(selection.from, selection.to)" :disabled="helper.loading"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('Suggest chords') }}</button>
+                        <button type="button" class="ws-btn" x-show="hasSelection && canSuggest" x-cloak @click="suggestBars(selection.from, selection.to)" :disabled="helper.loading || helper.online === false"
+                            :title="helper.online === false ? @js(__('icd-chords is not running on this computer: start it with ./serve.sh')) : ''"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('Suggest chords') }}<span x-show="helper.online === false"> ({{ __('off') }})</span></button>
+                        <button type="button" class="ws-btn" x-show="hasSelection && canSuggest && helper.online === false" x-cloak @click="checkHelper()" :title="@js(__('Check again'))"><i class="fa-solid fa-rotate"></i></button>
                         <button type="button" class="ws-btn" x-show="hasSelection" @click="restoreBars()" title="{{ __('Back as they were when the page was opened (or last saved)') }}"><i class="fa-solid fa-clock-rotate-left"></i> {{ __('Restore') }}</button>
                         <button type="button" class="ws-btn" x-show="clipboard" @click="paste(cursorBar(), false)" :title="@js(__('Only the chord names: the changes here stay where they are'))"><i class="fa-solid fa-paste"></i> {{ __('Paste here') }}</button>
                         <button type="button" class="ws-btn" x-show="clipboard" @click="paste(cursorBar(), true)" :title="@js(__('Where each chord changes comes along too'))">{{ __('Paste with the rhythm') }}</button>
@@ -716,7 +718,10 @@
                         </div>
                         {{-- Local only: chords suggested from the recording for this bar (or the marked bars with it) --}}
                         <div class="row" x-show="canSuggest && barMenu" x-cloak>
-                            <button type="button" class="ws-btn" @click="const { from, to } = barsFor(barMenu.bar); suggestBars(from, to)" :disabled="helper.loading"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('Suggest chords') }}</button>
+                            <button type="button" class="ws-btn" @click="const { from, to } = barsFor(barMenu.bar); suggestBars(from, to)" :disabled="helper.loading || helper.online === false"
+                                :title="helper.online === false ? @js(__('icd-chords is not running on this computer: start it with ./serve.sh')) : ''"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('Suggest chords') }}</button>
+                            <button type="button" class="ws-btn" x-show="helper.online === false" @click="checkHelper()" :title="@js(__('Check again'))"><i class="fa-solid fa-rotate"></i></button>
+                            <p class="help" x-show="helper.online === false" style="flex-basis: 100%; margin: .2rem 0 0;">{{ __('icd-chords is not running on this computer: start it with ./serve.sh') }}</p>
                         </div>
                         <div class="row" x-show="!versionId && barMenu && blockOffset(barMenu.bar)">
                             <button type="button" class="ws-btn" @click="alignBlock(false)">{{ __('Start on beat 1 of this bar') }}</button>
@@ -1097,7 +1102,7 @@
                 notice: '',
                 // Chord suggestions for some bars (local only): { url, loading, error, shift, label, bars: [{ bar, beats: [{ beat, options }] }] }
                 helper: {
-                    url: config.chordsHelper || null, loading: false, error: '', shift: 0, recordingKey: null, bars: null, label: '',
+                    url: config.chordsHelper || null, online: null, loading: false, error: '', shift: 0, recordingKey: null, bars: null, label: '',
                     // The chords are heard in the recording's key and come converted to the song's (and are shown in
                     // the key on screen).
                     note() {
@@ -1141,6 +1146,7 @@
                     this.$nextTick(() => requestAnimationFrame(() => window.scrollTo(0, place.y)));
                 },
                 init() {
+                    if (this.helper.url) this.checkHelper();
                     this.restorePlace();
                     rootElement = this.$el;
                     if (audio) {
@@ -2822,8 +2828,25 @@
                 },
                 // ---- Chord suggestions for some bars, from icd-chords on this computer (local only) ----
                 get canSuggest() { return !!this.helper.url && this.hasMusic && this.bpm > 0 && !this.versionId; },
+                // Is icd-chords running (GET /api/health)? helper.online: null while checking, then true / false.
+                async checkHelper() {
+                    this.helper.online = null;
+                    try {
+                        const response = await fetch(`${this.helper.url}/api/health`, { signal: AbortSignal.timeout(2500) });
+                        this.helper.online = response.ok && (await response.json()).suggest === true;
+                    } catch (error) {
+                        this.helper.online = false;
+                    }
+                    return this.helper.online;
+                },
                 // The bars from..to (32 at most) sent with their time in the recording, the song's other chords and its key.
                 async suggestBars(from, to) {
+                    // Checked again first: it may have been stopped since the page opened.
+                    if (!await this.checkHelper()) {
+                        this.barMenu = null;
+                        this.helper = { ...this.helper, bars: null, error: @js(__('icd-chords is not running on this computer: start it with ./serve.sh')) };
+                        return;
+                    }
                     const size = this.perBar * 2;
                     const bars = Array.from({ length: Math.min(to - from + 1, 32) }, (_, i) => from + i);
                     const vocabulary = [...new Set(this.ticks.filter(chord => chord && chord !== '?'))];

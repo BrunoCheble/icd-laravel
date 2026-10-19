@@ -1128,5 +1128,7 @@
     "Listening to the recording…": "A ouvir a gravação…",
     "The recording is in :key (:n semitones from the song): the chords were converted to the song's key.": "A gravação está em :key (:n meios-tons da música): os acordes foram convertidos para o tom da música.",
     "The recording seems :n semitones from the song: the chords were converted to the song's key.": "A gravação parece estar a :n meios-tons da música: os acordes foram convertidos para o tom da música.",
-    "icd-chords is downloading its audio.": "O icd-chords está a descarregar o áudio."
+    "icd-chords is downloading its audio.": "O icd-chords está a descarregar o áudio.",
+    "Check again": "Verificar de novo",
+    "off": "desligado"
 }
