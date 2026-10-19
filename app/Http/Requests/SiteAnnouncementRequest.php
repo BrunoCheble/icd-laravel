@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use App\Enums\AnnouncementType;
-use App\Models\Member;
+use App\Modules\Members\Models\Member;
 
 class SiteAnnouncementRequest extends FormRequest
 {

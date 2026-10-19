@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\PrayerController;
-use App\Http\Controllers\MemberController;
 use App\Http\Controllers\VisitorController;
 use App\Http\Controllers\MinistryController;
 use App\Http\Controllers\MinistryMemberController;
@@ -49,11 +48,6 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('visitors', VisitorController::class);
     Route::get('/visitors/{id}/activate', [VisitorController::class, 'activate'])->name('visitors.activate');
-
-    Route::resource('members', MemberController::class);
-    Route::patch('/members/{id}/photo', [MemberController::class, 'uploadPhoto'])->name('members.uploadPhoto');
-    Route::get('/members/{id}/activate', [MemberController::class, 'activate'])->name('members.activate');
-    Route::get('/members/{id}/card', [MemberController::class, 'generateMemberCard'])->name('members.generateMemberCard');
 
     Route::get('/report/families', [ReportController::class, 'families'])->name('report.families.index');
     Route::get('/report/anniversaries', [ReportController::class, 'anniversaries'])->name('report.anniversaries.index');

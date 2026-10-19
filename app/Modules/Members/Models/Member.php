@@ -1,0 +1,239 @@
+<?php
+
+namespace App\Modules\Members\Models;
+
+use App\Enums\Gender;
+use App\Enums\MemberOptions;
+use App\Enums\MaritalStatus;
+use App\Enums\MembershipStatus;
+use App\Models\Ministry;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class Member
+ *
+ * @property $id
+ * @property $first_name
+ * @property $last_name
+ * @property $email
+ * @property $phone_number
+ * @property $address
+ * @property $city
+ * @property $zip_code
+ * @property $date_of_birth
+ * @property $gender
+ * @property $marital_status
+ * @property $date_joined
+ * @property $membership_status
+ * @property $baptism_date
+ * @property $notes
+ * @property $created_at
+ * @property $updated_at
+ *
+ * @package App\Modules\Members
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
+class Member extends Model
+{
+
+    protected $perPage = 20;
+
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'first_name',
+        'middle_name',
+        'last_name',
+        'document_number',
+        'email',
+        'phone_number',
+        'address',
+        'city',
+        'zip_code',
+        'date_of_birth',
+        'gender',
+        'marital_status',
+        'date_joined',
+        'membership_status',
+        'baptism_date',
+        'notes',
+        'photo',
+        'spouse_id',
+        'father_id',
+        'mother_id'
+    ];
+
+    protected static function boot()
+    {
+        parent::boot();
+    }
+
+    public function scopeActives($query)
+    {
+        return $query->where('membership_status', MembershipStatus::ACTIVED);
+    }
+
+    public function scopeByFullName($query, $name) {
+        if (!$name) {
+            return $query;
+        }
+
+        return $query->whereRaw('concat(first_name, " ", last_name) like ?', ['%' . trim($name) . '%']);
+    }
+
+    public function scopeFilter($query, $attribute, $search)
+    {
+        if (!$attribute || !$search || !isset(MemberOptions::options()[$attribute])) {
+            return $query;
+        }
+
+        return $query->where($attribute, 'like', '%' . $search . '%');
+    }
+
+    public function scopeByStatus($query, $membership_status)
+    {
+        if (!$membership_status || !isset(MembershipStatus::options()[$membership_status])) {
+            return $query;
+        }
+
+        return $query->where('membership_status', $membership_status);
+    }
+
+    public function scopeWithDocument($query)
+    {
+        return $query->where('document_number', '!=', null);
+    }
+
+    public function spouse()
+    {
+        return $this->belongsTo(Member::class, 'spouse_id');
+    }
+
+    public function father()
+    {
+        return $this->belongsTo(Member::class, 'father_id');
+    }
+
+    public function mother()
+    {
+        return $this->belongsTo(Member::class, 'mother_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(Member::class, $this->gender == 'M' ? 'father_id' : 'mother_id');
+    }
+
+    public function getUrlPhotoAttribute()
+    {
+        return $this->photo && file_exists(public_path('images/' . $this->photo)) ? asset('images/' . $this->photo) : 'https://ui-avatars.com/api/?name=' . $this->first_name . '+' . $this->last_name;
+    }
+
+    public function getFirstAndLastNameAttribute() {
+        return $this->first_name . ' ' . $this->last_name;
+    }
+
+    public function getFirstAndLastNameAndDocumentAttribute() {
+        return $this->first_name . ' ' . $this->last_name . ' (' . $this->document_number . ')';
+    }
+
+    public function getParentsNameAttribute() {
+        return $this->father?->first_and_last_name .' / '. $this->mother?->first_and_last_name;
+    }
+    public function getFullNameAttribute()
+    {
+        return implode(' ', array_filter([$this->first_name, $this->middle_name, $this->last_name]));
+    }
+
+    /**
+     * Age in whole years, or null without a date of birth.
+     */
+    public function years(): ?int
+    {
+        return $this->date_of_birth ? \Carbon\Carbon::parse($this->date_of_birth)->age : null;
+    }
+
+    public function getAgeAttribute()
+    {
+        if ($this->date_of_birth) {
+            $this->date_of_birth = \Carbon\Carbon::parse($this->date_of_birth);
+            return $this->date_of_birth->age ? $this->date_of_birth->age. ' '. __('years') : null;
+        }
+        return null;
+    }
+
+    public function getFullAddressAttribute()
+    {
+        if (!$this->address) {
+            return null;
+        }
+
+        return $this->address . ', ' . $this->city . ', ' . $this->zip_code;
+    }
+
+    public function getContactAttribute()
+    {
+
+        if ($this->phone_number && $this->email) {
+            return $this->phone_number . ' / ' . $this->email;
+        }
+
+        if ($this->phone_number) {
+            return $this->phone_number;
+        }
+
+        if ($this->email) {
+            return $this->email;
+        }
+    }
+
+    public function getGenderNameAttribute()
+    {
+        return isset(Gender::options()[$this->gender]) ? __(Gender::options()[$this->gender]) : 'N/D';
+    }
+
+    public function getMaritalStatusNameAttribute()
+    {
+        return isset(MaritalStatus::options()[$this->marital_status]) ? __(MaritalStatus::options()[$this->marital_status]) : 'N/D';
+    }
+
+    public function isActive()
+    {
+        return $this->membership_status == MembershipStatus::ACTIVED;
+    }
+
+    public function isPending()
+    {
+        return $this->membership_status == MembershipStatus::PENDING;
+    }
+
+    public function isInactive()
+    {
+        return $this->membership_status == MembershipStatus::INACTIVED;
+    }
+
+    public function getCreatedAtFormattedAttribute()
+    {
+        return \Carbon\Carbon::parse($this->created_at)->format('d/m/Y H:i');
+    }
+
+    public function getUpdatedAtFormattedAttribute()
+    {
+        return \Carbon\Carbon::parse($this->updated_at)->format('d/m/Y H:i');
+    }
+
+    public function getDateOfBirthFormattedAttribute()
+    {
+        return \Carbon\Carbon::parse($this->date_of_birth)->format('d/m/Y');
+    }
+
+    // Ministries the member serves in (many-to-many)
+    public function ministries()
+    {
+        return $this->belongsToMany(Ministry::class);
+    }
+}

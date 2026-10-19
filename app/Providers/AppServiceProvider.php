@@ -4,8 +4,6 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
-use App\Models\Member;
-use App\Observers\MemberObserver;
 use App\Support\Menu;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\View;
@@ -17,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // The side menu: one section per module (the music module adds its own).
+        // The side menu: one section per module (the modules add their own).
         $this->app->singleton(Menu::class);
 
         // The WebAuthn (passkeys) library kept in lib/webauthn (no Composer on the production server).
@@ -37,8 +35,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Member::observe(MemberObserver::class);
-
         $this->app->make(Menu::class)
             ->section('home', null, 0, [
                 ['label' => 'Dashboard', 'icon' => 'fa-solid fa-house', 'route' => 'dashboard', 'active' => 'dashboard'],

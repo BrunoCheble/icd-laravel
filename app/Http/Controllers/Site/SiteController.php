@@ -18,7 +18,7 @@ use App\Http\Requests\SiteMemberRequest;
 use App\Http\Requests\SitePrayerRequest;
 use App\Http\Requests\VisitorRequest;
 use App\Models\Announcement;
-use App\Models\Member;
+use App\Modules\Members\Models\Member;
 use App\Models\Prayer;
 use App\Models\Visitor;
 use App\Services\RegisterAnnouncementService;

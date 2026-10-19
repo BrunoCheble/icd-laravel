@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ArrayHelper;
-use App\Models\Member;
+use App\Modules\Members\Models\Member;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 

@@ -46,7 +46,7 @@
         }
     </style>
 
-    @include('music::partials.ui')
+    @include('partials.ui')
 
     <div class="m-page" style="max-width: 64rem;">
         <div class="space-y-4">

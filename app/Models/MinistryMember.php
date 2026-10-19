@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Modules\Members\Models\Member;
 use Illuminate\Database\Eloquent\Model;
 
 class MinistryMember extends Model

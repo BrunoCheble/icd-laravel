@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
 
-    @include('music::partials.ui')
+    @include('partials.ui')
 
     <div class="m-page is-narrow">
         <a href="{{ route('songs.index') }}" class="m-back"><i class="fa-solid fa-arrow-left"></i> {{ __('Songs') }}</a>

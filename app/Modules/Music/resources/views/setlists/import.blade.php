@@ -3,7 +3,7 @@
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Import schedule') }}</h2>
     </x-slot>
 
-    @include('music::partials.ui')
+    @include('partials.ui')
 
     <div class="m-page is-narrow">
                 <a href="{{ route('setlists.index') }}" class="m-back"><i class="fa-solid fa-arrow-left"></i> {{ __('Setlists') }}</a>

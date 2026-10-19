@@ -6,7 +6,7 @@ use App\Enums\Gender;
 use App\Enums\MaritalStatus;
 use App\Helpers\DateHelper;
 use App\Helpers\NameHelper;
-use App\Models\Member;
+use App\Modules\Members\Models\Member;
 use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 

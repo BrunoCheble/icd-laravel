@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\ArrayHelper;
 use App\Models\Ministry;
 use App\Http\Requests\MinistryMemberRequest; // Importa a classe de Request
-use App\Models\Member;
+use App\Modules\Members\Models\Member;
 use App\Models\MinistryMember;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

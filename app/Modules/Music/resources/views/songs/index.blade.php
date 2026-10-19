@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
 
-    @include('music::partials.ui')
+    @include('partials.ui')
 
     <style>
         [x-cloak] { display: none !important; }

@@ -20,6 +20,7 @@
                 </form>
 
                 @include('report.anniversaries.list')
+                @include('members::members.partials.actions')
             </div>
         </div>
     </div>

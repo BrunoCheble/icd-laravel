@@ -53,7 +53,7 @@
         }
     </style>
 
-    @include('music::partials.ui')
+    @include('partials.ui')
 
     <div class="m-page" style="max-width: 64rem;" x-data="{
             open: @js($open),
