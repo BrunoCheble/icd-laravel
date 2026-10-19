@@ -6,6 +6,7 @@ use App\Enums\VisitorStatus;
 use App\Models\User;
 use App\Modules\Visitors\Models\Visitor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
@@ -48,6 +49,28 @@ class VisitorsTest extends TestCase
         $this->get('/visitors?gender=F&group=youth')->assertSee('Ana Costa')->assertDontSee('Bruno Silva');
         $this->get('/visitors?sort=name&direction=desc')->assertSeeInOrder(['Carla Dias', 'Bruno Silva', 'Ana Costa']);
         $this->get('/visitors?sort=nope')->assertSessionHasErrors('sort');
+    }
+
+    public function test_the_list_by_period_of_the_visit(): void
+    {
+        Carbon::setTestNow('2026-10-21 12:00:00'); // a Wednesday
+        $at = function (string $name, string $date) {
+            $visitor = $this->visitor(['name' => $name]);
+            $visitor->forceFill(['created_at' => Carbon::parse($date)])->save();
+        };
+        $at('Semana Ana', '2026-10-19 10:00');
+        $at('Mes Bruno', '2026-10-05 10:00');
+        $at('Ano Carla', '2026-03-01 10:00');
+        $at('Antigo Duarte', '2025-06-01 10:00');
+        $this->actingAs(User::factory()->create());
+
+        $this->get('/visitors?period=week')->assertSee('Semana Ana')->assertDontSee('Mes Bruno');
+        $this->get('/visitors?period=month')->assertSee('Mes Bruno')->assertDontSee('Ano Carla');
+        $this->get('/visitors?period=year')->assertSee('Ano Carla')->assertDontSee('Antigo Duarte');
+        // All: split by period, newest first
+        $this->get('/visitors')->assertSeeInOrder(['This week', 'Semana Ana', 'Earlier this month', 'Mes Bruno', 'Earlier this year', 'Ano Carla', 'Before this year', 'Antigo Duarte']);
+        $this->get('/visitors?period=nope')->assertSessionHasErrors('period');
+        Carbon::setTestNow();
     }
 
     public function test_a_visitor_is_created_and_updated(): void

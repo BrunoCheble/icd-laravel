@@ -1,7 +1,5 @@
 <?php
 
-use App\Http\Controllers\AnnouncementController;
-use App\Http\Controllers\PrayerController;
 use App\Http\Controllers\MinistryController;
 use App\Http\Controllers\MinistryMemberController;
 use App\Http\Controllers\LockController;
@@ -49,8 +47,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/ministries-members/{ministryId}', [MinistryMemberController::class, 'store'])->name('ministries-members.store');
     Route::delete('/ministries-members/{id}', [MinistryMemberController::class, 'destroy'])->name('ministries-members.destroy');
 
-    Route::resource('announcements', AnnouncementController::class);
-    Route::resource('prayers', PrayerController::class);
 });
 
 // Signing in with fingerprint / Face ID (a passkey registered on the profile).

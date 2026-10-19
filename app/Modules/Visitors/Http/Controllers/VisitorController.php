@@ -22,7 +22,8 @@ class VisitorController extends Controller
         $filters = $request->validated();
         $visitors = $service->execute($filters);
         $statusCounts = $service->countByStatus();
-        return view('visitors::visitors.index', compact('visitors', 'filters', 'statusCounts'));
+        $periodCounts = $service->countByPeriod();
+        return view('visitors::visitors.index', compact('visitors', 'filters', 'statusCounts', 'periodCounts'));
     }
 
     public function create(): View

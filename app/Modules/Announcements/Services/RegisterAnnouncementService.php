@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services;
+namespace App\Modules\Announcements\Services;
 
-use App\Models\Announcement;
+use App\Modules\Announcements\Models\Announcement;
 use App\Modules\Members\Models\Member;
 use Illuminate\Support\Facades\DB;
 use App\Services\FileUploadService;

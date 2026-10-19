@@ -7,6 +7,12 @@
 
     @include('partials.ui')
 
+    <style>
+        /* Headings splitting the list by the period of the visit */
+        .m-group-row td, div.m-group-row { padding: .5rem .9rem; background: #f9fafb; border-bottom: 1px solid #f1f2f4; font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--brand-text); }
+        .m-table tbody tr.m-group-row:hover { background: none; }
+    </style>
+
     @php
         $sort = $filters['sort'] ?? 'created';
         $direction = $filters['direction'] ?? ($sort === 'created' ? 'desc' : 'asc');
@@ -24,6 +30,7 @@
         $sortOptions = ['created' => __('Created At'), 'name' => __('Name'), 'city' => __('City'), 'group' => __('Group')];
         // Filters of the sheet, each one removable: "Group: Youth".
         $activeFilters = collect([
+            'status' => [__('Status'), $statuses],
             'gender' => [__('Gender'), $genders],
             'group' => [__('Group'), $groups],
         ])
@@ -33,7 +40,13 @@
                 'url' => route('visitors.index', request()->except(['page', $name])),
             ]);
         $tagOf = ['actived' => 'is-ok', 'inactived' => 'is-danger'];
-        $total = array_sum($statusCounts);
+        $period = $filters['period'] ?? '';
+        $periods = ['week' => __('This week'), 'month' => __('This month'), 'year' => __('This year'), '' => __('All')];
+        // Headings in the list when it shows every period by visit date, newest first.
+        $groupHeadings = $period === '' && $sort === 'created' && $direction === 'desc'
+            ? ['week' => __('This week'), 'month' => __('Earlier this month'), 'year' => __('Earlier this year'), 'older' => __('Before this year')]
+            : null;
+        $groupOf = fn ($visitor) => \App\Modules\Visitors\Services\ListVisitorsService::periodOf($visitor->created_at);
     @endphp
 
     <div class="m-page" x-data="{ filtersOpen: false }" @keydown.escape.window="filtersOpen = false">
@@ -49,11 +62,10 @@
             </div>
         </div>
 
-        {{-- Status at hand: all, active, inactive --}}
-        <nav class="m-status" aria-label="{{ __('Status') }}">
-            <a href="{{ route('visitors.index', request()->except(['page', 'status'])) }}" @class(['is-active' => $status === ''])>{{ __('All') }} <small>{{ $total }}</small></a>
-            @foreach ($statuses as $value => $label)
-                <a href="{{ route('visitors.index', array_merge(request()->except('page'), ['status' => $value])) }}" @class(['is-active' => $status === $value])>{{ $label }} <small>{{ $statusCounts[$value] ?? 0 }}</small></a>
+        {{-- When they visited: this week, this month, this year, all (status is in the filters) --}}
+        <nav class="m-status" aria-label="{{ __('Period') }}">
+            @foreach ($periods as $value => $label)
+                <a href="{{ route('visitors.index', array_merge(request()->except(['page', 'period']), $value === '' ? [] : ['period' => $value])) }}" @class(['is-active' => $period === $value])>{{ $label }} <small>{{ $periodCounts[$value === '' ? 'all' : $value] }}</small></a>
             @endforeach
         </nav>
 
@@ -80,7 +92,7 @@
                 @foreach ($activeFilters as $chip)
                     <a class="m-chip" href="{{ $chip['url'] }}" title="{{ __('Remove') }}">{{ $chip['text'] }} <i class="fa-solid fa-xmark"></i></a>
                 @endforeach
-                <a href="{{ route('visitors.index', request()->only(['status', 'sort', 'direction'])) }}" class="m-link">{{ __('Clear Filters') }}</a>
+                <a href="{{ route('visitors.index', request()->only(['period', 'sort', 'direction'])) }}" class="m-link">{{ __('Clear Filters') }}</a>
             </div>
         @endif
 
@@ -103,6 +115,9 @@
                     </thead>
                     <tbody>
                         @foreach ($visitors as $visitor)
+                            @if ($groupHeadings && ($loop->first || $groupOf($visitors[$loop->index - 1]) !== $groupOf($visitor)))
+                                <tr class="m-group-row"><td colspan="8">{{ $groupHeadings[$groupOf($visitor)] }}</td></tr>
+                            @endif
                             <tr>
                                 <td>
                                     <a href="{{ route('visitors.edit', $visitor) }}" class="m-name">
@@ -131,6 +146,9 @@
                 {{-- Phones and tablets --}}
                 <div class="m-rows">
                     @foreach ($visitors as $visitor)
+                        @if ($groupHeadings && ($loop->first || $groupOf($visitors[$loop->index - 1]) !== $groupOf($visitor)))
+                            <div class="m-group-row">{{ $groupHeadings[$groupOf($visitor)] }}</div>
+                        @endif
                         <div class="m-row">
                             <a href="{{ route('visitors.edit', $visitor) }}" class="m-row-main">
                                 <span class="m-initials is-lg">{{ $visitor->initials }}</span>

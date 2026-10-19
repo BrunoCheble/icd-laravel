@@ -6,4 +6,6 @@ return [
     App\Modules\Members\Providers\MembersServiceProvider::class,
     App\Modules\Visitors\Providers\VisitorsServiceProvider::class,
     App\Modules\Dashboard\Providers\DashboardServiceProvider::class,
+    App\Modules\Prayers\Providers\PrayersServiceProvider::class,
+    App\Modules\Announcements\Providers\AnnouncementsServiceProvider::class,
 ];

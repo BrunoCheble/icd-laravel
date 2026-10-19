@@ -1,5 +1,6 @@
 <?php
-namespace App\Models;
+
+namespace App\Modules\Prayers\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
