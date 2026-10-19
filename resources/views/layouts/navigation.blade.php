@@ -28,6 +28,10 @@
         @endforeach
     </nav>
 
+    <button type="button" class="app-sidebar-install" x-show="canInstall" x-cloak @click="install()" title="{{ __('Install the app') }}">
+        <i class="fa-solid fa-mobile-screen-button"></i>
+        <span class="app-nav-label">{{ __('Install the app') }}</span>
+    </button>
     <button type="button" class="app-sidebar-collapse" @click="toggleCollapsed()"
         :title="collapsed ? @js(__('Expand menu')) : @js(__('Collapse menu'))" :aria-label="collapsed ? @js(__('Expand menu')) : @js(__('Collapse menu'))">
         <i class="fa-solid" :class="collapsed ? 'fa-angles-right' : 'fa-angles-left'"></i>
