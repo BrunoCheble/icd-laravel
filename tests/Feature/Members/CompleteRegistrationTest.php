@@ -121,7 +121,7 @@ class CompleteRegistrationTest extends TestCase
         $member = $this->pending(['marital_status' => 'M']);
         $link = $this->link($member);
 
-        $this->get($link)->assertSee('name="spouse_phone"', false);
+        $this->get($link)->assertSee('name="spouse_phone"', false)->assertSee('Serve apenas para verificarmos se o seu marido já está registado na igreja.');
         $this->post($link, ['spouse_name' => 'João', 'spouse_phone' => '913 333 333'])->assertRedirect($link);
 
         $member->refresh();

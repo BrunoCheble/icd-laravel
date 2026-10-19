@@ -91,9 +91,9 @@
                                 @error('spouse_name')<p class="cr-error">{{ $message }}</p>@enderror
                             </div>
                             <div class="cr-field">
-                                <label for="spouse_phone">{{ $member->gender === 'M' ? __('Mobile number of your wife') : __('Mobile number of your husband') }}</label>
+                                <label for="spouse_phone">{{ $member->gender === 'M' ? __('Mobile number of your wife') : __('Mobile number of your husband') }} <span style="font-weight: 500; color: #9ca3af;">({{ __('optional') }})</span></label>
                                 <input id="spouse_phone" name="spouse_phone" type="tel" class="cr-input" value="{{ old('spouse_phone') }}" autocomplete="off" inputmode="tel" placeholder="912 345 678">
-                                <small>{{ __('If they are also a member of the church, we link you both.') }}</small>
+                                <small>{{ $member->gender === 'M' ? __('We use it only to check whether your wife is already registered at the church.') : __('We use it only to check whether your husband is already registered at the church.') }}</small>
                                 @error('spouse_phone')<p class="cr-error">{{ $message }}</p>@enderror
                             </div>
                             @break

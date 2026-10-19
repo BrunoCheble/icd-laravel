@@ -115,7 +115,7 @@ class MembersTest extends TestCase
         // Not a member: the name is kept, and the spouse is no longer pending
         $this->actingAs($user)->patch("/members/{$member->id}", $data + ['spouse_name' => '  Ana Lima '])->assertSessionHasNoErrors();
         $this->assertSame('Ana Lima', $member->fresh()->spouse_name);
-        $this->actingAs($user)->get("/members/{$member->id}")->assertSee('Ana Lima')->assertDontSee('Nome completo e telemóvel da esposa');
+        $this->actingAs($user)->get("/members/{$member->id}")->assertSee('Ana Lima')->assertDontSee('Nome completo da esposa');
         $this->actingAs($user)->get("/members/{$member->id}/edit")->assertSee('Ana Lima');
 
         // A member picked: the name goes
@@ -171,7 +171,7 @@ class MembersTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get("/members/{$member->id}")
             ->assertOk()
-            ->assertSee('Nome completo e telemóvel da esposa')
+            ->assertSee('Nome completo da esposa')
             ->assertSee('E-mail');
     }
 
