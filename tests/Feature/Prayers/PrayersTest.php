@@ -68,7 +68,7 @@ class PrayersTest extends TestCase
 
         $this->post('/new-prayer-request', ['name' => 'zz teste maria', 'request' => 'Pela minha família', 'phone_number' => '+351 912 345 678'])
             ->assertRedirect('/prayer-request');
-        $this->get('/prayer-request')->assertSee('We received your request.');
+        $this->get('/prayer-request')->assertSee('Recebemos o seu pedido.');
         $prayer = Prayer::where('name', 'Zz Teste Maria')->firstOrFail();
         $this->assertSame('912345678', $prayer->phone_number);
         $this->assertSame('Pela minha família', $prayer->request);
@@ -82,6 +82,16 @@ class PrayersTest extends TestCase
         // A bot filling the hidden field
         $this->post('/new-prayer-request', ['name' => 'Spam', 'website' => 'http://spam'])->assertSessionHasErrors('website');
         $this->assertFalse(Prayer::where('name', 'Spam')->exists());
+    }
+
+    public function test_the_public_page_is_in_portuguese_and_in_english_when_asked(): void
+    {
+        $this->get('/prayer-request')->assertOk()->assertSee('<html lang="pt">', false)->assertSee('Pedido de oração')->assertSee('Filipenses 4:6');
+        $this->get('/prayer-request?lang=en')->assertOk()->assertSee('<html lang="en">', false)->assertSee('Prayer request')->assertSee('Philippians 4:6');
+
+        // The language stays after sending
+        $this->post('/new-prayer-request', ['name' => 'ZZ Teste', 'lang' => 'en'])->assertRedirect('/prayer-request?lang=en');
+        $this->post('/new-prayer-request', ['name' => 'ZZ Teste'])->assertRedirect('/prayer-request');
     }
 
     public function test_the_list_offers_to_answer_on_whatsapp(): void

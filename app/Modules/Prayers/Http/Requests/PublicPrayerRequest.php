@@ -17,6 +17,7 @@ class PublicPrayerRequest extends FormRequest
 
     public function prepareForValidation(): void
     {
+        app()->setLocale(\App\Modules\Prayers\Http\Controllers\PublicPrayerController::locale($this));
         // "+351 912 345 678", "00351912345678", "912-345-678" -> "912345678"; other countries keep their code.
         // input(): "request" is also the name of the form's data on a request object.
         $phone = preg_replace('/\D+/', '', (string) $this->input('phone_number'));
