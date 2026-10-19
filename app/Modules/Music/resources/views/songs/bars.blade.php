@@ -2787,7 +2787,24 @@
                         list = base.map(chord => ChordTransposer.transposeChord(chord, minor ? 'Am' : 'C', this.key)).filter(chord => !song.includes(chord));
                     }
                     const typed = (this.editor?.text || '').trim().toLowerCase();
-                    return typed ? list.filter(chord => chord.toLowerCase().startsWith(typed)) : list;
+                    return this.chordOrder(typed ? list.filter(chord => chord.toLowerCase().startsWith(typed)) : list);
+                },
+                // Chords in order: by their root counted from the song's key (E, F#, G#… in E), each family together,
+                // the plain chord first and then its variations (E, E4, E7M, E/G#).
+                chordOrder(list) {
+                    if (typeof ChordTransposer === 'undefined') return list;
+                    const tonic = ChordTransposer.parseKey(this.key || '')?.pc ?? 0;
+                    const typeRank = { '': 0, m: 1, dim: 2, aug: 3 };
+                    const place = (chord) => {
+                        const family = ChordTransposer.chordFamily(chord);
+                        if (family === null) return [99, 9, chord.length];
+                        const root = parseInt(family, 10);
+                        return [(root - tonic + 12) % 12, typeRank[family.replace(/^\d+/, '')] ?? 9, chord.length];
+                    };
+                    return [...list].sort((a, b) => {
+                        const [pa, pb] = [place(a), place(b)];
+                        return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2] || a.localeCompare(b);
+                    });
                 },
                 pickChord(chord) {
                     this.ref('editorChord').value = chord;
