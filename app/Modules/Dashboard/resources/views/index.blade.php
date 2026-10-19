@@ -59,6 +59,8 @@
         .today-preview span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
         .today-edit { margin-top: .45rem; }
         .today-edit textarea { font-size: .88rem; }
+        /* Phones and tablets: a sent message's state goes under the name */
+        @media (max-width: 1023px) { .today-item.is-sent .today-actions { flex: 1 0 100%; flex-wrap: wrap; justify-content: flex-start; } }
         /* Phones: a couple's buttons go under the names, side by side */
         @media (max-width: 639px) {
             .today-item { padding: .75rem .85rem; gap: .65rem; }
@@ -173,7 +175,10 @@
                                         <template x-if="sent">
                                             <span class="today-sent"><i class="fa-solid fa-check"></i> {{ __('Sent') }} <small x-text="sentLabel()"></small></span>
                                         </template>
-                                        <template x-if="sent">
+                                        {{-- After a reminder: did the member answer? --}}
+                                        <span x-show="sent && item.progress === 'completed'" x-cloak class="m-tag is-ok"><i class="fa-solid fa-circle-check"></i> {{ __('Completed') }}</span>
+                                        <span x-show="sent && item.kind === 'pending' && item.progress !== 'completed'" x-cloak class="m-tag is-part"><i class="fa-solid fa-hourglass-half"></i> {{ __('Waiting') }}</span>
+                                        <template x-if="sent && sent.today !== false">
                                             <button type="button" class="m-btn is-ghost" @click="mark(false)">{{ __('Undo') }}</button>
                                         </template>
                                         @if ($withPhone->isNotEmpty())

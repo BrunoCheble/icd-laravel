@@ -62,7 +62,7 @@ class TodayMessagesTest extends TestCase
             ->assertOk()->assertJsonPath('sent.by', 'Bruno')->assertJsonPath('sent.at', '09:00');
         $this->actingAs($user)->postJson('/dashboard/sent-messages', ['kind' => 'birthday', 'recipient_id' => $member->id])->assertOk();
         $this->assertSame(1, SentMessage::where(['kind' => 'birthday', 'recipient_id' => $member->id, 'period' => '2026'])->count());
-        $this->assertSame(['by' => 'Bruno', 'at' => '09:00'], app(GetTodayMessagesService::class)->execute(now())['birthdays'][0]['sent']);
+        $this->assertSame(['by' => 'Bruno', 'at' => '09:00', 'today' => true], app(GetTodayMessagesService::class)->execute(now())['birthdays'][0]['sent']);
 
         $this->actingAs($user)->deleteJson('/dashboard/sent-messages', ['kind' => 'birthday', 'recipient_id' => $member->id])->assertOk();
         $this->assertSame(0, SentMessage::count());
@@ -82,17 +82,33 @@ class TodayMessagesTest extends TestCase
         $this->actingAs($user)->get('/dashboard')->assertDontSee('Lucas Andrade');
     }
 
-    public function test_a_reminded_pending_member_waits_a_week(): void
+    public function test_a_reminded_member_shows_whether_they_answered_for_a_week(): void
     {
-        $member = $this->member(['first_name' => 'Carla', 'gender' => 'F', 'membership_status' => MembershipStatus::PENDING, 'email' => null]);
+        // Only the email is missing
+        $member = $this->member(['first_name' => 'Carla', 'gender' => 'F', 'membership_status' => MembershipStatus::PENDING, 'email' => null,
+            'phone_number' => '912345678', 'address' => 'Rua A', 'zip_code' => '1000-001', 'city' => 'Lisboa', 'date_of_birth' => '1990-01-01']);
         $user = User::factory()->create();
+        $reminders = fn () => app(GetTodayMessagesService::class)->execute(now())['reminders'];
 
         $this->actingAs($user)->postJson('/dashboard/sent-messages', ['kind' => 'pending', 'recipient_id' => $member->id])->assertOk();
 
+        // Days later: still listed, as sent, waiting for the answer (and the mark cannot be undone any more)
         Carbon::setTestNow('2026-10-22 09:00:00');
-        $this->actingAs($user)->get('/dashboard')->assertDontSee('Carla');
-        Carbon::setTestNow('2026-10-26 09:00:00');
+        $item = $reminders()->firstWhere('recipientId', $member->id);
+        $this->assertSame('waiting', $item['progress']);
+        $this->assertSame('19/10 09:00', $item['sent']['at']);
+        $this->assertFalse($item['sent']['today']);
+
+        // The member fills in what was missing: completed
+        $member->update(['email' => 'carla@example.com']);
+        $this->assertSame('completed', $reminders()->firstWhere('recipientId', $member->id)['progress']);
         $this->actingAs($user)->get('/dashboard')->assertSee('Carla');
+
+        // A week after the reminder it is gone (nothing missing) or asked again (still missing)
+        Carbon::setTestNow('2026-10-26 09:00:00');
+        $this->assertNull($reminders()->firstWhere('recipientId', $member->id));
+        $member->update(['email' => null]);
+        $this->assertNull($reminders()->firstWhere('recipientId', $member->id)['sent']);
     }
 
     public function test_the_page_needs_a_login(): void
