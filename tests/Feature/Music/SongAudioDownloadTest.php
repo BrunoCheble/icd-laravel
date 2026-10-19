@@ -91,4 +91,22 @@ class SongAudioDownloadTest extends MusicTestCase
             ->assertSessionHas('success', fn ($message) => ! str_contains($message, 'icd-chords'));
         $this->assertTrue(Song::where('title', 'ZZ Teste Download')->exists());
     }
+
+    public function test_a_local_computer_plays_production_s_audio_file_when_it_is_not_here(): void
+    {
+        $song = $this->song();
+        $song->forceFill(['audio_path' => 'zz teste.mp3'])->save();
+        config(['services.music.audio_fallback_url' => 'https://admin.igrejaicd.pt/']);
+
+        // Production (or any environment but local): only its own files
+        $this->assertNull($song->audioUrl());
+
+        $this->app['env'] = 'local';
+        $this->assertSame('https://admin.igrejaicd.pt/audio/songs/zz%20teste.mp3', $song->audioUrl());
+
+        // The file here: this one
+        \Illuminate\Support\Facades\File::ensureDirectoryExists(public_path('audio/songs'));
+        file_put_contents(public_path('audio/songs/zz teste.mp3'), 'x');
+        $this->assertStringStartsWith(url('/'), $song->audioUrl());
+    }
 }

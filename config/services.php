@@ -27,6 +27,11 @@ return [
     // Study app (icd-chords, Python): reads songs and saves edited chord maps with this token.
     // The chord suggestion helper (icd-chords, server.py) on this computer: only set in a local .env, so the bars
     // grid offers "suggest the ? chords" here and never in production.
+    // Local computer with production's database: the songs' audio files are played from production's server.
+    'music' => [
+        'audio_fallback_url' => env('AUDIO_FALLBACK_URL'),
+    ],
+
     'chords_helper' => [
         'url' => env('CHORDS_HELPER_URL'),
         // The same, as the server reaches it (from Docker: http://host.docker.internal:8765).
