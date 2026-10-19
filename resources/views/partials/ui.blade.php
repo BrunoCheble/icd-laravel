@@ -2,8 +2,7 @@
      actions sheet (a bottom sheet on phones), form sections and fields, status tags. Included once. --}}
 @once
     <style>
-        .m-page { max-width: 76rem; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
-        .m-page.is-narrow { max-width: 52rem; }
+        .m-page { padding: 1.5rem 1.5rem 3rem; }
         @media (max-width: 639px) { .m-page { padding: .75rem .75rem 2rem; } }
 
         .m-card { background: #fff; border: 1px solid #e5e7eb; border-radius: .9rem; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); }
