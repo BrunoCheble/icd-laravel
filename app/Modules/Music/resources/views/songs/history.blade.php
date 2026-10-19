@@ -1,8 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('History') }} · {{ $song->title }}
-        </h2>
+        @include('music::songs.partials.switcher', ['song' => $song, 'current' => 'history', 'label' => __('History')])
     </x-slot>
 
     <style>

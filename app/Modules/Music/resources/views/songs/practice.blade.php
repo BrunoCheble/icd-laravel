@@ -1,8 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Practice') }} · {{ $data['song']['title'] }}@if ($data['setlist']) <span class="text-gray-500 font-normal">· {{ $data['setlist']['title'] }}</span>@endif
-        </h2>
+        @include('music::songs.partials.switcher', ['song' => $data['song'], 'current' => 'practice', 'label' => __('Practice'), 'suffix' => $data['setlist']['title'] ?? null])
     </x-slot>
 
     <script src="{{ asset('js/chord-transposer.js') }}?v={{ filemtime(public_path('js/chord-transposer.js')) }}"></script>
