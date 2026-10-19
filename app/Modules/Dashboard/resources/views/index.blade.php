@@ -69,6 +69,9 @@
         .today-pager { order: 2; display: flex; align-items: center; justify-content: center; gap: .75rem; padding: .6rem 1rem; border-top: 1px solid #f1f2f4; font-size: .85rem; font-weight: 600; color: #6b7280; }
         .today-pager .m-btn { min-height: 36px; width: 36px; }
 
+        .today-search { display: block; margin: 0 0 1rem; max-width: 28rem; }
+        .today-nothing { margin: -.5rem 0 1rem; }
+
         .today-done { padding: 2.5rem 1rem; text-align: center; }
         .today-done i { display: block; margin-bottom: .6rem; font-size: 2rem; color: #16a34a; }
         .today-done strong { display: block; font-size: 1.05rem; color: #111827; }
@@ -97,7 +100,7 @@
         $weekday = fn ($date) => rtrim($date->locale(app()->getLocale())->isoFormat('ddd'), '.');
     @endphp
 
-    <div class="m-page" x-data="todayMessages(@js(['toSend' => $toSend, 'left' => $sections->map(fn ($section) => $section[3]->whereNull('sent')->count()), 'store' => route('dashboard.sent.store'), 'destroy' => route('dashboard.sent.destroy')]))">
+    <div class="m-page" x-data="todayMessages(@js(['toSend' => $toSend, 'left' => $sections->map(fn ($section) => $section[3]->whereNull('sent')->count()), 'store' => route('dashboard.sent.store'), 'destroy' => route('dashboard.sent.destroy'), 'names' => $all->pluck('title')->concat($upcoming->pluck('title'))->values()]))">
         @include('layouts.alert')
 
         <div class="m-head today-head">
@@ -118,6 +121,13 @@
                 @endforeach
                 <a href="#today-next"><i class="fa-solid fa-calendar-days"></i> {{ __('Next days') }}</a>
             </nav>
+
+            {{-- Find someone by name, in every section --}}
+            <label class="m-search today-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" x-model="search" placeholder="{{ __('Search by name') }}" aria-label="{{ __('Search by name') }}" @keydown.escape="search = ''">
+            </label>
+            <p class="m-muted today-nothing" x-show="search.trim() && !found()" x-cloak>{{ __('Nobody with this name today.') }}</p>
         @endif
 
         <div class="today-grid">
@@ -130,14 +140,14 @@
             @endif
 
             @foreach ($sections as $name => [$icon, $title, $short, $items])
-                <section id="today-{{ $name }}" class="m-card m-list today-section" x-data="{ section: @js($name), total: {{ $items->count() }}, page: 0, perPage: {{ $perPage }}, pages: {{ (int) ceil($items->count() / $perPage) }} }">
+                <section id="today-{{ $name }}" class="m-card m-list today-section" x-data="{ section: @js($name), total: {{ $items->count() }}, page: 0, perPage: {{ $perPage }}, pages: {{ (int) ceil($items->count() / $perPage) }}, names: @js($items->pluck('title')) }" x-show="!search.trim() || names.some(name => matches(name))">
                     <h3 class="today-title">
                         <i class="fa-solid {{ $icon }}"></i> {{ $title }}
                         <small :class="{ 'is-done': left[section] === 0 }" x-text="left[section] === 0 ? '✓ ' + @js(__('All sent')) : (total - left[section]) + '/' + total + ' ' + @js(__('sent'))"></small>
                     </h3>
                     @foreach ($items as $item)
                         @php($withPhone = collect($item['people'])->whereNotNull('whatsapp'))
-                        <div class="today-item" x-data="todayMessage(@js($item))" :class="{ 'is-sent': sent }" x-show="Math.floor({{ $loop->index }} / perPage) === page">
+                        <div class="today-item" x-data="todayMessage(@js($item))" :class="{ 'is-sent': sent }" x-show="search.trim() ? matches(item.title) : Math.floor({{ $loop->index }} / perPage) === page">
                             <span class="today-faces">
                                 @foreach ($item['people'] as $person)
                                     @if ($person['photo'])
@@ -195,7 +205,7 @@
                     @endforeach
                     {{-- Pages of the section --}}
                     @if ($items->count() > $perPage)
-                        <div class="today-pager">
+                        <div class="today-pager" x-show="!search.trim()">
                             <button type="button" class="m-btn is-icon" @click="page--" :disabled="page === 0" aria-label="{{ __('Previous') }}"><i class="fa-solid fa-chevron-left"></i></button>
                             <span x-text="(page * perPage + 1) + '–' + Math.min((page + 1) * perPage, total) + ' ' + @js(__('of')) + ' ' + total"></span>
                             <button type="button" class="m-btn is-icon" @click="page++" :disabled="page === pages - 1" aria-label="{{ __('Next') }}"><i class="fa-solid fa-chevron-right"></i></button>
@@ -205,10 +215,10 @@
             @endforeach
 
             {{-- What comes next --}}
-            <section id="today-next" class="m-card m-list">
+            <section id="today-next" class="m-card m-list" x-data="{ names: @js($upcoming->pluck('title')) }" x-show="!search.trim() || names.some(name => matches(name))">
                 <h3 class="today-title"><i class="fa-solid fa-calendar-days"></i> {{ __('Next :count days', ['count' => \App\Modules\Dashboard\Services\GetTodayMessagesService::UPCOMING_DAYS]) }} <small>{{ $upcoming->count() }}</small></h3>
                 @forelse ($upcoming as $entry)
-                    <div class="today-next">
+                    <div class="today-next" x-show="matches(@js($entry['title']))">
                         <span class="today-next-day"><strong>{{ $entry['date']->day }}</strong><small>{{ $weekday($entry['date']) }}</small></span>
                         <i class="fa-solid {{ $entry['kind'] === 'wedding' ? 'fa-heart' : 'fa-cake-candles' }}"></i>
                         <span class="today-text">
@@ -232,8 +242,15 @@
 
     <script>
         // What is left to send: on the page and per section (the shortcuts and the sections' counts).
-        function todayMessages({ toSend, left, store, destroy }) {
-            return { toSend, left, store, destroy };
+        // The name search: accents and case do not matter.
+        function todayMessages({ toSend, left, store, destroy, names }) {
+            const plain = text => (text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+            return {
+                toSend, left, store, destroy, names,
+                search: '',
+                matches(name) { return plain(name).includes(plain(this.search)); },
+                found() { return this.names.some(name => this.matches(name)); },
+            };
         }
 
         // One message: its text (editable before sending) and whether it was sent; marking it tells the server and

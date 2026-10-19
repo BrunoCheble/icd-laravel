@@ -1053,5 +1053,7 @@
     "Link for the member to fill it in": "Link para o membro preencher",
     "Copied": "Copiado",
     "Personal link, valid for :count days.": "Link pessoal, válido durante :count dias.",
-    "of": "de"
+    "of": "de",
+    "Search by name": "Pesquisar por nome",
+    "Nobody with this name today.": "Ninguém com este nome hoje."
 }
