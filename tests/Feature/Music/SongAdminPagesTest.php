@@ -76,4 +76,21 @@ class SongAdminPagesTest extends MusicTestCase
         $this->assertSame(['?', '?', '?'], $structure[1]['chords']);
         $this->assertSame([4, 4, 4], $structure[1]['durations']);
     }
+
+    public function test_the_song_picker_offers_the_next_setlist_on_the_same_tab(): void
+    {
+        $song = $this->song();
+        $other = $this->song('Other song');
+        $this->setlist($other);
+
+        $page = $this->actingAs($this->admin())
+            ->get("/songs/{$song->id}/layout")
+            ->assertOk()
+            ->assertSee('song-switcher', false)
+            ->assertSee('Sunday')
+            ->assertSee('Other song');
+
+        // The other songs open on the same tab (the address is escaped for JavaScript: "\/").
+        $this->assertMatchesRegularExpression('#songs[\\\\/]+__SONG__[\\\\/]+layout#', $page->getContent());
+    }
 }

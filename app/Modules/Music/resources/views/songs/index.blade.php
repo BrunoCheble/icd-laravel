@@ -27,8 +27,6 @@
         .song-cards { display: none; }
         .song-card { display: flex; align-items: flex-start; gap: .7rem; padding: .85rem .9rem; border-bottom: 1px solid #f1f2f4; }
         .song-card:last-child { border-bottom: 0; }
-        .song-card.is-selected { background: #fef2f2; }
-        .song-card input[type=checkbox] { margin-top: .2rem; }
         .song-card-main { flex: 1; min-width: 0; text-decoration: none; }
         .song-card-title { display: flex; align-items: center; gap: .5rem; font-weight: 700; color: #111827; }
         .song-card-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -37,6 +35,8 @@
         @media (max-width: 1023px) {
             .songs-table { display: none; }
             .song-cards { display: block; }
+            /* Deleting several songs together only on large screens */
+            .songs-bulk { display: none !important; }
         }
         .songs-list { overflow: hidden; }
         .songs-empty { padding: 2.5rem 1rem; text-align: center; color: #6b7280; }
@@ -130,7 +130,7 @@
         @endif
 
         {{-- Several songs selected (on any page): deleted together --}}
-        <div class="m-card mt-3" style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; padding: .7rem .9rem; border-color: #fecaca; background: #fef2f2;" x-show="selected.length" x-cloak>
+        <div class="m-card mt-3 songs-bulk" style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; padding: .7rem .9rem; border-color: #fecaca; background: #fef2f2;" x-show="selected.length" x-cloak>
             <strong class="text-sm" x-text="@js(__(':count selected')).replace(':count', selected.length)"></strong>
             <button type="button" class="m-link" x-show="selected.length < all.length" @click="selectAll()" x-text="@js(__('Select all :count songs')).replace(':count', all.length)"></button>
             <button type="button" class="m-link" style="color: #6b7280;" @click="clear()">{{ __('Clear selection') }}</button>
@@ -206,15 +206,12 @@
                 </table>
 
                 {{-- Phones and tablets --}}
+                {{-- Phones and tablets: no boxes to select songs for deleting together (no deleting by a slip of the
+                     finger); one song is deleted from its menu, which asks first --}}
                 <div class="song-cards">
-                    <label class="song-card" style="align-items: center; padding-top: .6rem; padding-bottom: .6rem; background: #fafafa;">
-                        <input type="checkbox" class="rounded border-gray-300" style="margin: 0;" :checked="pageSelected()" @change="togglePage($event.target.checked)">
-                        <span class="m-muted">{{ __('Select the songs of this page') }}</span>
-                    </label>
                     @foreach ($songs as $song)
                         @php $tag = $tags($song); @endphp
-                        <div class="song-card" :class="{ 'is-selected': selected.includes({{ $song->id }}) }">
-                            <input type="checkbox" class="rounded border-gray-300" :checked="selected.includes({{ $song->id }})" @change="toggle({{ $song->id }})" aria-label="{{ __('Select') }} {{ $song->title }}">
+                        <div class="song-card">
                             <a href="{{ route('songs.show', $song) }}" class="song-card-main">
                                 <div class="song-card-title"><span>{{ $song->title }}</span>@if ($song->musical_key)<span class="m-tag is-key">{{ $song->musical_key }}</span>@endif</div>
                                 <div class="song-card-artist">{{ $song->artist ?: '—' }}</div>

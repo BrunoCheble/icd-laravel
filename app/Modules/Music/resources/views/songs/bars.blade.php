@@ -1,8 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Layout') }} · {{ $song->title }}
-        </h2>
+        @include('music::songs.partials.switcher', ['song' => $song, 'current' => 'layout', 'label' => __('Layout')])
     </x-slot>
 
     <script src="{{ asset('js/chord-transposer.js') }}?v={{ filemtime(public_path('js/chord-transposer.js')) }}"></script>
@@ -116,6 +114,20 @@
         /* The menu of a block, next to its name in the bars */
         .block-more { border: 0; background: none; padding: 0 .25rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
         .block-more:hover { background: var(--brand-soft); color: var(--brand-text); }
+        /* Phones and tablets: the block's menu slides up from the bottom (over a dimmed page), wide and with fields
+           in 16px (so the phone does not zoom in) */
+        .sheet-scrim { display: none; }
+        @media (max-width: 1023px) {
+            .sheet-scrim { display: block; position: fixed; inset: 0; z-index: 49; background: rgba(17, 24, 39, .45); }
+            .popover.block-menu-pop { position: fixed !important; left: 0 !important; right: 0; top: auto !important; bottom: 0; width: min(34rem, 100%); max-height: 88vh; margin: 0 auto; overflow-y: auto; border: 0; border-radius: 1.1rem 1.1rem 0 0; padding: 1rem 1rem max(1.1rem, env(safe-area-inset-bottom)); box-shadow: 0 -12px 40px rgba(0, 0, 0, .25); }
+            .popover.block-menu-pop::before { content: ''; display: block; width: 2.5rem; height: 4px; margin: -.35rem auto .75rem; border-radius: 999px; background: #e5e7eb; }
+            .block-menu-pop .block-menu-head { margin: -.4rem -1rem .75rem; padding: .6rem 1rem .6rem; border-radius: 0; }
+            .block-menu-pop input[type=text], .block-menu-pop .stepper input, .block-menu-pop .block-menu-time input { font-size: 16px; }
+            .block-menu-pop .stepper button { width: 2.75rem; }
+            .block-menu-pop .stepper input, .block-menu-pop .block-menu-time input, .block-menu-pop .block-menu-time .nudge { min-height: 44px; }
+            .block-menu-pop .block-menu-name-row .ws-btn { min-height: 44px; min-width: 3rem; }
+            .block-menu-pop .block-menu-close { width: 40px; height: 40px; font-size: 1.1rem; }
+        }
         /* Phones and tablets: the block's and the bar's buttons big enough for a finger, apart from each other */
         @media (max-width: 1023px) {
             .bar-group-head { gap: .4rem; }
@@ -657,7 +669,8 @@
 
                     {{-- The menu of a block (its "..." next to its name): name, bars, repetitions (it is moved by dragging its head,
                          duplicated and removed with the buttons on its right) --}}
-                    <div class="popover" x-show="blockMenu" x-cloak x-ref="blockMenu" @click.outside="blockMenu = null" @keydown.escape.stop="blockMenu = null">
+                    <div class="sheet-scrim" x-show="blockMenu" x-cloak x-transition.opacity></div>
+                    <div class="popover block-menu-pop" x-show="blockMenu" x-cloak x-ref="blockMenu" @click.outside="blockMenu = null" @keydown.escape.stop="blockMenu = null">
                         <template x-if="blockMenu && menuBlock()">
                             <div x-data="{ name: menuBlockInfo().name }" class="block-menu" :style="typeStyle(menuBlockInfo().name)">
                                 <div class="block-menu-head">
