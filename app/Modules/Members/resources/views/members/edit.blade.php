@@ -7,7 +7,7 @@
 
     @include('partials.ui')
 
-    <div class="m-page is-narrow">
+    <div class="m-page">
         <a href="{{ route('members.show', $member) }}" class="m-back"><i class="fa-solid fa-arrow-left"></i> {{ $member->first_and_last_name }}</a>
         <div class="m-head">
             <div>

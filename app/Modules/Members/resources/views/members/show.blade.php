@@ -55,7 +55,7 @@
         ])->filter();
     @endphp
 
-    <div class="m-page is-narrow">
+    <div class="m-page">
         @include('layouts.alert')
         <a href="{{ route('members.index') }}" class="m-back"><i class="fa-solid fa-arrow-left"></i> {{ __('Members') }}</a>
 
