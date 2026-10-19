@@ -370,7 +370,7 @@
                         </div>
                         <p class="helper-note" x-show="helper.loading">{{ __('Listening to the recording…') }}</p>
                         <p class="helper-error" x-show="helper.error" x-text="helper.error"></p>
-                        <p class="helper-note" x-show="helper.shift" x-text="@js(__('The recording is :n semitone(s) away from the song\'s key: the chords are given in the song\'s key.')).replace(':n', helper.shift > 0 ? '+' + helper.shift : helper.shift)"></p>
+                        <p class="helper-note" x-show="helper.bars && helper.shift" x-text="helper.note()"></p>
                         <p class="helper-note" x-show="helper.bars && !helper.bars.length">{{ __('Every suggestion was used.') }}</p>
                         <template x-for="item in helper.bars || []" :key="item.bar">
                             <div class="helper-bar" x-data="{ chosen: item.beats.map(beat => beat.options[0]?.chord || null) }">
@@ -1096,7 +1096,18 @@
                 clipboard: null,
                 notice: '',
                 // Chord suggestions for some bars (local only): { url, loading, error, shift, label, bars: [{ bar, beats: [{ beat, options }] }] }
-                helper: { url: config.chordsHelper || null, loading: false, error: '', shift: 0, bars: null, label: '' },
+                helper: {
+                    url: config.chordsHelper || null, loading: false, error: '', shift: 0, recordingKey: null, bars: null, label: '',
+                    // The chords are heard in the recording's key and come converted to the song's (and are shown in
+                    // the key on screen).
+                    note() {
+                        const semitones = (this.shift > 0 ? '+' : '') + this.shift;
+                        // "B major" -> "B", "F# minor" -> "F#m", as keys are written here.
+                        const key = (this.recordingKey || '').replace(/\s+major$/, '').replace(/\s+minor$/, 'm');
+                        return (key ? @js(__('The recording is in :key (:n semitones from the song): the chords were converted to the song\'s key.')).replace(':key', key)
+                            : @js(__('The recording seems :n semitones from the song: the chords were converted to the song\'s key.'))).replace(':n', semitones);
+                    },
+                },
                 // Chords as they were when the page was opened or last saved (to restore bars).
                 originalTicks: [...ticks],
                 splits: [...splits],
@@ -2829,7 +2840,7 @@
                         });
                         const result = await response.json();
                         if (!response.ok) throw new Error(result.message || response.status);
-                        this.helper = { ...this.helper, loading: false, shift: result.shift || 0, bars: result.bars };
+                        this.helper = { ...this.helper, loading: false, shift: result.shift || 0, recordingKey: result.recording_key || null, bars: result.bars };
                     } catch (error) {
                         const offline = error instanceof TypeError;
                         this.helper = { ...this.helper, loading: false, error: offline ? @js(__('icd-chords is not running on this computer: start it with ./serve.sh')) : String(error.message || error) };
