@@ -15,6 +15,7 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @include('layouts.partials.pwa')
 
         {{-- The side menu folded to its icons (remembered on this device), set before the page shows --}}
         <script>
@@ -55,6 +56,19 @@
             .app-sidebar-collapse { display: flex; align-items: center; gap: .7rem; margin: .5rem .6rem .75rem; padding: .5rem .65rem; border: 0; border-radius: .55rem; background: none; color: #9ca3af; font-size: .8rem; cursor: pointer; white-space: nowrap; }
             .app-sidebar-collapse i { width: 1.15rem; text-align: center; }
             .app-sidebar-collapse:hover { background: #f3f4f6; color: #4b5563; }
+            .app-sidebar-install { display: flex; align-items: center; gap: .7rem; margin: 0 .6rem; padding: .55rem .65rem; border: 1px dashed var(--brand-200); border-radius: .55rem; background: var(--brand-soft); color: var(--brand-strong); font-size: .85rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+            .app-sidebar-install i { width: 1.15rem; text-align: center; }
+            .app-sidebar-install:hover { border-style: solid; }
+            html.sidebar-collapsed .app-sidebar-install { justify-content: center; padding-left: 0; padding-right: 0; }
+            .app-install-help { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-end; justify-content: center; }
+            .app-install-overlay { position: absolute; inset: 0; background: rgba(17, 24, 39, .45); }
+            .app-install-box { position: relative; width: min(28rem, 100%); padding: 1.5rem 1.25rem max(1.25rem, env(safe-area-inset-bottom)); border-radius: 1.1rem 1.1rem 0 0; background: #fff; text-align: center; box-shadow: 0 -12px 40px rgba(0, 0, 0, .25); }
+            .app-install-box img { margin: 0 auto .5rem; border-radius: 1rem; box-shadow: 0 2px 8px rgba(0, 0, 0, .12); }
+            .app-install-box h2 { margin: 0 0 .75rem; font-size: 1.15rem; font-weight: 800; }
+            .app-install-box ol { margin: 0 0 1rem; padding-left: 1.25rem; list-style: decimal; text-align: left; font-size: .92rem; line-height: 1.5; color: #374151; }
+            .app-install-box li + li { margin-top: .35rem; }
+            .app-install-box i { color: var(--brand-hover); }
+            .app-install-box button { width: 100%; min-height: 46px; border: 0; border-radius: .7rem; background: var(--brand); color: #fff; font-weight: 700; font-size: 1rem; }
             .app-sidebar-backdrop { position: fixed; inset: 0; z-index: 35; background: rgba(17, 24, 39, .4); }
 
             /* Folded: only the icons (each one's name in its tooltip) */
@@ -85,6 +99,7 @@
                 html.sidebar-collapsed .app-nav-section + .app-nav-section { margin-top: 1rem; padding-top: 0; border-top: 0; }
                 html.sidebar-collapsed .app-nav-badge { position: static; min-width: 1.25rem; padding: 0 .4rem; font-size: .7rem; line-height: 1.25rem; }
                 .app-sidebar-collapse { display: none; }
+                .app-sidebar-install { margin-bottom: max(.9rem, env(safe-area-inset-bottom)); }
                 .app-sidebar-close { display: inline-flex; }
                 .app-topbar-menu { display: inline-flex; }
                 /* The top bar (with the menu button) stays in sight while the page scrolls */
@@ -114,12 +129,25 @@
         <div class="app-shell" x-data="{
                 menuOpen: false,
                 collapsed: document.documentElement.classList.contains('sidebar-collapsed'),
+                // Installing the admin as an app: the browser's own prompt (Android, desktop Chrome), or the steps on iPhone.
+                installPrompt: null,
+                iosHelp: false,
+                isIos: /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+                standalone: matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
+                get canInstall() { return !this.standalone && (!!this.installPrompt || this.isIos); },
+                async install() {
+                    if (!this.installPrompt) { this.iosHelp = true; return; }
+                    this.installPrompt.prompt();
+                    await this.installPrompt.userChoice.catch(() => null);
+                    this.installPrompt = null;
+                },
                 toggleCollapsed() {
                     this.collapsed = !this.collapsed;
                     document.documentElement.classList.toggle('sidebar-collapsed', this.collapsed);
                     try { localStorage.setItem('sidebar-collapsed', this.collapsed ? '1' : '0'); } catch (error) {}
                 },
-            }" @keydown.escape.window="menuOpen = false">
+            }" @keydown.escape.window="menuOpen = false; iosHelp = false"
+            @beforeinstallprompt.window="$event.preventDefault(); installPrompt = $event" @appinstalled.window="installPrompt = null; standalone = true">
             @include('layouts.navigation')
 
             <div class="app-body">
@@ -149,6 +177,21 @@
                         </x-slot>
                     </x-dropdown>
                 </header>
+
+                {{-- iPhone / iPad: how to put the admin on the home screen --}}
+                <div class="app-install-help" x-show="iosHelp" x-cloak role="dialog" aria-modal="true" aria-label="{{ __('Install the app') }}">
+                    <div class="app-install-overlay" @click="iosHelp = false"></div>
+                    <div class="app-install-box">
+                        <img src="{{ asset('icons/admin-icon-192.png') }}" alt="" width="64" height="64">
+                        <h2>{{ __('Install the app') }}</h2>
+                        <ol>
+                            <li>{{ __('Tap the Share button') }} <i class="fa-solid fa-arrow-up-from-bracket"></i> {{ __('at the bottom (or top) of Safari.') }}</li>
+                            <li>{{ __('Choose "Add to Home Screen".') }} <i class="fa-regular fa-square-plus"></i></li>
+                            <li>{{ __('Tap "Add": the ICD Admin opens from its icon, full screen.') }}</li>
+                        </ol>
+                        <button type="button" @click="iosHelp = false">{{ __('Got it') }}</button>
+                    </div>
+                </div>
 
                 <!-- Page Content -->
                 <main class="app-main">

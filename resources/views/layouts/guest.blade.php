@@ -14,6 +14,10 @@
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- The login and account pages open the installed admin app too (not the public pages that share this layout) --}}
+    @if (request()->routeIs('login', 'register', 'password.*', 'verification.*'))
+        @include('layouts.partials.pwa')
+    @endif
 </head>
 
 <body
