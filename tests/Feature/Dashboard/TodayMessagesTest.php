@@ -38,7 +38,7 @@ class TodayMessagesTest extends TestCase
         $this->member(['first_name' => 'Rui', 'date_of_birth' => '1975-10-25']);
         $this->member(['first_name' => 'Velho', 'date_of_birth' => '1950-10-19', 'membership_status' => MembershipStatus::INACTIVED]);
         $wife = $this->member(['first_name' => 'Ana', 'gender' => 'F', 'marital_status' => 'M']);
-        $this->member(['first_name' => 'João', 'marital_status' => 'M', 'spouse_id' => $wife->id, 'date_joined' => '2010-10-19']);
+        $this->member(['first_name' => 'João', 'marital_status' => 'M', 'spouse_id' => $wife->id, 'date_joined' => '2010-10-19', 'phone_number' => '911111111']);
         Visitor::create(['name' => 'Lucas Andrade', 'gender' => 'M', 'created_by' => 'ZZ Teste', 'status' => VisitorStatus::ACTIVED, 'phone_number' => '933333333']);
         $old = Visitor::create(['name' => 'Antigo Visitante', 'gender' => 'M', 'created_by' => 'ZZ Teste', 'status' => VisitorStatus::ACTIVED]);
         $old->forceFill(['created_at' => now()->subDays(20)])->save();
