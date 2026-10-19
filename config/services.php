@@ -25,6 +25,12 @@ return [
     ],
 
     // Study app (icd-chords, Python): reads songs and saves edited chord maps with this token.
+    // The chord suggestion helper (icd-chords, server.py) on this computer: only set in a local .env, so the bars
+    // grid offers "suggest the ? chords" here and never in production.
+    'chords_helper' => [
+        'url' => env('CHORDS_HELPER_URL'),
+    ],
+
     'study' => [
         'token' => env('STUDY_API_TOKEN'),
     ],

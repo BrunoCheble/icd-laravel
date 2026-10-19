@@ -8,6 +8,20 @@
 
     <style>
         .bars-page { --type-intro: #0369a1; --type-verse: #047857; --type-prechorus: #b45309; --type-chorus: #be123c; --type-bridge: #6d28d9; --type-instrumental: #4338ca; --type-ending: #475569; --type-other: #111827; }
+        /* Suggestions for the "?" bars (local only) */
+        .helper-panel { margin: .5rem 0; padding: .75rem; border: 1px solid var(--brand-200); border-radius: .75rem; background: var(--brand-soft); }
+        .helper-head { display: flex; align-items: center; gap: .5rem; }
+        .helper-head strong { flex: 1; font-size: .9rem; color: var(--brand-strong); }
+        .helper-error { margin: .5rem 0 0; color: #b91c1c; font-size: .85rem; font-weight: 600; }
+        .helper-note { margin: .4rem 0 0; color: #6b7280; font-size: .8rem; }
+        .helper-bar { display: flex; align-items: center; gap: .6rem; margin-top: .5rem; padding: .5rem; border-radius: .6rem; background: #fff; }
+        .helper-go { flex: none; width: 5rem; border: 0; background: none; font-size: .8rem; font-weight: 800; color: var(--brand-text); text-align: left; cursor: pointer; }
+        .helper-beats { flex: 1; display: flex; flex-wrap: wrap; gap: .5rem; }
+        .helper-beat { display: flex; align-items: center; gap: .2rem; }
+        .helper-beat small { width: 1rem; color: #9ca3af; font-weight: 700; font-size: .7rem; }
+        .helper-beat button { padding: .15rem .45rem; border: 1px solid #e5e7eb; border-radius: .4rem; background: #fff; font-weight: 700; font-size: .82rem; cursor: pointer; }
+        .helper-beat button.is-on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-strong); }
+
         /* Grid of bars next to the chord sheet; on phones one of them at a time (tabs) */
         .bars-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; margin-top: .75rem; }
         @media (min-width: 1024px) { .bars-layout { grid-template-columns: minmax(0, 1fr) minmax(18rem, 26rem); } }
@@ -264,6 +278,8 @@
                     'instruments' => $instruments,
                     'title' => $song->title,
                     'reviewedAt' => $song->reviewed_at?->toIso8601String(),
+                    // Chord suggestions for the "?" bars, from icd-chords on this computer: never in production.
+                    'chordsHelper' => app()->environment('local') ? config('services.chords_helper.url') : null,
                 ]))" @keydown.window="onKey($event)">
 
                     {{-- Toolbar: player, play / edit, undo, tempo, key, save, options --}}
@@ -296,6 +312,9 @@
                             <button type="button" class="ws-btn" x-show="canPlay && bpm > 0" :class="{ 'is-active': countIn }" @click="toggleCountIn()"
                                 :title="countIn ? @js(__('Count-in on: a bar of drumsticks at the BPM before playing. Click to turn it off')) : @js(__('Count-in off. Click for a bar of drumsticks at the BPM before playing'))"
                                 aria-label="{{ __('Count-in') }}"><i class="fa-solid fa-drum"></i><span class="ws-label"> {{ __('Count-in') }}</span><span x-show="counting" x-text="` ${countBeat || ''}`"></span></button>
+                            {{-- Local only: the "?" bars sent to icd-chords, which suggests their chords from the recording --}}
+                            <button type="button" class="ws-btn" x-show="helper.url && hasMusic && bpm > 0 && !versionId && unknownBars().length" x-cloak @click="suggestUnknown()" :disabled="helper.loading"
+                                :title="@js(__('Suggest the chords of the bars with "?" from the recording (icd-chords on this computer)'))"><i class="fa-solid" :class="helper.loading ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'"></i><span class="ws-label"> {{ __('Suggest the ?') }}</span> <span x-text="unknownBars().length"></span></button>
                             <span class="ws-spacer"></span>
                             {{-- Tapping "BPM" in the rhythm of the song sets it; the number can be typed too --}}
                             <span class="ws-btn" style="padding-right: .3rem;" x-show="!versionId">
@@ -345,6 +364,35 @@
                     </div>
                     <p class="version-note" x-show="versionId" x-cloak x-text="@js(__('Editing the version for :instrument: only its chords change (the blocks, times, tempo, key and lyrics are the base\'s). It is a copy: later changes to the base do not reach it.')).replace(':instrument', currentVersion?.instrument ?? '')"></p>
                     {{-- Marked bars, copied chords and what happened to them --}}
+                    {{-- The suggestions for the "?" bars (local only): a chord per beat, the first option already chosen --}}
+                    <div class="helper-panel" x-show="helper.url && (helper.error || helper.bars)" x-cloak>
+                        <div class="helper-head">
+                            <strong><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('Suggestions for the ? bars') }}</strong>
+                            <button type="button" class="ws-btn" x-show="helper.bars?.length" @click="applyAllSuggestions()">{{ __('Use the first option in all') }}</button>
+                            <button type="button" class="ws-btn" @click="helper.bars = null; helper.error = ''" aria-label="{{ __('Close') }}"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <p class="helper-error" x-show="helper.error" x-text="helper.error"></p>
+                        <p class="helper-note" x-show="helper.shift" x-text="@js(__('The recording is :n semitone(s) away from the song\'s key: the chords are given in the song\'s key.')).replace(':n', helper.shift > 0 ? '+' + helper.shift : helper.shift)"></p>
+                        <p class="helper-note" x-show="helper.bars && !helper.bars.length">{{ __('Every suggestion was used.') }}</p>
+                        <template x-for="item in helper.bars || []" :key="item.bar">
+                            <div class="helper-bar" x-data="{ chosen: item.beats.map(beat => beat.options[0]?.chord || null) }">
+                                <button type="button" class="helper-go" @click="moveTo(item.bar * perBar * 2)" x-text="@js(__('Bar')) + ' ' + (item.bar + 1)"></button>
+                                <div class="helper-beats">
+                                    <template x-for="(beat, i) in item.beats" :key="i">
+                                        <div class="helper-beat">
+                                            <small x-text="beat.beat"></small>
+                                            <template x-for="option in beat.options" :key="option.chord">
+                                                <button type="button" :class="{ 'is-on': chosen[i] === option.chord }" @click="chosen[i] = option.chord"
+                                                    :title="Math.round(option.probability * 100) + '%'" x-text="transposeName(option.chord)"></button>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                                <button type="button" class="ws-btn is-primary" @click="applySuggestion(item.bar, chosen)"><i class="fa-solid fa-check"></i></button>
+                            </div>
+                        </template>
+                    </div>
+
                     <div class="passage-bar" x-show="hasSelection || clipboard || notice" x-cloak>
                         <span x-show="hasSelection" x-text="`${@js(__('Marked'))}: ${barsLabel(selection.from, selection.to)}`"></span>
                         <button type="button" class="ws-btn" x-show="hasSelection" @click="copyBars()"><i class="fa-solid fa-copy"></i> {{ __('Copy') }}</button>
@@ -1044,6 +1092,8 @@
                 // Chords copied: { ticks, offset (ticks after the start of its first bar), label }.
                 clipboard: null,
                 notice: '',
+                // Suggestions for the "?" bars (local only): { url, loading, error, shift, bars: [{ bar, beats: [{ beat, options }] }] }
+                helper: { url: config.chordsHelper || null, loading: false, error: '', shift: 0, bars: null },
                 // Chords as they were when the page was opened or last saved (to restore bars).
                 originalTicks: [...ticks],
                 splits: [...splits],
@@ -2755,6 +2805,50 @@
                     const end = Math.min((Math.floor(tick / (this.perBar * 2)) + 1) * this.perBar * 2, next ? next.startTick : Infinity);
                     for (let t = tick; t < Math.min(end, this.ticks.length) && (t === tick || (this.ticks[t] === old && !this.splits.includes(t))); t++) this.ticks[t] = chord;
                     this.revision++;
+                },
+                // ---- Suggestions for the "?" bars, from icd-chords on this computer (local only) ----
+                // The bars with a "?" (a chord not known yet).
+                unknownBars() {
+                    const size = this.perBar * 2;
+                    const bars = new Set();
+                    this.ticks.forEach((chord, tick) => { if (chord === '?') bars.add(Math.floor(tick / size)); });
+                    return [...bars].sort((a, b) => a - b);
+                },
+                async suggestUnknown() {
+                    const size = this.perBar * 2;
+                    const bars = this.unknownBars().slice(0, 32);
+                    const vocabulary = [...new Set(this.ticks.filter(chord => chord && chord !== '?'))];
+                    this.helper = { ...this.helper, loading: true, error: '', bars: null };
+                    try {
+                        const response = await fetch(`${this.helper.url}/api/suggest`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                audio_url: config.audioUrl, youtube_url: config.audioUrl ? null : config.youtubeUrl, key: this.savedKey, vocabulary,
+                                bars: bars.map(bar => ({ bar, beats: this.perBar, start: Math.max(0, this.timeOfTick(bar * size)), end: this.timeOfTick(Math.min((bar + 1) * size, this.ticks.length)) })),
+                            }),
+                        });
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(result.message || response.status);
+                        this.helper = { ...this.helper, loading: false, shift: result.shift || 0, bars: result.bars };
+                    } catch (error) {
+                        const offline = error instanceof TypeError;
+                        this.helper = { ...this.helper, loading: false, error: offline ? @js(__('icd-chords is not running on this computer: start it with ./serve.sh')) : String(error.message || error) };
+                    }
+                },
+                // The bar with the chosen chord on each beat (the same chord on the next beats goes on, no new chord).
+                applySuggestion(bar, chords) {
+                    this.remember();
+                    let previous = null;
+                    chords.forEach((chord, i) => {
+                        if (!chord || chord === previous) return;
+                        this.setFrom((bar * this.perBar + i) * 2, chord, false);
+                        previous = chord;
+                    });
+                    this.helper.bars = this.helper.bars.filter(item => item.bar !== bar);
+                },
+                applyAllSuggestions() {
+                    for (const item of [...(this.helper.bars || [])]) this.applySuggestion(item.bar, item.beats.map(beat => beat.options[0]?.chord));
                 },
                 // A chord name, or "?" (a chord not known yet).
                 isChordName(typed) { return typed === '?' || /^[A-G][#b]?[^\s\[\]|]*$/.test(typed); },

@@ -77,6 +77,24 @@ class SongAdminPagesTest extends MusicTestCase
         $this->assertSame([4, 4, 4], $structure[1]['durations']);
     }
 
+    public function test_the_chord_suggestions_helper_is_offered_only_on_a_local_computer(): void
+    {
+        $song = $this->song();
+        config(['services.chords_helper.url' => 'http://localhost:8765']);
+        $this->actingAs($this->admin());
+
+        // Production (any environment but local): never, even with the address set
+        $this->app['env'] = 'production';
+        $this->get("/songs/{$song->id}/layout")->assertOk()->assertDontSee('localhost:8765');
+
+        $this->app['env'] = 'local';
+        $this->get("/songs/{$song->id}/layout")->assertOk()->assertSee('localhost:8765');
+
+        // Local without the address: not offered either
+        config(['services.chords_helper.url' => null]);
+        $this->get("/songs/{$song->id}/layout")->assertOk()->assertDontSee('localhost:8765');
+    }
+
     public function test_the_song_picker_offers_the_next_setlist_on_the_same_tab(): void
     {
         $song = $this->song();
