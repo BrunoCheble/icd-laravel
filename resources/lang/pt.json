@@ -1122,11 +1122,9 @@
     "Waiting": "À espera",
     "We use it only to check whether your wife is already registered at the church.": "Serve apenas para verificarmos se a sua esposa já está registada na igreja.",
     "We use it only to check whether your husband is already registered at the church.": "Serve apenas para verificarmos se o seu marido já está registado na igreja.",
-    "Suggest the chords of the bars with \"?\" from the recording (icd-chords on this computer)": "Sugerir os acordes dos compassos com \"?\" a partir da gravação (icd-chords neste computador)",
-    "Suggest the ?": "Sugerir os ?",
     "icd-chords is not running on this computer: start it with ./serve.sh": "O icd-chords não está a correr neste computador: inicie-o com ./serve.sh",
-    "Suggestions for the ? bars": "Sugestões para os compassos com ?",
     "Use the first option in all": "Usar a 1ª opção em todos",
     "The recording is :n semitone(s) away from the song's key: the chords are given in the song's key.": "A gravação está :n meio(s)-tom(ns) do tom da música: os acordes vêm no tom da música.",
-    "Every suggestion was used.": "Todas as sugestões foram usadas."
+    "Every suggestion was used.": "Todas as sugestões foram usadas.",
+    "Listening to the recording…": "A ouvir a gravação…"
 }
