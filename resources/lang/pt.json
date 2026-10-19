@@ -1023,12 +1023,14 @@
     "sent": "enviadas",
     "Sent": "Enviada",
     "Edit message": "Editar mensagem",
-    "Send to :name": "Enviar a :name",
     "No phone number: mark as done after greeting in person.": "Sem telemóvel: marque como feito depois de falar pessoalmente.",
-    "No phone · Mark as done": "Sem telemóvel · Marcar como feito",
     "Next :count days": "Próximos :count dias",
     "Nothing in the next days.": "Nada nos próximos dias.",
     "See the whole month": "Ver o mês inteiro",
     "Birthday": "Aniversário",
-    "Wedding anniversary": "Aniversário de casamento"
+    "Wedding anniversary": "Aniversário de casamento",
+    "Weddings": "Casamentos",
+    "Next days": "Próximos dias",
+    "Sections": "Secções",
+    "Mark as done": "Marcar como feito"
 }
