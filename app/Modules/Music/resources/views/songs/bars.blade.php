@@ -2865,8 +2865,11 @@
                         if (!response.ok) throw new Error(result.message || response.status);
                         this.helper = { ...this.helper, loading: false, shift: result.shift || 0, recordingKey: result.recording_key || null, bars: result.bars };
                     } catch (error) {
-                        const offline = error instanceof TypeError;
-                        this.helper = { ...this.helper, loading: false, error: offline ? @js(__('icd-chords is not running on this computer: start it with ./serve.sh')) : String(error.message || error) };
+                        // No answer: stopped meanwhile, or it failed on the way (said apart).
+                        const offline = error instanceof TypeError && !await this.checkHelper();
+                        const message = offline ? @js(__('icd-chords is not running on this computer: start it with ./serve.sh'))
+                            : (error instanceof TypeError ? @js(__('icd-chords did not answer the suggestion: see its terminal.')) : String(error.message || error));
+                        this.helper = { ...this.helper, loading: false, error: message };
                     }
                 },
                 // The bar with the chosen chord on each beat (the same chord on the next beats goes on, no new chord).
