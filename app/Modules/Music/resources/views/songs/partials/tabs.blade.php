@@ -31,13 +31,20 @@
            names when they fit, else icons and the name of the page being shown, and only icons when very narrow */
         .song-tabs-wrap { container-type: inline-size; }
         @container (max-width: 46rem) {
-            .song-tab { padding: .55rem .7rem; }
+            /* The tabs fill the whole width (wide areas to tap); only the page being shown keeps its name */
+            .song-tabs { margin-bottom: .75rem; }
+            .song-tab { flex: 1 1 0; justify-content: center; min-width: 2.75rem; padding: .7rem .25rem; font-size: 1rem; }
             .song-tab:not(.is-current) span { display: none; }
+            .song-tab.is-current { flex: 0 1 auto; min-width: 0; padding: .7rem .6rem; }
+            .song-tab.is-current span { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: .875rem; }
         }
+        /* Phones: a little less room for the icons, so the active name fits whole */
         @container (max-width: 26rem) {
-            .song-tabs { justify-content: space-between; margin-bottom: .5rem; }
-            .song-tab { padding: .6rem .9rem; font-size: 1rem; }
-            .song-tab span { display: none; }
+            .song-tab { min-width: 2.4rem; padding: .7rem .1rem; }
+            .song-tab.is-current { padding: .4rem .45rem; }
+            /* The active one: its name only (no icon), on two lines when long ("Linhas e / blocos") */
+            .song-tab.is-current i { display: none; }
+            .song-tab.is-current span { font-size: .78rem; line-height: 1.1; white-space: normal; text-align: center; overflow: visible; }
         }
     </style>
 @endonce
