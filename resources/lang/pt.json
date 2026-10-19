@@ -1130,5 +1130,6 @@
     "The recording seems :n semitones from the song: the chords were converted to the song's key.": "A gravação parece estar a :n meios-tons da música: os acordes foram convertidos para o tom da música.",
     "icd-chords is downloading its audio.": "O icd-chords está a descarregar o áudio.",
     "Check again": "Verificar de novo",
-    "off": "desligado"
+    "off": "desligado",
+    "icd-chords did not answer the suggestion: see its terminal.": "O icd-chords não respondeu à sugestão: veja o terminal dele."
 }
