@@ -6,10 +6,6 @@ use App\Modules\Members\Models\Member;
 
 class GetMemberPendingInformationService
 {
-    // Written in the notes when the member gives the spouse's name on the "complete your registration" page; the
-    // spouse is then linked by hand (and is no longer asked of the member).
-    public const SPOUSE_NOTE = 'Cônjuge (indicado pelo membro): ';
-
     /**
      * What a pending member (registered on the site) still has to send, to ask by WhatsApp. Empty for other members.
      *
@@ -33,7 +29,8 @@ class GetMemberPendingInformationService
         }
 
         $fields = [];
-        if ($member->marital_status == 'M' && ! $member->spouse_id && ! str_contains((string) $member->notes, self::SPOUSE_NOTE)) {
+        // The spouse: a member (spouse_id) or, when not a member, the name (spouse_name).
+        if ($member->marital_status == 'M' && ! $member->spouse_id && ! $member->spouse_name) {
             $fields[] = 'spouse';
         }
         if ($member->marital_status == 'M' && ! $member->date_joined) {

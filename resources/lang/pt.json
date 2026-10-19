@@ -6,7 +6,7 @@
     "Middle Name": "Nome do meio",
     "Last Name": "Último nome",
     "Date Of Birth": "Data de nascimento",
-    "Spouse": "Conjugal",
+    "Spouse": "Cônjuge",
     "Father": "Pai",
     "Mother": "Mae",
     "Wedding Date": "Data de casamento",
@@ -1058,5 +1058,8 @@
     "Nobody with this name today.": "Ninguém com este nome hoje.",
     "Mobile number of your wife": "Telemóvel da sua esposa",
     "Mobile number of your husband": "Telemóvel do seu marido",
-    "If they are also a member of the church, we link you both.": "Se também for membro da igreja, associamos os dois."
+    "If they are also a member of the church, we link you both.": "Se também for membro da igreja, associamos os dois.",
+    "not a member": "não é membro",
+    "Use": "Usar",
+    "Pick a member, or type the name when the spouse is not a member.": "Escolha um membro, ou escreva o nome se o cônjuge não for membro."
 }

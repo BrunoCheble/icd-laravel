@@ -46,7 +46,7 @@ class CompleteRegistrationRequest extends FormRequest
     {
         $rules = [
             'spouse' => [
-                'spouse_name' => ['nullable', 'string', 'max:255'],
+                'spouse_name' => ['nullable', 'required_with:spouse_phone', 'string', 'max:255'],
                 'spouse_phone' => ['nullable', 'regex:/^9\d{8}$/'],
             ],
             'date_joined' => ['date_joined' => ['nullable', 'date', 'after:1900-01-01', 'before_or_equal:today']],

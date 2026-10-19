@@ -5,7 +5,7 @@
     $field = fn (string $name, $default = null) => old($name, $default ?? $member->{$name});
 @endphp
 
-<div class="m-form" x-data="memberForm(@js(['gender' => $field('gender'), 'marital' => $field('marital_status'), 'spouse' => (bool) $field('spouse_id')]))">
+<div class="m-form" x-data="memberForm(@js(['gender' => $field('gender'), 'marital' => $field('marital_status'), 'spouse' => (bool) ($field('spouse_id') || $field('spouse_name'))]))">
     @if ($errors->any())
         <div class="m-card m-section" style="border-color: #fecaca; background: #fef2f2;">
             <p class="m-error"><i class="fa-solid fa-triangle-exclamation"></i> {{ __('Check the fields marked below.') }}</p>
@@ -107,9 +107,11 @@
                 </div>
             </div>
             <div class="m-field" x-show="marital === 'M' || spouseSet">
-                <span class="m-label">{{ __('Spouse') }} <span class="m-optional">({{ __('a member of the church') }})</span></span>
-                @include('members::members.partials.person-picker', ['name' => 'spouse_id', 'want' => 'spouse'])
+                <span class="m-label">{{ __('Spouse') }}</span>
+                @include('members::members.partials.person-picker', ['name' => 'spouse_id', 'want' => 'spouse', 'freeName' => 'spouse_name'])
+                <p class="m-help">{{ __('Pick a member, or type the name when the spouse is not a member.') }}</p>
                 @error('spouse_id')<p class="m-error">{{ $message }}</p>@enderror
+                @error('spouse_name')<p class="m-error">{{ $message }}</p>@enderror
             </div>
             <div class="m-grid cols-2">
                 <div class="m-field">

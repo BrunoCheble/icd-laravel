@@ -94,6 +94,31 @@ class MembersTest extends TestCase
         $this->assertSame('2015-06-20', (string) $spouse->fresh()->date_joined);
     }
 
+    public function test_the_spouse_is_a_member_or_a_name(): void
+    {
+        $member = $this->member(['marital_status' => 'M', 'membership_status' => MembershipStatus::PENDING]);
+        $wife = $this->member(['first_name' => 'Maria', 'gender' => 'F', 'marital_status' => 'M']);
+        $user = User::factory()->create();
+        $data = ['first_name' => 'ZZ Teste', 'last_name' => 'Membro', 'document_number' => $member->document_number, 'gender' => 'M', 'marital_status' => 'M'];
+
+        // Not a member: the name is kept, and the spouse is no longer pending
+        $this->actingAs($user)->patch("/members/{$member->id}", $data + ['spouse_name' => '  Ana Lima '])->assertSessionHasNoErrors();
+        $this->assertSame('Ana Lima', $member->fresh()->spouse_name);
+        $this->actingAs($user)->get("/members/{$member->id}")->assertSee('Ana Lima')->assertDontSee('Nome completo e telemóvel da esposa');
+        $this->actingAs($user)->get("/members/{$member->id}/edit")->assertSee('Ana Lima');
+
+        // A member picked: the name goes
+        $this->actingAs($user)->patch("/members/{$member->id}", $data + ['spouse_id' => (string) $wife->id, 'spouse_name' => 'Ana Lima']);
+        $this->assertNull($member->fresh()->spouse_name);
+        $this->assertSame((string) $wife->id, (string) $member->fresh()->spouse_id);
+
+        // Linked back: the wife's name-only spouse goes too
+        $other = $this->member(['first_name' => 'Rita', 'gender' => 'F', 'marital_status' => 'M', 'spouse_name' => 'Fulano']);
+        $this->actingAs($user)->patch("/members/{$member->id}", $data + ['spouse_id' => (string) $other->id]);
+        $this->assertSame((string) $member->id, (string) $other->fresh()->spouse_id);
+        $this->assertNull($other->fresh()->spouse_name);
+    }
+
     public function test_the_nif_is_unique_and_the_choices_are_checked(): void
     {
         $other = $this->member(['document_number' => '123456789']);

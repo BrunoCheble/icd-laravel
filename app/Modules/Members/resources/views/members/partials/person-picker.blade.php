@@ -1,12 +1,17 @@
 {{-- Picks another member (spouse, father, mother) by typing part of the name or NIF. $name (the field), $want ("M",
-     "F" or "spouse": of the other gender than the form's), with window.memberPeople set by the form --}}
-@php $selected = (string) old($name, $member->{$name}); @endphp
-<div class="person-picker" x-data="personPicker(@js(['selected' => $selected, 'want' => $want]))" @click.outside="open = false">
+     "F" or "spouse": of the other gender than the form's), $freeName (optional: the field for a name typed when the
+     person is not a member), with window.memberPeople set by the form --}}
+@php
+    $selected = (string) old($name, $member->{$name});
+    $free = isset($freeName) ? (string) old($freeName, $member->{$freeName}) : null;
+@endphp
+<div class="person-picker" x-data="personPicker(@js(['selected' => $selected, 'want' => $want, 'free' => $free]))" @click.outside="open = false">
     <input type="hidden" name="{{ $name }}" :value="selected">
+    @isset($freeName)<input type="hidden" name="{{ $freeName }}" :value="selected ? '' : free">@endisset
     <template x-if="current">
         <div class="person-picker-current">
             <i class="fa-solid fa-user"></i>
-            <span><strong x-text="current.name"></strong><small x-text="current.document ? 'NIF ' + current.document : ''"></small></span>
+            <span><strong x-text="current.name"></strong><small x-text="current.member ? (current.document ? 'NIF ' + current.document : '') : @js(__('not a member'))"></small></span>
             <button type="button" class="m-btn is-ghost is-icon" @click="clear()" aria-label="{{ __('Remove') }}"><i class="fa-solid fa-xmark"></i></button>
         </div>
     </template>
@@ -24,7 +29,11 @@
                 <strong x-text="person.name"></strong><small x-text="person.document ? 'NIF ' + person.document : ''"></small>
             </button>
         </template>
-        <p x-show="!matches.length">{{ __('No members found.') }}</p>
+        <p x-show="!matches.length && !canTypeName">{{ __('No members found.') }}</p>
+        {{-- Not a member: the name typed is kept --}}
+        <button type="button" class="is-free" x-show="canTypeName" @mousedown.prevent="useName()" :class="{ 'is-active': active === matches.length }">
+            <i class="fa-solid fa-user-plus"></i> <strong x-text="@js(__('Use')) + ' «' + term.trim() + '»'"></strong><small>{{ __('not a member') }}</small>
+        </button>
     </div>
 </div>
 
@@ -41,19 +50,29 @@
         .person-picker-list button { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 .5rem; width: 100%; padding: .55rem .65rem; border: 0; border-radius: .5rem; background: none; text-align: left; cursor: pointer; }
         .person-picker-list button strong { font-size: .9rem; font-weight: 600; color: #111827; }
         .person-picker-list button:hover, .person-picker-list button.is-active { background: #f3f4f6; }
+        .person-picker-list button.is-free { border-top: 1px solid #f1f2f4; border-radius: 0 0 .5rem .5rem; color: var(--brand-text); }
+        .person-picker-list button.is-free i { align-self: center; }
         .person-picker-list p { margin: 0; padding: .55rem .65rem; font-size: .85rem; color: #6b7280; }
     </style>
     <script>
         // Search a member by name or NIF (accents and case ignored), of the wanted gender; the chosen one is kept.
-        function personPicker({ selected, want }) {
+        // With "free" (a name field), a name that is no member's can be typed too.
+        function personPicker({ selected, want, free }) {
             const plain = text => (text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
             const people = window.memberPeople || [];
             return {
                 selected,
+                free: free || '',
+                canFree: free !== null,
                 term: '',
                 open: false,
                 active: 0,
-                get current() { return people.find(person => person.id === this.selected) || null; },
+                get current() {
+                    const person = people.find(person => person.id === this.selected);
+                    if (person) return { ...person, member: true };
+                    return this.free ? { name: this.free, member: false } : null;
+                },
+                get canTypeName() { return this.canFree && this.term.trim().length > 1; },
                 // The gender wanted; for the spouse, the other one than the form's ("gender" of memberForm).
                 get wanted() { return want === 'spouse' ? ({ M: 'F', F: 'M' }[this.gender] || null) : want; },
                 get matches() {
@@ -64,15 +83,23 @@
                         .filter(person => words.every(word => plain(person.name).includes(word) || (person.document || '').includes(word)))
                         .slice(0, 30);
                 },
-                move(step) { this.active = Math.max(0, Math.min(this.matches.length - 1, this.active + step)); },
+                move(step) { this.active = Math.max(0, Math.min(this.matches.length - (this.canTypeName ? 0 : 1), this.active + step)); },
+                useName() {
+                    this.selected = '';
+                    this.free = this.term.trim();
+                    this.term = '';
+                    this.open = false;
+                },
                 pick(person) {
-                    if (!person) return;
+                    if (!person) return this.canTypeName ? this.useName() : null;
                     this.selected = person.id;
+                    this.free = '';
                     this.term = '';
                     this.open = false;
                 },
                 clear() {
                     this.selected = '';
+                    this.free = '';
                     this.$nextTick(() => this.$refs.term?.focus());
                 },
             };

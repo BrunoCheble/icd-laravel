@@ -100,7 +100,7 @@ class CompleteRegistrationTest extends TestCase
         $this->post($link, ['date_of_birth' => now()->addDay()->toDateString()])->assertSessionHasErrors('date_of_birth');
     }
 
-    public function test_the_spouse_name_goes_to_the_notes_and_a_complete_registration_says_thanks(): void
+    public function test_a_spouse_who_is_not_a_member_is_kept_by_name_and_a_complete_registration_says_thanks(): void
     {
         $member = $this->pending(['marital_status' => 'M', 'email' => 'carla@example.com', 'phone_number' => '912345678',
             'address' => 'Rua A', 'zip_code' => '1000-001', 'city' => 'Lisboa', 'date_of_birth' => '1990-01-01', 'document_number' => '987654321']);
@@ -109,7 +109,9 @@ class CompleteRegistrationTest extends TestCase
         $this->get($link)->assertSee('Nome completo do seu marido');
         $this->post($link, ['spouse_name' => 'joão silva', 'date_joined' => '2015-06-20'])->assertRedirect($link);
 
-        $this->assertStringContainsString('Cônjuge (indicado pelo membro): João Silva', $member->fresh()->notes);
+        $member->refresh();
+        $this->assertSame('João Silva', $member->spouse_name);
+        $this->assertNull($member->spouse_id);
         $this->get($link)->assertSee('Obrigado, Carla!')->assertDontSee('<form', false);
     }
 
@@ -124,6 +126,7 @@ class CompleteRegistrationTest extends TestCase
 
         $member->refresh();
         $this->assertSame((string) $husband->id, (string) $member->spouse_id);
+        $this->assertNull($member->spouse_name);
         $this->assertSame((string) $member->id, (string) $husband->fresh()->spouse_id);
         // The husband's wedding date is kept, for both
         $this->assertSame('2012-09-01', Carbon::parse($member->date_joined)->toDateString());
@@ -146,9 +149,11 @@ class CompleteRegistrationTest extends TestCase
             $this->post($this->link($member), ['spouse_name' => 'Alguém', 'spouse_phone' => $phone]);
             $member->refresh();
             $this->assertNull($member->spouse_id, $phone);
-            $this->assertStringContainsString("Cônjuge (indicado pelo membro): Alguém · telemóvel {$phone}", $member->notes);
+            $this->assertSame('Alguém', $member->spouse_name);
+            $this->assertStringContainsString("Telemóvel do cônjuge (indicado pelo membro): {$phone}", $member->notes);
         }
-        $this->post($this->link($this->pending(['marital_status' => 'M'])), ['spouse_phone' => '123'])->assertSessionHasErrors('spouse_phone');
+        $this->post($this->link($this->pending(['marital_status' => 'M'])), ['spouse_name' => 'Alguém', 'spouse_phone' => '123'])->assertSessionHasErrors('spouse_phone');
+        $this->post($this->link($this->pending(['marital_status' => 'M'])), ['spouse_phone' => '918888888'])->assertSessionHasErrors('spouse_name');
     }
 
     public function test_the_page_is_in_portuguese_and_in_english_when_asked(): void

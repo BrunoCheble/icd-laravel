@@ -63,6 +63,7 @@ class Member extends Model
         'notes',
         'photo',
         'spouse_id',
+        'spouse_name',
         'father_id',
         'mother_id'
     ];

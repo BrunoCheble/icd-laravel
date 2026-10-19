@@ -15,6 +15,13 @@ class MemberRequest extends FormRequest
         return true;
     }
 
+    // The spouse is a member or a name, never both: picking a member drops the name.
+    public function prepareForValidation(): void
+    {
+        $name = trim((string) $this->spouse_name);
+        $this->merge(['spouse_name' => $this->spouse_id || $name === '' ? null : $name]);
+    }
+
     public function rules(): array
     {
         $memberId = $this->route('member')?->id;
@@ -38,6 +45,7 @@ class MemberRequest extends FormRequest
             'date_of_birth' => 'nullable|date',
             'date_joined' => 'nullable|date',
             'spouse_id' => $relative,
+            'spouse_name' => 'nullable|string|max:255',
             'father_id' => $relative,
             'mother_id' => $relative,
         ];

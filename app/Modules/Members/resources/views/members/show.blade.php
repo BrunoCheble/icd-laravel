@@ -131,7 +131,15 @@
                         <span><strong>{{ $child->first_and_last_name }}</strong><small>{{ $child->gender === 'M' ? __('Son') : __('Daughter') }}@if ($child->years() !== null) · {{ trans_choice(':count year|:count years', $child->years(), ['count' => $child->years()]) }}@endif</small></span>
                     </a>
                 @endforeach
-                @if ($family->isEmpty() && $children->isEmpty())
+                @if (! $member->spouse && $member->spouse_name)
+                    {{-- A spouse who is not a member: only the name --}}
+                    <div class="member-person">
+                        @php($words = preg_split('/\s+/', trim($member->spouse_name)))
+                        <span class="m-initials">{{ mb_strtoupper(mb_substr($words[0], 0, 1) . (count($words) > 1 ? mb_substr(end($words), 0, 1) : '')) }}</span>
+                        <span><strong>{{ $member->spouse_name }}</strong><small>{{ __('Spouse') }} · {{ __('not a member') }}@if ($member->date_joined) · {{ __('Wedding Date') }} {{ $day($member->date_joined) }}@endif</small></span>
+                    </div>
+                @endif
+                @if ($family->isEmpty() && $children->isEmpty() && ! $member->spouse_name)
                     <p class="m-muted">{{ __('No family members in the church.') }}</p>
                 @endif
             </section>

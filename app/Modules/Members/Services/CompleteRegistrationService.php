@@ -11,30 +11,38 @@ class CompleteRegistrationService
     /**
      * Saves what a pending member filled in on the "complete your registration" page (only the fields still
      * missing; empty ones are left as they are). The spouse is linked when its mobile number finds them (see
-     * findSpouse()); otherwise the name and number go to the notes, to link the spouse by hand.
+     * findSpouse()); otherwise the name is kept as the spouse's (spouse_name) and the number goes to the notes.
      */
     public function execute(Member $member, array $data): void
     {
         $data = array_filter($data, fn ($value) => $value !== null && $value !== '');
 
         if (isset($data['spouse_name']) || isset($data['spouse_phone'])) {
-            $name = isset($data['spouse_name']) ? NameHelper::normalizeName($data['spouse_name']) : null;
             $phone = $data['spouse_phone'] ?? null;
             $spouse = $phone ? $this->findSpouse($member, $phone) : null;
 
             if ($spouse) {
+                // A member: linked (both ways, by the observer), keeping the spouse's wedding date when the member
+                // has none.
                 $data['spouse_id'] = (string) $spouse->id;
-                // The observer gives both the member's wedding date: keep the spouse's when the member has none.
+                unset($data['spouse_name']);
                 if (! isset($data['date_joined']) && ! $member->date_joined && $spouse->date_joined) {
                     $data['date_joined'] = Carbon::parse($spouse->date_joined)->toDateString();
                 }
                 $note = 'Cônjuge associado pelo próprio membro (telemóvel ' . $phone . ')';
             } else {
-                $note = GetMemberPendingInformationService::SPOUSE_NOTE . collect([$name, $phone ? 'telemóvel ' . $phone : null])->filter()->implode(' · ');
+                // Not a member (or not found): the name is kept as the spouse's; the number, in the notes.
+                if (isset($data['spouse_name'])) {
+                    $data['spouse_name'] = NameHelper::normalizeName($data['spouse_name']);
+                }
+                $note = $phone ? 'Telemóvel do cônjuge (indicado pelo membro): ' . $phone : null;
             }
-            $member->notes = trim($member->notes . "\n" . $note);
-            unset($data['spouse_name'], $data['spouse_phone']);
+            if ($note) {
+                $member->notes = trim($member->notes . "\n" . $note);
+            }
+            unset($data['spouse_phone']);
         }
+
         foreach (['address', 'city'] as $field) {
             if (isset($data[$field])) {
                 $data[$field] = NameHelper::normalizeName($data[$field]);
