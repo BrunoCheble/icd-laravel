@@ -177,6 +177,10 @@
         .chord-picker .block-menu-field:first-of-type { margin-top: .45rem; }
         .menu-chords button.is-current { border-color: var(--type-color, var(--brand)); background: var(--type-color, var(--brand)); color: #fff; }
         .menu-chords.is-key button { border-style: dashed; color: #4b5563; }
+        .menu-chords.is-suggested button { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-strong); }
+        .menu-chords.is-suggested button:first-child { font-size: 1rem; }
+        .menu-chords.is-suggested button.is-current { border-color: var(--brand); background: var(--brand); color: #fff; }
+        .picker-select .menu-chords.is-suggested { margin-bottom: .45rem; }
         .menu-chords button:hover { border-color: var(--brand); color: var(--brand-text); }
         .menu-chords button.is-current:hover { color: #fff; }
         .repeat-input { width: 3.6rem; padding: .15rem .35rem; border: 1px solid #d1d5db; border-radius: .35rem; font-weight: 700; text-align: center; }
@@ -552,8 +556,16 @@
                         <template x-if="editor">
                             <div class="block-menu-field picker-select" x-show="pickerChords('song').length || pickerChords('key').length">
                                 <span class="block-menu-label">{{ __('Choose a chord') }}</span>
+                                <div class="menu-chords is-suggested" x-show="suggestedChords().length">
+                                    <template x-for="chord in suggestedChords()" :key="'q' + chord">
+                                        <button type="button" :class="{ 'is-current': chord === editorChordNow() }" @click="pickChord(chord)" x-text="chord"></button>
+                                    </template>
+                                </div>
                                 <select @change="if ($event.target.value) pickChord($event.target.value)" :aria-label="@js(__('Choose a chord'))">
                                     <option value="">{{ __('Choose…') }}</option>
+                                    <optgroup :label="@js(__('Suggested'))" x-show="suggestedChords().length">
+                                        <template x-for="chord in suggestedChords()" :key="'g' + chord"><option :value="chord" x-text="chord === editorChordNow() ? chord + ' ✓' : chord"></option></template>
+                                    </optgroup>
                                     <optgroup :label="@js(__('In the song'))" x-show="pickerChords('song').length">
                                         <template x-for="chord in pickerChords('song')" :key="'s' + chord"><option :value="chord" x-text="chord === editorChordNow() ? chord + ' ✓' : chord"></option></template>
                                     </optgroup>
@@ -565,6 +577,14 @@
                         </template>
                         <template x-if="editor">
                             <div class="picker-chips">
+                                <div class="block-menu-field" x-show="suggestedChords().length">
+                                    <span class="block-menu-label"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('Suggested') }}</span>
+                                    <div class="menu-chords is-suggested">
+                                        <template x-for="chord in suggestedChords()" :key="chord">
+                                            <button type="button" :class="{ 'is-current': chord === editorChordNow() }" @click="pickChord(chord)" x-text="chord"></button>
+                                        </template>
+                                    </div>
+                                </div>
                                 <div class="block-menu-field" x-show="pickerChords('song').length">
                                     <span class="block-menu-label">{{ __('In the song') }}</span>
                                     <div class="menu-chords">
@@ -2773,13 +2793,43 @@
                 editorChordNow() { return this.editor ? this.transposeName(this.ticks[this.editorTick()]) || null : null; },
                 // The song's chords (in the order they first come, as shown in the current key), or the chords of the
                 // key that the song does not use yet; filtered by what is typed.
+                // The chords most likely at the beat being edited: those the song puts most often right after the chord
+                // before it and right before the chord after it ("F#m | D", "F#m | D", "? | D" -> F#m), the likeliest first.
+                suggestedChords() {
+                    if (!this.editor) return [];
+                    const tick = this.editorTick();
+                    const starts = this.chordStarts();
+                    const names = starts.map(start => this.ticks[start]);
+                    let before = null;
+                    let after = null;
+                    starts.forEach((start, i) => {
+                        if (start < tick) before = names[i];
+                        else if (start > tick && after === null) after = names[i];
+                    });
+                    const score = {};
+                    for (let i = 0; i + 1 < names.length; i++) {
+                        // Not the place being edited itself.
+                        if (starts[i] === tick || starts[i + 1] === tick) continue;
+                        const [first, second] = [names[i], names[i + 1]];
+                        if (before && first === before && second !== '?') score[second] = (score[second] ?? 0) + 1;
+                        if (after && second === after && first !== '?') score[first] = (score[first] ?? 0) + 1;
+                    }
+                    const typed = (this.editor?.text || '').trim().toLowerCase();
+                    const ranked = this.chordOrder(Object.keys(score).map(name => this.transposeName(name)));
+                    const scoreOf = (shown) => score[Object.keys(score).find(name => this.transposeName(name) === shown)] ?? 0;
+                    return ranked.sort((a, b) => scoreOf(b) - scoreOf(a))
+                        .filter(chord => !typed || chord.toLowerCase().startsWith(typed))
+                        .slice(0, 4);
+                },
                 pickerChords(kind) {
                     const song = [];
                     this.ticks.forEach(chord => {
                         const name = chord && chord !== '?' ? this.transposeName(chord) : null;
                         if (name && !song.includes(name)) song.push(name);
                     });
-                    let list = song;
+                    // The suggested ones are not listed again.
+                    const suggested = this.suggestedChords();
+                    let list = song.filter(chord => !suggested.includes(chord));
                     if (kind === 'key') {
                         if (!this.key || typeof ChordTransposer === 'undefined') return [];
                         const minor = /m$/.test(this.key);
