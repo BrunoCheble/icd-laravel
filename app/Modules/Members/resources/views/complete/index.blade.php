@@ -72,7 +72,7 @@
             </div>
         @else
             <h1>{{ __('Hello, :name!', ['name' => $member->first_name]) }} 👋</h1>
-            <p class="lead">{{ __('To complete your registration as a member of the church, we only need a few more details.') }}</p>
+            <p class="lead">{{ $member->isPending() ? __('To complete your registration as a member of the church, we only need a few more details.') : __('To keep your registration at the church up to date, we only need a few more details.') }}</p>
 
             @if (session('success'))
                 <div class="cr-alert is-ok"><i class="fa-solid fa-check"></i> {{ __('Thank you! We received your details. Only these are still missing:') }}</div>

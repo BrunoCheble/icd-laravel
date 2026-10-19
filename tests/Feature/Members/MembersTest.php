@@ -94,6 +94,17 @@ class MembersTest extends TestCase
         $this->assertSame('2015-06-20', (string) $spouse->fresh()->date_joined);
     }
 
+    public function test_an_active_member_s_missing_details_are_pending_too_and_marked_in_the_form(): void
+    {
+        $member = $this->member(['date_of_birth' => null, 'phone_number' => '912345678', 'address' => 'Rua A', 'zip_code' => '1000-001', 'city' => 'Lisboa']);
+        $inactive = $this->member(['membership_status' => MembershipStatus::INACTIVED]);
+        $this->actingAs(User::factory()->create());
+
+        $this->get("/members/{$member->id}")->assertSee('Data de nascimento');
+        $this->get("/members/{$member->id}/edit")->assertSee('Pending detail')->assertSeeInOrder(['Date of Birth', 'Pending detail']);
+        $this->get("/members/{$inactive->id}/edit")->assertDontSee('Pending detail');
+    }
+
     public function test_the_spouse_is_a_member_or_a_name(): void
     {
         $member = $this->member(['marital_status' => 'M', 'membership_status' => MembershipStatus::PENDING]);

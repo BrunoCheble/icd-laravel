@@ -30,8 +30,8 @@ class GetTodayMessagesService
 
     /**
      * The messages of the day, each ready to send by WhatsApp (see item()), in sections: "birthdays", "weddings"
-     * (one per couple), "welcomes" (visitors of the last days, until welcomed), "reminders" (pending members, not
-     * reminded in the last days); and "upcoming": the birthdays and wedding anniversaries of the next days.
+     * (one per couple), "welcomes" (visitors of the last days, until welcomed), "reminders" (members with missing
+     * details, pending ones first, not reminded in the last days); and "upcoming": the birthdays and wedding anniversaries of the next days.
      */
     public function execute(CarbonInterface $today): array
     {
@@ -76,7 +76,8 @@ class GetTodayMessagesService
 
         $reminded = $sent->where('kind', SentMessage::PENDING)->groupBy('recipient_id');
         $reminders = Member::query()
-            ->where('membership_status', MembershipStatus::PENDING)
+            ->where('membership_status', '!=', MembershipStatus::INACTIVED)
+            ->orderByRaw('membership_status = ? DESC', [MembershipStatus::PENDING])
             ->orderBy('created_at')
             ->get()
             ->map(fn (Member $member) => [$member, $this->pending->execute($member)])
@@ -85,7 +86,7 @@ class GetTodayMessagesService
             ->filter(fn ($pair) => ! isset($reminded[$pair[0]->id]) || $reminded[$pair[0]->id]->contains(fn ($m) => $m->period === $today->toDateString()))
             ->map(fn ($pair) => $this->item(SentMessage::PENDING, $pair[0]->id, $pair[0]->first_and_last_name, [$pair[0]], $sentOn(SentMessage::PENDING, $pair[0]->id), [
                 'subtitle' => trans_choice(':count pending item|:count pending items', count($pair[1]), ['count' => count($pair[1])]),
-                'text' => self::reminderText($this->sibling($pair[0]), $pair[0]->first_name, $pair[1], $this->registrationLink->execute($pair[0])),
+                'text' => self::reminderText($this->sibling($pair[0]), $pair[0]->first_name, $pair[1], $this->registrationLink->execute($pair[0]), $pair[0]->isPending()),
             ]));
 
         return [
@@ -99,11 +100,14 @@ class GetTodayMessagesService
     }
 
     /**
-     * The message that asks a pending member for what is missing, with the link to fill it in on their own.
+     * The message that asks a member for what is missing, with the link to fill it in on their own: to complete the
+     * registration (pending) or to bring it up to date (active).
      */
-    public static function reminderText(string $sibling, string $firstName, array $pending, string $link): string
+    public static function reminderText(string $sibling, string $firstName, array $pending, string $link, bool $registering = true): string
     {
-        return "A paz, {$sibling} {$firstName}! Tudo bem ? Para concluir o seu registo como membro da igreja, faltam-nos alguns dados:\n"
+        $why = $registering ? 'Para concluir o seu registo como membro da igreja' : 'Para mantermos o seu registo na igreja atualizado';
+
+        return "A paz, {$sibling} {$firstName}! Tudo bem ? {$why}, faltam-nos alguns dados:\n"
             . collect($pending)->map(fn ($item) => "- {$item};")->implode("\n")
             . "\n\nPode preenchê-los aqui, é rápido: {$link}";
     }

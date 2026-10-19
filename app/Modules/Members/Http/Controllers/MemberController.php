@@ -11,6 +11,7 @@ use App\Modules\Members\Http\Requests\UploadMemberPhotoRequest;
 use App\Modules\Members\Models\Member;
 use App\Modules\Members\Services\ActivateMemberService;
 use App\Modules\Members\Services\GetMemberFormOptionsService;
+use App\Modules\Members\Services\GetMemberPendingInformationService;
 use App\Modules\Members\Services\GetMemberProfileService;
 use App\Modules\Members\Services\ListMembersService;
 use App\Modules\Members\Services\RemoveMemberService;
@@ -55,9 +56,9 @@ class MemberController extends Controller
         return view('members::members.show', ['member' => $member] + $service->execute($member));
     }
 
-    public function edit(Member $member, GetMemberFormOptionsService $options): View
+    public function edit(Member $member, GetMemberFormOptionsService $options, GetMemberPendingInformationService $pending): View
     {
-        return view('members::members.edit', ['member' => $member] + $options->execute($member));
+        return view('members::members.edit', ['member' => $member, 'pendingFields' => $pending->fields($member)] + $options->execute($member));
     }
 
     public function update(MemberRequest $request, Member $member, SaveMemberService $service): RedirectResponse

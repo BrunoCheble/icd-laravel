@@ -122,7 +122,8 @@
                     this.member = member;
                     this.panel = 'menu';
                     this.text = `A paz, ${member.sibling} ${member.firstName}! Tudo bem ?`;
-                    this.pendingText = `A paz, ${member.sibling} ${member.firstName}! Tudo bem ? Para concluir o seu registo como membro da igreja, faltam-nos alguns dados:\n`
+                    const why = member.status === 'pending' ? 'Para concluir o seu registo como membro da igreja' : 'Para mantermos o seu registo na igreja atualizado';
+                    this.pendingText = `A paz, ${member.sibling} ${member.firstName}! Tudo bem ? ${why}, faltam-nos alguns dados:\n`
                         + member.pending.map(item => `- ${item};`).join('\n')
                         + (member.complete ? `\n\nPode preenchê-los aqui, é rápido: ${member.complete}` : '');
                 },

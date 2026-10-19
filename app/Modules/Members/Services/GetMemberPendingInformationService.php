@@ -2,12 +2,14 @@
 
 namespace App\Modules\Members\Services;
 
+use App\Enums\MembershipStatus;
 use App\Modules\Members\Models\Member;
 
 class GetMemberPendingInformationService
 {
     /**
-     * What a pending member (registered on the site) still has to send, to ask by WhatsApp. Empty for other members.
+     * What a member still has to send (missing or invalid details), to ask by WhatsApp: for pending members
+     * (registered on the site) and active ones. Empty for inactive members.
      *
      * @return string[]
      */
@@ -24,7 +26,7 @@ class GetMemberPendingInformationService
      */
     public function fields(Member $member): array
     {
-        if (! $member->isPending()) {
+        if ($member->membership_status === MembershipStatus::INACTIVED) {
             return [];
         }
 

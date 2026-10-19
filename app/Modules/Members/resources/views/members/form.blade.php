@@ -1,11 +1,23 @@
 {{-- The member form (create and edit), in sections. $member, $genders, $maritalStatus, $membershipStatus, $people
-     (the other adult members: id, name, document, gender) --}}
+     (the other adult members: id, name, document, gender), $pendingFields (edit: the details still missing, marked
+     "Pending") --}}
 @php
     $date = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('Y-m-d') : '';
     $field = fn (string $name, $default = null) => old($name, $default ?? $member->{$name});
+    $pendingFields ??= [];
+    // The "Pending" tag of a missing detail.
+    $pendingTag = fn (string $name) => in_array($name, $pendingFields, true)
+        ? new \Illuminate\Support\HtmlString(' <span class="m-tag is-part"><i class="fa-solid fa-circle-exclamation"></i> ' . e(__('Pending detail')) . '</span>')
+        : '';
 @endphp
 
 <div class="m-form" x-data="memberForm(@js(['gender' => $field('gender'), 'marital' => $field('marital_status'), 'spouse' => (bool) ($field('spouse_id') || $field('spouse_name'))]))">
+    @if ($pendingFields)
+        <div class="m-card m-section" style="border-color: #fde68a; background: #fffbeb;">
+            <p class="m-help" style="color: #92400e;"><i class="fa-solid fa-circle-exclamation"></i> {{ trans_choice(':count detail is missing; it is marked "Pending" below.|:count details are missing; they are marked "Pending" below.', count($pendingFields), ['count' => count($pendingFields)]) }}</p>
+        </div>
+    @endif
+
     @if ($errors->any())
         <div class="m-card m-section" style="border-color: #fecaca; background: #fef2f2;">
             <p class="m-error"><i class="fa-solid fa-triangle-exclamation"></i> {{ __('Check the fields marked below.') }}</p>
@@ -27,12 +39,12 @@
             </div>
             <div class="m-grid cols-3">
                 <div class="m-field">
-                    <label class="m-label" for="document_number">{{ __('Document Number') }} (NIF)</label>
+                    <label class="m-label" for="document_number">{{ __('Document Number') }} (NIF){{ $pendingTag('document_number') }}</label>
                     <input id="document_number" name="document_number" type="text" inputmode="numeric" class="m-input" value="{{ $field('document_number') }}" required autocomplete="off">
                     @error('document_number')<p class="m-error">{{ $message }}</p>@enderror
                 </div>
                 <div class="m-field">
-                    <label class="m-label" for="date_of_birth">{{ __('Date of Birth') }}</label>
+                    <label class="m-label" for="date_of_birth">{{ __('Date of Birth') }}{{ $pendingTag('date_of_birth') }}</label>
                     <input id="date_of_birth" name="date_of_birth" type="date" class="m-input" value="{{ old('date_of_birth', $date($member->date_of_birth)) }}">
                     @error('date_of_birth')<p class="m-error">{{ $message }}</p>@enderror
                 </div>
@@ -55,18 +67,18 @@
         <div class="m-grid">
             <div class="m-grid cols-2">
                 <div class="m-field">
-                    <label class="m-label" for="phone_number">{{ __('Phone Number') }}</label>
+                    <label class="m-label" for="phone_number">{{ __('Phone Number') }}{{ $pendingTag('phone_number') }}</label>
                     <input id="phone_number" name="phone_number" type="tel" class="m-input" value="{{ $field('phone_number') }}" autocomplete="off">
                     @error('phone_number')<p class="m-error">{{ $message }}</p>@enderror
                 </div>
                 <div class="m-field">
-                    <label class="m-label" for="email">{{ __('Email') }}</label>
+                    <label class="m-label" for="email">{{ __('Email') }}{{ $pendingTag('email') }}</label>
                     <input id="email" name="email" type="email" class="m-input" value="{{ $field('email') }}" autocomplete="off">
                     @error('email')<p class="m-error">{{ $message }}</p>@enderror
                 </div>
             </div>
             <div class="m-field">
-                <label class="m-label" for="address">{{ __('Address') }}</label>
+                <label class="m-label" for="address">{{ __('Address') }}{{ $pendingTag('address') }}</label>
                 <input id="address" name="address" type="text" class="m-input" value="{{ $field('address') }}" autocomplete="off">
                 @error('address')<p class="m-error">{{ $message }}</p>@enderror
             </div>
@@ -101,13 +113,13 @@
                     @error('marital_status')<p class="m-error">{{ $message }}</p>@enderror
                 </div>
                 <div class="m-field" x-show="marital === 'M'">
-                    <label class="m-label" for="date_joined">{{ __('Wedding Date') }}</label>
+                    <label class="m-label" for="date_joined">{{ __('Wedding Date') }}{{ $pendingTag('date_joined') }}</label>
                     <input id="date_joined" name="date_joined" type="date" class="m-input" value="{{ old('date_joined', $date($member->date_joined)) }}">
                     @error('date_joined')<p class="m-error">{{ $message }}</p>@enderror
                 </div>
             </div>
             <div class="m-field" x-show="marital === 'M' || spouseSet">
-                <span class="m-label">{{ __('Spouse') }}</span>
+                <span class="m-label">{{ __('Spouse') }}{{ $pendingTag('spouse') }}</span>
                 @include('members::members.partials.person-picker', ['name' => 'spouse_id', 'want' => 'spouse', 'freeName' => 'spouse_name'])
                 <p class="m-help">{{ __('Pick a member, or type the name when the spouse is not a member.') }}</p>
                 @error('spouse_id')<p class="m-error">{{ $message }}</p>@enderror

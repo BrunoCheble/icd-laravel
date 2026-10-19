@@ -1061,5 +1061,11 @@
     "If they are also a member of the church, we link you both.": "Se também for membro da igreja, associamos os dois.",
     "not a member": "não é membro",
     "Use": "Usar",
-    "Pick a member, or type the name when the spouse is not a member.": "Escolha um membro, ou escreva o nome se o cônjuge não for membro."
+    "Pick a member, or type the name when the spouse is not a member.": "Escolha um membro, ou escreva o nome se o cônjuge não for membro.",
+    "Missing details to ask for": "Dados em falta a pedir",
+    "Missing details": "Dados em falta",
+    "No birthdays, wedding anniversaries, new visitors or missing details today.": "Hoje não há aniversários, aniversários de casamento, visitantes novos nem dados em falta.",
+    "To keep your registration at the church up to date, we only need a few more details.": "Para mantermos o seu registo na igreja atualizado, só precisamos de mais alguns dados.",
+    ":count detail is missing; it is marked \"Pending\" below.|:count details are missing; they are marked \"Pending\" below.": ":count dado em falta; está marcado como \"Pendente\" abaixo.|:count dados em falta; estão marcados como \"Pendente\" abaixo.",
+    "Pending detail": "Pendente"
 }

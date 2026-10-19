@@ -92,7 +92,7 @@
             'birthdays' => ['fa-cake-candles', __('Birthdays today'), __('Birthdays'), $birthdays],
             'weddings' => ['fa-heart', __('Wedding anniversaries today'), __('Weddings'), $weddings],
             'welcomes' => ['fa-hand', __('Visitors to welcome'), __('Visitors'), $welcomes],
-            'reminders' => ['fa-circle-exclamation', __('Pending members to remind'), __('Pending'), $reminders],
+            'reminders' => ['fa-circle-exclamation', __('Missing details to ask for'), __('Missing details'), $reminders],
         ])->filter(fn ($section) => $section[3]->isNotEmpty());
         $all = $sections->flatMap(fn ($section) => $section[3]);
         $toSend = $all->whereNull('sent')->count();
@@ -135,7 +135,7 @@
                 <div class="m-card today-done">
                     <i class="fa-solid fa-circle-check"></i>
                     <strong>{{ __('No messages for today.') }}</strong>
-                    <small>{{ __('No birthdays, wedding anniversaries, new visitors or pending members today.') }}</small>
+                    <small>{{ __('No birthdays, wedding anniversaries, new visitors or missing details today.') }}</small>
                 </div>
             @endif
 

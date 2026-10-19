@@ -135,6 +135,7 @@
         .m-field { display: grid; align-content: start; gap: .3rem; min-width: 0; }
         .m-label { font-size: .82rem; font-weight: 700; color: #374151; }
         .m-label .m-optional { font-weight: 500; color: #9ca3af; }
+        .m-label .m-tag { margin-left: .25rem; padding: 0 .45rem; font-size: .7rem; line-height: 1.25rem; vertical-align: top; }
         .m-input { width: 100%; min-height: 42px; padding: .5rem .75rem; border: 1px solid #d1d5db; border-radius: .6rem; background-color: #fff; font-size: .92rem; color: #111827; }
         select.m-input { padding-right: 2rem; }
         textarea.m-input { min-height: 0; line-height: 1.45; }
