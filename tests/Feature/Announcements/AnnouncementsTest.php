@@ -18,6 +18,76 @@ class AnnouncementsTest extends TestCase
 {
     use RefreshDatabase;
 
+    private string $publicPath;
+
+    // Files go to a temporary public folder, removed after each test.
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->publicPath = sys_get_temp_dir() . '/icd-public-' . uniqid();
+        \Illuminate\Support\Facades\File::ensureDirectoryExists("{$this->publicPath}/images/announcements");
+        // The rest of the public folder (the built assets…) as it is.
+        foreach (\Illuminate\Support\Facades\File::glob(public_path() . '/*') as $entry) {
+            if (basename($entry) !== 'images') {
+                symlink($entry, "{$this->publicPath}/" . basename($entry));
+            }
+        }
+        copy(public_path('images/announcements/default.jpg'), "{$this->publicPath}/images/announcements/default.jpg");
+        $this->app->usePublicPath($this->publicPath);
+    }
+
+    protected function tearDown(): void
+    {
+        \Illuminate\Support\Facades\File::deleteDirectory($this->publicPath);
+        parent::tearDown();
+    }
+
+    /** A 1×1 PNG (the test container has no GD to draw one). */
+    private function png(string $name = 'foto.png'): UploadedFile
+    {
+        return UploadedFile::fake()->createWithContent($name, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+    }
+
+    public function test_the_picture_goes_to_the_public_folder_and_a_new_one_replaces_it(): void
+    {
+        $member = $this->member();
+        $user = User::factory()->create();
+        $data = ['member_id' => $member->id, 'type' => 'product', 'title' => 'ZZ Teste Foto', 'description' => 'Texto', 'contact' => '912345678', 'is_approved' => '1'];
+
+        $this->actingAs($user)->post('/announcements', $data + ['image_path' => $this->png()])->assertRedirect('/announcements');
+        $announcement = Announcement::where('title', 'ZZ Teste Foto')->firstOrFail();
+        $first = $announcement->image_path;
+        $this->assertStringStartsWith('images/announcements/', $first);
+        $this->assertFileExists(public_path($first));
+        $this->assertSame(asset($first), $announcement->url_image);
+
+        $this->actingAs($user)->patch("/announcements/{$announcement->id}", $data + ['image_path' => $this->png('outra.png')]);
+        $this->assertFileDoesNotExist(public_path($first));
+        $this->assertFileExists(public_path($announcement->fresh()->image_path));
+
+        // Sent by a member on the public page too
+        $this->post('/new-announcement', ['member_document' => $member->document_number, 'type' => 'service', 'title' => 'ZZ Teste Público',
+            'description' => 'X', 'contact' => '912345678', 'image_path' => $this->png()])->assertRedirect('/announcement');
+        $this->assertFileExists(public_path(Announcement::where('title', 'ZZ Teste Público')->value('image_path')));
+    }
+
+    public function test_a_picture_sent_before_is_served_from_storage(): void
+    {
+        $folder = storage_path('app/public/announcements');
+        \Illuminate\Support\Facades\File::ensureDirectoryExists($folder);
+        $name = 'zzteste' . uniqid() . '.png';
+        file_put_contents("{$folder}/{$name}", base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+        try {
+            $announcement = $this->announcement(['image_path' => "storage/announcements/{$name}", 'is_approved' => true]);
+            $this->assertSame(route('announcements.file', $name), $announcement->url_image);
+            $this->get("/announcements/files/{$name}")->assertOk()->assertHeader('Content-Type', 'image/png');
+            $this->get('/announcements/files/nao-existe.png')->assertNotFound();
+            $this->get('/announcements/files/..%2F..%2F.env')->assertNotFound();
+        } finally {
+            @unlink("{$folder}/{$name}");
+        }
+    }
+
     public function test_the_pages_need_a_login(): void
     {
         $announcement = $this->announcement();
@@ -140,7 +210,9 @@ class AnnouncementsTest extends TestCase
         $announcement = $this->announcement(['title' => 'Primeiro', 'is_approved' => true]);
         $response = $this->getJson('/api/public/announcements')->assertOk()->assertJsonPath('data.0.title', 'Primeiro')
             ->assertJsonPath('data.0.type_name', 'Product')->assertJsonPath('data.0.whatsapp', 'https://wa.me/351912345678')
-            ->assertJsonMissingPath('data.0.member_id');
+            ->assertJsonMissingPath('data.0.member_id')
+            // No picture: the default one
+            ->assertJsonPath('data.0.has_picture', false)->assertJsonPath('data.0.image_url', asset('images/announcements/default.jpg'));
         $this->assertStringContainsString('max-age=300', $response->headers->get('Cache-Control'));
 
         // Cached: a change made without the model (as by hand in the database) is not seen…

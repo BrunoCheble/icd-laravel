@@ -13,6 +13,11 @@ class Announcement extends Model
     public const PUBLISHED = 'published';
     public const EXPIRED = 'expired';
 
+    // Every announcement's picture has this format (cropped to it when sent); without one, the default picture.
+    public const PICTURE_WIDTH = 1600;
+    public const PICTURE_HEIGHT = 1000;
+    public const DEFAULT_PICTURE = 'images/announcements/default.jpg';
+
     // The site's list of announcements (see ListPublicAnnouncementsService), cached; any change clears it.
     public const PUBLIC_CACHE = 'public-announcements';
 
@@ -72,7 +77,34 @@ class Announcement extends Model
      */
     public function getUrlImageAttribute(): ?string
     {
-        return $this->image_path && file_exists(public_path($this->image_path)) ? asset($this->image_path) : null;
+        if (! $this->image_path) {
+            return null;
+        }
+        if (file_exists(public_path($this->image_path))) {
+            return asset($this->image_path);
+        }
+
+        // Sent before the files went to the public folder: in storage/app/public, served by the system.
+        $old = self::storedFile($this->image_path);
+        return $old ? route('announcements.file', basename($old)) : null;
+    }
+
+    /**
+     * The picture to show: the one sent, or the default one (no picture, or a PDF).
+     */
+    public function getPictureUrlAttribute(): string
+    {
+        return $this->url_image && ! $this->isPdf() ? $this->url_image : asset(self::DEFAULT_PICTURE);
+    }
+
+    /**
+     * Where a file sent before the public folder was used is ("storage/announcements/x.png" -> storage/app/public/
+     * announcements/x.png), or null.
+     */
+    public static function storedFile(string $path): ?string
+    {
+        $file = storage_path('app/public/announcements/' . basename($path));
+        return str_starts_with($path, 'storage/announcements/') && is_file($file) ? $file : null;
     }
 
     public function isPdf(): bool

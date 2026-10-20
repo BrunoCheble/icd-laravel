@@ -147,6 +147,7 @@
                 <div class="an-field">
                     <label for="image_path">{{ __('Image or PDF') }} <span>({{ __('optional') }})</span></label>
                     <input id="image_path" name="image_path" type="file" accept=".pdf,image/jpeg,image/png" class="an-input">
+                    @include('announcements::partials.image-cropper', ['input' => 'image_path'])
                     <small>{{ __('JPG, PNG or PDF, up to 5 MB.') }}</small>
                     @error('image_path')<p class="an-error">{{ $message }}</p>@enderror
                 </div>

@@ -14,3 +14,10 @@ Route::middleware('auth')->group(function () {
 // The public page to send an announcement (the same addresses as before); it waits for approval.
 Route::get('/announcement', [PublicAnnouncementController::class, 'create'])->name('site.announcement');
 Route::post('/new-announcement', [PublicAnnouncementController::class, 'store'])->middleware('throttle:5,1,announce')->name('announcement.register');
+
+// The files of announcements sent before they went to the public folder (in storage/app/public).
+Route::get('/announcements/files/{file}', function (string $file) {
+    $path = \App\Modules\Announcements\Models\Announcement::storedFile('storage/announcements/' . $file);
+    abort_unless($path, 404);
+    return response()->file($path, ['Cache-Control' => 'public, max-age=2592000']);
+})->where('file', '[A-Za-z0-9_-]+\.(?:jpe?g|png|gif|pdf)')->name('announcements.file');
