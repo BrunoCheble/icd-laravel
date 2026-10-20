@@ -31,7 +31,8 @@ class RefreshDeployCaches
 
     public function terminate(Request $request, Response $response): void
     {
-        if (app()->isProduction() && $this->caches->isStale()) {
+        // Only web requests: tests run in the console and some pretend to be production (they never build real caches).
+        if (app()->isProduction() && ! app()->runningInConsole() && $this->caches->isStale()) {
             $this->caches->execute();
         }
     }
