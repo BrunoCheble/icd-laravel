@@ -3,22 +3,17 @@
 namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Announcements\Models\Announcement;
+use App\Modules\Announcements\Services\ListPublicAnnouncementsService;
 use Illuminate\Http\JsonResponse;
 
 class ApiController extends Controller
 {
     /**
-     * The announcements the site shows: approved and not expired, newest first.
+     * The announcements the site shows (see ListPublicAnnouncementsService), cached here and in the browser.
      */
-    public function index(): JsonResponse
+    public function index(ListPublicAnnouncementsService $service): JsonResponse
     {
-        $announcements = Announcement::where('is_approved', true)
-            ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>=', now()->startOfDay()))
-            ->latest()
-            ->get();
-
-        return response()->json(['data' => $announcements], 200);
+        return response()->json(['data' => $service->execute()], 200)
+            ->header('Cache-Control', 'public, max-age=300');
     }
-
 }

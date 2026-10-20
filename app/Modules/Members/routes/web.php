@@ -16,5 +16,5 @@ Route::middleware('auth')->group(function () {
 });
 
 // The page a pending member opens from the link sent by WhatsApp (signed, see GetRegistrationLinkService).
-Route::get('/completar-registo/{member}', [CompleteRegistrationController::class, 'show'])->middleware('throttle:30,1')->name('members.complete');
-Route::post('/completar-registo/{member}', [CompleteRegistrationController::class, 'update'])->middleware(['signed', 'throttle:10,1'])->name('members.complete.update');
+Route::get('/completar-registo/{member}', [CompleteRegistrationController::class, 'show'])->middleware('throttle:30,1,complete-registration')->name('members.complete');
+Route::post('/completar-registo/{member}', [CompleteRegistrationController::class, 'update'])->middleware(['signed', 'throttle:10,1,complete-registration-save'])->name('members.complete.update');
