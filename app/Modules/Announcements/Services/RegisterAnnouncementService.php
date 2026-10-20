@@ -30,7 +30,7 @@ class RegisterAnnouncementService
                 'description' => $data['description'],
                 'type'        => $data['type'],
                 'contact'     => $data['contact'],
-                'link'        => $data['link'],
+                'link'        => $data['link'] ?? null,
                 'member_id'   => $member->id,
                 'image_path'  => $filePath,
                 'is_approved' => false,

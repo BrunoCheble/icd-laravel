@@ -13,6 +13,16 @@ class Announcement extends Model
     public const PUBLISHED = 'published';
     public const EXPIRED = 'expired';
 
+    // The site's list of announcements (see ListPublicAnnouncementsService), cached; any change clears it.
+    public const PUBLIC_CACHE = 'public-announcements';
+
+    protected static function booted(): void
+    {
+        $forget = fn () => \Illuminate\Support\Facades\Cache::forget(self::PUBLIC_CACHE);
+        static::saved($forget);
+        static::deleted($forget);
+    }
+
     protected $fillable = [
         'member_id',
         'title',

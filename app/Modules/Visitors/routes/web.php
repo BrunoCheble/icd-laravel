@@ -13,6 +13,6 @@ Route::middleware('auth')->group(function () {
 
 // The reception's page to register visitors (the same addresses as before; registering is a POST now).
 Route::get('/visitor', [PublicVisitorController::class, 'create'])->name('site.visitor');
-Route::post('/new-visitor', [PublicVisitorController::class, 'store'])->middleware('throttle:30,1')->name('visitor.register');
+Route::post('/new-visitor', [PublicVisitorController::class, 'store'])->middleware('throttle:30,1,visitor-register')->name('visitor.register');
 Route::get('/new-visitor', fn () => redirect()->route('site.visitor'));
 Route::post('/visitor/new-family', [PublicVisitorController::class, 'newFamily'])->name('site.visitor.new-family');

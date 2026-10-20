@@ -12,4 +12,4 @@ Route::middleware('auth')->group(function () {
 
 // The public page to leave a prayer request (the same addresses as before).
 Route::get('/prayer-request', [PublicPrayerController::class, 'create'])->name('site.prayer');
-Route::post('/new-prayer-request', [PublicPrayerController::class, 'store'])->middleware('throttle:5,1')->name('prayer.register');
+Route::post('/new-prayer-request', [PublicPrayerController::class, 'store'])->middleware('throttle:5,1,prayer-request')->name('prayer.register');

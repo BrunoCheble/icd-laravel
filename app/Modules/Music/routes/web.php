@@ -27,9 +27,9 @@ Route::prefix('repertoire')->name('site.setlist')->controller(SiteSetlistControl
     Route::patch('/{setlist}/songs/{song}/key', 'updateKey')->whereNumber(['setlist', 'song'])->name('.songs.key');
     Route::patch('/{setlist}/songs/{song}/bpm', 'updateBpm')->whereNumber(['setlist', 'song'])->name('.songs.bpm');
     Route::put('/{setlist}/order', 'reorder')->whereNumber('setlist')->name('.order');
-    Route::post('/{setlist}/songs/{song}/lessons/{lesson}/loops', 'contributeLessonLoop')->whereNumber(['setlist', 'song', 'lesson'])->middleware('throttle:20,1')->name('.songs.lessons.loops');
-    Route::post('/{setlist}/songs/{song}/lessons', 'contributeLesson')->whereNumber(['setlist', 'song'])->middleware('throttle:10,1')->name('.songs.lessons');
-    Route::post('/{setlist}/songs/{song}/suggestions', 'suggest')->whereNumber(['setlist', 'song'])->middleware('throttle:20,1')->name('.songs.suggest');
+    Route::post('/{setlist}/songs/{song}/lessons/{lesson}/loops', 'contributeLessonLoop')->whereNumber(['setlist', 'song', 'lesson'])->middleware('throttle:20,1,lesson-loops')->name('.songs.lessons.loops');
+    Route::post('/{setlist}/songs/{song}/lessons', 'contributeLesson')->whereNumber(['setlist', 'song'])->middleware('throttle:10,1,lesson-contributions')->name('.songs.lessons');
+    Route::post('/{setlist}/songs/{song}/suggestions', 'suggest')->whereNumber(['setlist', 'song'])->middleware('throttle:20,1,chord-suggestions')->name('.songs.suggest');
 });
 
 Route::middleware('auth')->group(function () {

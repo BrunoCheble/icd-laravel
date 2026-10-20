@@ -99,6 +99,60 @@ class AnnouncementsTest extends TestCase
         $this->assertSame(['Publicado Dois', 'Sem Prazo'], $titles);
     }
 
+    public function test_a_member_announces_on_the_public_page_and_it_waits_for_approval(): void
+    {
+        $member = $this->member();
+        $this->get('/announcement')->assertOk()->assertSee('name="member_document"', false);
+
+        $this->post('/new-announcement', ['member_document' => $member->document_number, 'type' => 'service', 'title' => 'ZZ Teste Pintor',
+            'description' => 'Pinturas', 'contact' => '912 345 678'])->assertRedirect('/announcement');
+        $announcement = Announcement::where('title', 'ZZ Teste Pintor')->firstOrFail();
+        $this->assertFalse($announcement->is_approved);
+        $this->assertSame($member->id, $announcement->member_id);
+        $this->assertNull($announcement->link);
+        $this->get('/announcement')->assertSee('O seu serviço foi recebido!');
+
+        // Not a member, or a bot
+        $this->post('/new-announcement', ['member_document' => '000000000', 'type' => 'service', 'title' => 'X', 'description' => 'X', 'contact' => '9'])
+            ->assertSessionHasErrors('member_document');
+        $this->post('/new-announcement', ['member_document' => $member->document_number, 'type' => 'service', 'title' => 'Spam', 'description' => 'X', 'contact' => '9', 'website' => 'http://spam'])
+            ->assertSessionHasErrors('website');
+        $this->assertFalse(Announcement::where('title', 'Spam')->exists());
+    }
+
+    public function test_repeated_requests_are_limited(): void
+    {
+        $member = $this->member();
+        $form = ['member_document' => $member->document_number, 'type' => 'service', 'description' => 'X', 'contact' => '912345678'];
+        for ($i = 1; $i <= 5; $i++) {
+            $this->post('/new-announcement', $form + ['title' => "ZZ Teste {$i}"])->assertRedirect();
+        }
+        $this->post('/new-announcement', $form + ['title' => 'ZZ Teste 6'])->assertStatus(429);
+
+        for ($i = 1; $i <= 10; $i++) {
+            $this->get("/check-document-number/{$member->document_number}")->assertOk();
+        }
+        $this->get("/check-document-number/{$member->document_number}")->assertStatus(429);
+    }
+
+    public function test_the_site_api_is_cached_until_an_announcement_changes(): void
+    {
+        $announcement = $this->announcement(['title' => 'Primeiro', 'is_approved' => true]);
+        $response = $this->getJson('/api/public/announcements')->assertOk()->assertJsonPath('data.0.title', 'Primeiro')
+            ->assertJsonPath('data.0.type_name', 'Product')->assertJsonPath('data.0.whatsapp', 'https://wa.me/351912345678')
+            ->assertJsonMissingPath('data.0.member_id');
+        $this->assertStringContainsString('max-age=300', $response->headers->get('Cache-Control'));
+
+        // Cached: a change made without the model (as by hand in the database) is not seen…
+        \Illuminate\Support\Facades\DB::table('announcements')->where('id', $announcement->id)->update(['title' => 'Escondido']);
+        $this->getJson('/api/public/announcements')->assertJsonPath('data.0.title', 'Primeiro');
+        // …while any change through the system clears the cache at once
+        $announcement->fresh()->update(['title' => 'Segundo']);
+        $this->getJson('/api/public/announcements')->assertJsonPath('data.0.title', 'Segundo');
+        $this->actingAs(\App\Models\User::factory()->create())->patch("/announcements/{$announcement->id}/approval", ['approved' => '0']);
+        $this->getJson('/api/public/announcements')->assertJsonCount(0, 'data');
+    }
+
     private function announcement(array $data = []): Announcement
     {
         return Announcement::create($data + [
