@@ -10,7 +10,7 @@ use App\Modules\Announcements\Support\AnnouncementCategories;
 use Illuminate\Http\JsonResponse;
 
 /**
- * Comments sent from the site about a published announcement, by members (their NIF); they wait for approval.
+ * Private comments sent from the site about a published announcement, by members (their NIF), for the church's team.
  */
 class PublicCommentController extends Controller
 {
@@ -22,6 +22,6 @@ class PublicCommentController extends Controller
 
         $service->execute($announcement, $request->member(), $request->validated('body'));
 
-        return response()->json(['message' => __('Thank you! Your comment shows on the site once approved.')], 201);
+        return response()->json(['message' => __('Thank you! Your comment was sent to the church\'s team.')], 201);
     }
 }

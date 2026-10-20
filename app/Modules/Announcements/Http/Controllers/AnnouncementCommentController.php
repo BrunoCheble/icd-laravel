@@ -4,23 +4,23 @@ namespace App\Modules\Announcements\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Announcements\Models\AnnouncementComment;
-use App\Modules\Announcements\Services\ApproveCommentService;
+use App\Modules\Announcements\Services\MarkCommentReadService;
 use App\Modules\Announcements\Services\RemoveCommentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 
 /**
- * The team approving (or taking back) and deleting the members' comments about announcements.
+ * The team reading (or marking as not read) and deleting the members' private comments about announcements.
  */
 class AnnouncementCommentController extends Controller
 {
-    public function approval(Request $request, AnnouncementComment $comment, ApproveCommentService $service): RedirectResponse
+    public function read(Request $request, AnnouncementComment $comment, MarkCommentReadService $service): RedirectResponse
     {
-        $approved = $request->boolean('approved');
-        $service->execute($comment, $approved);
+        $read = $request->boolean('read');
+        $service->execute($comment, $read);
 
-        return Redirect::back()->with('success', $approved ? __('Comment approved.') : __('Comment back to pending.'));
+        return Redirect::back()->with('success', $read ? __('Comment marked as read.') : __('Comment marked as not read.'));
     }
 
     public function destroy(AnnouncementComment $comment, RemoveCommentService $service): RedirectResponse

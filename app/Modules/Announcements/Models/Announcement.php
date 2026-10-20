@@ -14,8 +14,8 @@ class Announcement extends Model
     public const PUBLISHED = 'published';
     public const EXPIRED = 'expired';
 
-    // The picture of an announcement is its category's banner (no pictures sent by people); the default one for the
-    // old types (donations, products).
+    // The picture of an announcement is its category's banner, or the first photo of a donation or a sale; the default
+    // one for the old types (products).
     public const DEFAULT_PICTURE = 'images/announcements/default.jpg';
 
     // The site's list of announcements (see ListPublicAnnouncementsService), cached; any change clears it.
@@ -37,6 +37,7 @@ class Announcement extends Model
         'contact',
         'link',
         'image_path',
+        'photos',
         'is_approved',
         'approved_at',
         'expires_at',
@@ -45,6 +46,7 @@ class Announcement extends Model
     protected $casts = [
         'is_approved' => 'boolean',
         'details' => 'array',
+        'photos' => 'array',
     ];
 
     /**
@@ -56,11 +58,19 @@ class Announcement extends Model
     }
 
     /**
-     * The members' comments about it (the site shows the approved ones).
+     * The members' private comments about it, for the church's team (only the admin shows them).
      */
     public function comments()
     {
         return $this->hasMany(AnnouncementComment::class)->latest()->orderByDesc('id');
+    }
+
+    /**
+     * The members' stars (1 to 5), one per member.
+     */
+    public function ratings()
+    {
+        return $this->hasMany(AnnouncementRating::class);
     }
 
     public function isApproved(): bool
@@ -101,11 +111,35 @@ class Announcement extends Model
     }
 
     /**
-     * The picture to show: the category's banner (the default picture for the old types).
+     * The picture to show: the first photo of a donation or a sale, otherwise the category's banner (the default
+     * picture for the old types).
      */
     public function getPictureUrlAttribute(): string
     {
+        $photo = $this->photo_urls[0] ?? null;
+        if ($photo) {
+            return $photo;
+        }
+
         return asset(AnnouncementCategories::has($this->type) ? AnnouncementCategories::banner($this->type) : self::DEFAULT_PICTURE);
+    }
+
+    /** The members' average stars (one decimal) and how many rated it, e.g. ["average" => 4.5, "count" => 2]. */
+    public function ratingSummary(): array
+    {
+        $ratings = $this->relationLoaded('ratings') ? $this->ratings : $this->ratings()->get();
+
+        return ['average' => $ratings->isEmpty() ? null : round($ratings->avg('stars'), 1), 'count' => $ratings->count()];
+    }
+
+    /** The addresses of its photos (only donations and sales take them). */
+    public function getPhotoUrlsAttribute(): array
+    {
+        if (! AnnouncementCategories::photos($this->type)) {
+            return [];
+        }
+
+        return collect($this->photos ?? [])->filter(fn ($path) => is_file(public_path($path)))->map(fn ($path) => asset($path))->values()->all();
     }
 
     /** The category's fields as they read (see AnnouncementCategories::describe()). */

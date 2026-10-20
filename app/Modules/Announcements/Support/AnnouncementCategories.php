@@ -3,10 +3,12 @@
 namespace App\Modules\Announcements\Support;
 
 /**
- * The announcement categories: the kinds of announcement that stay current for months (no products or brands). Each
- * one has its banner (the site shows it instead of pictures), how long it lasts by default and its own fields, kept
- * in the announcement's "details" (JSON). The forms, the validation and the site's labels all come from here.
+ * The announcement categories. Each one has its banner (the site shows it, not pictures sent by people, except the
+ * photos of donations and sales), how long it lasts by default and its own fields, kept in the announcement's
+ * "details" (JSON). The forms, the validation and the site's labels all come from here.
  *
+ * Category: label, icon, months, fields, and optionally pdf (takes a PDF: a résumé), photos (how many: donations,
+ * sales) and limit (how many a member may have at a time, waiting or published).
  * Field: label, type (select | text | yesno), options (select: key => label), required, max (text length).
  * The keys are stored; the labels are translated when shown.
  */
@@ -16,6 +18,8 @@ class AnnouncementCategories
     public const LESSONS = 'lessons';
     public const RESUME = 'resume';
     public const JOB = 'job';
+    public const DONATION = 'donation';
+    public const SALE = 'sale';
 
     /** The categories, in their order on the forms and the site. */
     public static function all(): array
@@ -32,6 +36,11 @@ class AnnouncementCategories
             'beauty' => 'Beauty',
             'logistics' => 'Transport and logistics',
             'other' => 'Other',
+        ];
+        $conditions = [
+            'new' => 'New',
+            'like_new' => 'Like new',
+            'used' => 'Used, in good condition',
         ];
 
         return [
@@ -52,8 +61,10 @@ class AnnouncementCategories
                         'food' => 'Cooking and events',
                         'other' => 'Other',
                     ]],
-                    'zone' => ['label' => 'Area served', 'type' => 'text', 'required' => true, 'max' => 80, 'placeholder' => 'E.g. Lisbon and Amadora'],
+                    'company' => ['label' => 'Company name', 'type' => 'text', 'required' => false, 'max' => 80, 'placeholder' => 'E.g. Silva Pinturas'],
+                    'location' => ['label' => 'Location', 'type' => 'text', 'required' => true, 'max' => 80, 'placeholder' => 'E.g. Lisbon and Amadora'],
                     'availability' => ['label' => 'Availability', 'type' => 'text', 'required' => false, 'max' => 80, 'placeholder' => 'E.g. Weekdays and Saturdays'],
+                    'other_contact' => ['label' => 'Other contact (email or website)', 'type' => 'text', 'required' => false, 'max' => 120, 'placeholder' => 'E.g. geral@empresa.pt'],
                 ],
             ],
             self::LESSONS => [
@@ -114,6 +125,28 @@ class AnnouncementCategories
                     'location' => ['label' => 'Place of work', 'type' => 'text', 'required' => true, 'max' => 80, 'placeholder' => 'E.g. Sintra'],
                 ],
             ],
+            self::DONATION => [
+                'label' => 'Donations',
+                'icon' => 'fa-hand-holding-heart',
+                'months' => 1,
+                'photos' => 3,
+                'fields' => [
+                    'condition' => ['label' => 'Condition', 'type' => 'select', 'required' => true, 'options' => $conditions],
+                    'location' => ['label' => 'Pick-up place', 'type' => 'text', 'required' => false, 'max' => 80, 'placeholder' => 'E.g. Amadora'],
+                ],
+            ],
+            self::SALE => [
+                'label' => 'Sales',
+                'icon' => 'fa-tag',
+                'months' => 2,
+                'photos' => 3,
+                'limit' => 3,
+                'fields' => [
+                    'price' => ['label' => 'Price', 'type' => 'text', 'required' => true, 'max' => 30, 'placeholder' => 'E.g. 25 €'],
+                    'condition' => ['label' => 'Condition', 'type' => 'select', 'required' => true, 'options' => $conditions],
+                    'location' => ['label' => 'Location', 'type' => 'text', 'required' => false, 'max' => 80, 'placeholder' => 'E.g. Amadora'],
+                ],
+            ],
         ];
     }
 
@@ -145,6 +178,18 @@ class AnnouncementCategories
         return (bool) (self::all()[$category]['pdf'] ?? false);
     }
 
+    /** How many photos the category takes (donations and sales), 0 for the others. */
+    public static function photos(?string $category): int
+    {
+        return (int) (self::all()[$category]['photos'] ?? 0);
+    }
+
+    /** How many announcements of the category a member may have at a time (waiting or published), or null. */
+    public static function limit(?string $category): ?int
+    {
+        return self::all()[$category]['limit'] ?? null;
+    }
+
     /** The end of an announcement of the category sent today. */
     public static function defaultExpiry(string $category): string
     {
@@ -166,6 +211,16 @@ class AnnouncementCategories
         }
 
         return $rules;
+    }
+
+    /** Validation rules of a donation's or a sale's photos (pictures only, up to its number). */
+    public static function photoRules(?string $category): array
+    {
+        $max = self::photos($category);
+
+        return $max
+            ? ['photos' => ['nullable', 'array', "max:{$max}"], 'photos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120']]
+            : ['photos' => ['prohibited']];
     }
 
     /** Readable names of the fields (for the validation messages). */
@@ -232,6 +287,8 @@ class AnnouncementCategories
             'icon' => $category['icon'],
             'months' => $category['months'],
             'pdf' => (bool) ($category['pdf'] ?? false),
+            'photos' => (int) ($category['photos'] ?? 0),
+            'limit' => $category['limit'] ?? null,
             'fields' => collect($category['fields'])->map(fn ($field) => [
                 'label' => __($field['label']),
                 'type' => $field['type'],

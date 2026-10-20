@@ -146,11 +146,13 @@ class DevDataSeeder extends Seeder
     {
         $authors = Member::query()->where('last_name', 'like', 'ZZ Teste%')->where('membership_status', MembershipStatus::ACTIVED)->pluck('id');
         foreach ([
-            ['ZZ Teste Pintor profissional', 'service', true, '+5 months', 'Pintura de interiores e exteriores, massa corrida e pequenas reparações em paredes.', ['area' => 'construction', 'zone' => 'Amadora e Sintra', 'availability' => 'Dias úteis e sábados']],
+            ['ZZ Teste Pintor profissional', 'service', true, '+5 months', 'Pintura de interiores e exteriores, massa corrida e pequenas reparações em paredes.', ['area' => 'construction', 'company' => 'ZZ Teste Pinturas', 'location' => 'Amadora e Sintra', 'availability' => 'Dias úteis e sábados']],
             ['ZZ Teste Explicações de Matemática', 'lessons', true, '+4 months', 'Explicações para o 3º ciclo e secundário, presencial ou online.', ['subject' => 'Matemática', 'level' => 'secondary', 'mode' => 'both']],
             ['ZZ Teste Procuro trabalho em limpezas', 'resume', true, '+10 days', 'Experiência em limpezas domésticas e de escritórios. Disponível de manhã.', ['area' => 'cleaning', 'experience' => '1_3', 'availability' => 'part', 'driving' => false]],
             ['ZZ Teste Ajudante de cozinha', 'job', true, '-3 days', 'Restaurante procura ajudante de cozinha para o turno do almoço.', ['role' => 'Ajudante de cozinha', 'area' => 'restaurant', 'contract' => 'part', 'location' => 'Lisboa']],
-            ['ZZ Teste Reparações elétricas', 'service', false, '+6 months', 'Pequenas reparações elétricas em casa.', ['area' => 'electricity', 'zone' => 'Lisboa']],
+            ['ZZ Teste Reparações elétricas', 'service', false, '+6 months', 'Pequenas reparações elétricas em casa.', ['area' => 'electricity', 'location' => 'Lisboa']],
+            ['ZZ Teste Roupa de bebé', 'donation', true, '+3 weeks', 'Roupa de 0 a 12 meses em bom estado. É só combinar a recolha.', ['condition' => 'used', 'location' => 'Amadora']],
+            ['ZZ Teste Bicicleta de criança', 'sale', true, '+1 month', 'Bicicleta de criança (6 a 9 anos), pouco usada, com rodinhas.', ['price' => '40 €', 'condition' => 'like_new', 'location' => 'Sintra']],
         ] as $i => [$title, $type, $approved, $expires, $text, $details]) {
             $announcement = Announcement::create([
                 'member_id' => $authors[$i % max(1, $authors->count())],
@@ -158,10 +160,13 @@ class DevDataSeeder extends Seeder
                 'is_approved' => $approved, 'approved_at' => $approved ? now() : null,
                 'expires_at' => $expires ? now()->modify($expires)->endOfDay() : null,
             ]);
-            // Members' comments: one shown on the site, one waiting for approval
+            // Members' private comments (one read by the team) and stars
             if ($i === 0) {
-                $announcement->comments()->create(['member_id' => $authors->last(), 'body' => 'Pintou a minha sala, ficou impecável. Recomendo!', 'is_approved' => true, 'approved_at' => now()]);
-                $announcement->comments()->create(['member_id' => $authors->first(), 'body' => 'Faz orçamentos sem compromisso?', 'is_approved' => false]);
+                $announcement->comments()->create(['member_id' => $authors->last(), 'body' => 'Pintou a minha sala, ficou impecável.', 'read_at' => now()]);
+                $announcement->comments()->create(['member_id' => $authors->get(1), 'body' => 'Não atende o telefone há duas semanas, ainda está disponível?']);
+                foreach ($authors->slice(1, 3)->values() as $n => $memberId) {
+                    $announcement->ratings()->create(['member_id' => $memberId, 'stars' => [5, 4, 5][$n]]);
+                }
             }
         }
     }

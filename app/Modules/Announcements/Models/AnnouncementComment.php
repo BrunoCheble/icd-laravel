@@ -4,10 +4,10 @@ namespace App\Modules\Announcements\Models;
 
 use App\Modules\Members\Models\Member;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Cache;
 
 /**
- * A comment a member sent about an announcement (found by the NIF); the site shows it once approved.
+ * A private comment a member (found by the NIF) sent to the church's team about an announcement; only the admin shows
+ * it. read_at: when the team read it.
  */
 class AnnouncementComment extends Model
 {
@@ -15,22 +15,12 @@ class AnnouncementComment extends Model
         'announcement_id',
         'member_id',
         'body',
-        'is_approved',
-        'approved_at',
+        'read_at',
     ];
 
     protected $casts = [
-        'is_approved' => 'boolean',
-        'approved_at' => 'datetime',
+        'read_at' => 'datetime',
     ];
-
-    protected static function booted(): void
-    {
-        // The site's list carries the approved comments.
-        $forget = fn () => Cache::forget(Announcement::PUBLIC_CACHE);
-        static::saved($forget);
-        static::deleted($forget);
-    }
 
     public function announcement()
     {

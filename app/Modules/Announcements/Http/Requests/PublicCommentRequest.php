@@ -6,7 +6,7 @@ use App\Modules\Members\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * A comment about an announcement, sent from the site by a member (found by the NIF). It waits for approval.
+ * A private comment about an announcement for the church's team, sent from the site by a member (found by the NIF).
  */
 class PublicCommentRequest extends FormRequest
 {

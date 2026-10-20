@@ -26,7 +26,10 @@ class AnnouncementRequest extends FormRequest
             'image_path'  => ['nullable', 'file', 'mimes:pdf', 'max:5120'],
             'is_approved' => ['sometimes', 'boolean'],
             'expires_at'  => ['nullable', 'date'],
-        ] + AnnouncementCategories::rules($this->input('type'));
+            // The photos kept are the ones not removed.
+            'remove_photos'   => ['nullable', 'array'],
+            'remove_photos.*' => ['string'],
+        ] + AnnouncementCategories::rules($this->input('type')) + AnnouncementCategories::photoRules($this->input('type'));
     }
 
     public function attributes(): array

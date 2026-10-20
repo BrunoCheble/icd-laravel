@@ -7,6 +7,8 @@
         'lessons' => [__('Your lessons were received!'), __('The team will review them and they will be on the church\'s site once approved.'), null],
         'resume' => [__('Your résumé was received!'), __('The team will review it and it will be on the church\'s site once approved. God bless your search!'), null],
         'job' => [__('Your job offer was received!'), __('The team will review it and it will be on the church\'s site once approved.'), null],
+        'donation' => [__('Your donation was received!'), __('Thank you for your generosity! It will be on the church\'s site once approved.'), null],
+        'sale' => [__('Your sale was received!'), __('The team will review it and it will be on the church\'s site once approved.'), __('Sales are agreed directly between you and whoever is interested.')],
     ];
     $sent = session('sent');
     // The errors of the category's fields, for the form's script ("details.area" => message).
@@ -89,7 +91,7 @@
             </div>
         @else
             <h1>{{ __('Announce') }}</h1>
-            <p class="lead">{{ __('Members of the church can announce their services, lessons, their résumé or a job offer. It shows on the site once approved by the team.') }}</p>
+            <p class="lead">{{ __('Members of the church can announce their services, lessons, their résumé, a job offer, a donation or something for sale. It shows on the site once approved by the team.') }}</p>
 
             <form method="POST" action="{{ route('announcement.register') }}" enctype="multipart/form-data" class="an-card"
                 x-data="announcementForm(@js(['type' => old('type', ''), 'details' => (object) old('details', []), 'errors' => (object) $detailErrors->all(), 'categories' => $categories, 'checkUrl' => route('member.checkDocumentNumber', '__NIF__')]))" @submit="sending = true">
@@ -165,7 +167,18 @@
                     @error('link')<p class="an-error">{{ $message }}</p>@enderror
                 </div>
 
-                {{-- A résumé can go with its PDF (the site shows the category's picture, never one sent) --}}
+                {{-- A donation or a sale can go with up to 3 photos (the first one is the card's picture) --}}
+                <div class="an-field" x-show="categories[type]?.photos" x-cloak>
+                    <label for="photos">{{ __('Photos') }} <span>({{ __('optional') }})</span></label>
+                    <input id="photos" name="photos[]" type="file" multiple accept="image/jpeg,image/png,image/webp" class="an-input" :disabled="!categories[type]?.photos" @change="checkPhotos($event)">
+                    <small>{{ __('Up to 3 photos (JPG, PNG or WebP, up to 5 MB each). The first one is the card\'s picture on the site.') }}</small>
+                    <p class="an-error" x-show="photoError" x-text="photoError"></p>
+                    @error('photos')<p class="an-error">{{ $message }}</p>@enderror
+                    @error('photos.*')<p class="an-error">{{ $message }}</p>@enderror
+                </div>
+                <p class="an-tip" x-show="categories[type]?.limit" x-cloak><i class="fa-solid fa-circle-info"></i> {{ __('Each member can have up to 3 sales announced at a time.') }}</p>
+
+                {{-- A résumé can go with its PDF --}}
                 <div class="an-field" x-show="categories[type]?.pdf" x-cloak>
                     <label for="image_path">{{ __('Résumé in PDF') }} <span>({{ __('optional') }})</span></label>
                     <input id="image_path" name="image_path" type="file" accept=".pdf,application/pdf" class="an-input" :disabled="!categories[type]?.pdf">
@@ -184,7 +197,13 @@
         // and examples by category.
         function announcementForm({ type, details, errors, categories, checkUrl }) {
             return {
-                type, details, errors, categories, nif: '', nifState: null, checked: null, sending: false,
+                type, details, errors, categories, nif: '', nifState: null, checked: null, sending: false, photoError: '',
+                // No more photos than the category takes.
+                checkPhotos(event) {
+                    const max = this.categories[this.type]?.photos || 0;
+                    this.photoError = event.target.files.length > max ? @js(__('Choose up to 3 photos.')) : '';
+                    if (this.photoError) event.target.value = '';
+                },
                 // Yes / no fields kept as true / false: the form's 1 / 0.
                 init() { for (const key in this.details) if (typeof this.details[key] === 'boolean') this.details[key] = this.details[key] ? '1' : '0'; },
                 get fields() { return this.categories[this.type]?.fields || {}; },
@@ -192,6 +211,8 @@
                     service: { title: 'Ex. Pintor Profissional', description: 'Ex. Pintor com experiência em pintura residencial e comercial, oferecendo serviços de alta qualidade com acabamento profissional. Trabalho com pintura interna e externa, aplicação de massa corrida, textura e reparos em paredes.' },
                     lessons: { title: 'Ex. Explicações de Matemática', description: 'Ex. Professora com experiência dá explicações de Matemática ao 2.º e 3.º ciclo e ao secundário. Ajuda na preparação para testes e exames, com acompanhamento à medida de cada aluno.' },
                     resume: { title: 'Ex. Procuro trabalho em restauração', description: 'Ex. Sou uma pessoa motivada, em busca de uma oportunidade na área de restauração. Tenho interesse em aprender e crescer no setor. Sou pontual, comunicativo e estou disponível para começar de imediato.', link: 'https://www.linkedin.com/in/****/' },
+                    donation: { title: 'Ex. Roupa de bebé', description: 'Ex. Roupa de bebé dos 0 aos 12 meses, em bom estado. Para quem precisar, é só combinar a recolha.' },
+                    sale: { title: 'Ex. Bicicleta de criança', description: 'Ex. Bicicleta de criança (6 a 9 anos), pouco usada, com rodinhas. Entrego em Amadora.' },
                     job: { title: 'Ex. Ajudante de cozinha', description: 'Ex. Restaurante em Sintra procura ajudante de cozinha para o turno do almoço, de segunda a sexta. Não é preciso experiência: damos formação.' },
                 },
                 async checkNif() {

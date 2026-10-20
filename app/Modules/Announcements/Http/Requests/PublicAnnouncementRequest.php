@@ -2,6 +2,7 @@
 
 namespace App\Modules\Announcements\Http\Requests;
 
+use App\Modules\Announcements\Models\Announcement;
 use App\Modules\Announcements\Support\AnnouncementCategories;
 use App\Modules\Members\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
@@ -40,7 +41,27 @@ class PublicAnnouncementRequest extends FormRequest
             'image_path'      => ['nullable', 'file', 'mimes:pdf', 'max:5120'],
             // Left empty by people; bots fill every field.
             'website'         => ['prohibited'],
-        ] + AnnouncementCategories::rules($this->input('type'));
+        ] + AnnouncementCategories::rules($this->input('type')) + AnnouncementCategories::photoRules($this->input('type'));
+    }
+
+    /**
+     * A member may have only so many announcements of some categories at a time (sales: 3, waiting or published).
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $limit = AnnouncementCategories::limit($this->input('type'));
+            $member = $limit ? $this->member() : null;
+            if (! $member) {
+                return;
+            }
+            $active = Announcement::query()->where('member_id', $member->id)->where('type', $this->input('type'))
+                ->where(fn ($query) => $query->where('is_approved', false)->orWhereNull('expires_at')->orWhere('expires_at', '>=', now()->startOfDay()))
+                ->count();
+            if ($active >= $limit) {
+                $validator->errors()->add('type', __('You already have :count announcements of this kind. Wait for one to end, or ask the team to remove one, to send another.', ['count' => $active]));
+            }
+        });
     }
 
     public function attributes(): array

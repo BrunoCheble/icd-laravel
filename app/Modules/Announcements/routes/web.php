@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth')->group(function () {
     Route::resource('announcements', AnnouncementController::class)->except('show');
     Route::patch('/announcements/{announcement}/approval', [AnnouncementController::class, 'approval'])->name('announcements.approval');
-    // The members' comments about an announcement: approved (the site shows them) or deleted.
-    Route::patch('/announcements/comments/{comment}/approval', [AnnouncementCommentController::class, 'approval'])->whereNumber('comment')->name('announcements.comments.approval');
+    // The members' private comments about an announcement: read or deleted by the team.
+    Route::patch('/announcements/comments/{comment}/read', [AnnouncementCommentController::class, 'read'])->whereNumber('comment')->name('announcements.comments.read');
     Route::delete('/announcements/comments/{comment}', [AnnouncementCommentController::class, 'destroy'])->whereNumber('comment')->name('announcements.comments.destroy');
 });
 

@@ -36,7 +36,9 @@
         .notice-comments { display: grid; gap: .5rem; margin: 0 0 1rem; }
         .notice-comments h3 { margin: 0; font-size: .8rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--tx-6b7280); }
         .notice-comment { padding: .65rem .75rem; border: 1px solid var(--bd-e5e7eb); border-radius: .7rem; }
-        .notice-comment.is-pending { border-color: var(--bd-fcd34d); background: var(--bg-fffbeb); }
+        .notice-comment.is-new { border-color: var(--bd-fcd34d); background: var(--bg-fffbeb); }
+        .notice-private { margin: 0; font-size: .78rem; color: var(--tx-6b7280); }
+        .notice-stars { color: #f59e0b; letter-spacing: .05em; }
         .notice-comment p { margin: .25rem 0 .5rem; font-size: .9rem; line-height: 1.45; color: var(--tx-374151); white-space: pre-line; overflow-wrap: anywhere; }
         .notice-comment small { font-size: .78rem; color: var(--tx-6b7280); }
         .notice-comment-actions { display: flex; gap: .4rem; }
@@ -52,7 +54,7 @@
         $types = collect($categories)->map(fn ($category) => $category['label'])->all() + \App\Enums\AnnouncementType::options();
         $icons = collect($categories)->map(fn ($category) => $category['icon'])->all() + ['donation' => 'fa-hand-holding-heart', 'product' => 'fa-tag'];
         $statuses = ['pending' => [__('Waiting for approval'), 'is-part'], 'published' => [__('Published'), 'is-ok'], 'expired' => [__('Expired'), 'is-off']];
-        $tabs = ['' => __('All'), 'pending' => __('To approve'), 'published' => __('Published'), 'expired' => __('Expired'), 'comments' => __('Comments to approve')];
+        $tabs = ['' => __('All'), 'pending' => __('To approve'), 'published' => __('Published'), 'expired' => __('Expired'), 'comments' => __('Comments not read')];
         $day = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : null;
     @endphp
 
@@ -114,13 +116,19 @@
                             'link' => $announcement->link,
                             'file' => $announcement->isPdf() ? $announcement->url_image : null,
                             'details' => $announcement->detail_lines,
+                            'photos' => $announcement->photo_urls,
                             'comments' => $announcement->comments->map(fn ($comment) => [
                                 'name' => $comment->member?->first_and_last_name ?? __('Member'),
                                 'body' => $comment->body,
                                 'date' => $comment->created_at?->format('d/m/Y H:i'),
-                                'approved' => $comment->is_approved,
-                                'approval' => route('announcements.comments.approval', $comment),
+                                'read' => $comment->read_at !== null,
+                                'readUrl' => route('announcements.comments.read', $comment),
                                 'destroy' => route('announcements.comments.destroy', $comment),
+                            ])->values()->all(),
+                            'rating' => $announcement->ratingSummary(),
+                            'ratings' => $announcement->ratings->sortByDesc('updated_at')->map(fn ($rating) => [
+                                'name' => $rating->member?->first_and_last_name ?? __('Member'),
+                                'stars' => $rating->stars,
                             ])->values()->all(),
                             'status' => $announcement->status(),
                             'statusLabel' => $statusLabel,
@@ -135,6 +143,7 @@
                         <a href="{{ route('announcements.edit', $announcement) }}" class="notice-media" aria-label="{{ $announcement->title }}">
                             <img src="{{ $announcement->picture_url }}" alt="" loading="lazy">
                             @if ($announcement->isPdf())<span class="m-tag is-media" style="position: absolute; right: .6rem; top: .6rem; left: auto;"><i class="fa-solid fa-file-pdf"></i> PDF</span>@endif
+                            @if (count($announcement->photo_urls) > 1)<span class="m-tag is-media" style="position: absolute; right: .6rem; top: .6rem; left: auto;"><i class="fa-solid fa-images"></i> {{ count($announcement->photo_urls) }}</span>@endif
                             <span class="m-tag {{ $statusTag }}">{{ $statusLabel }}</span>
                         </a>
                         <div class="notice-body">
@@ -150,10 +159,12 @@
                                 <span><i class="fa-solid {{ $icons[$announcement->type] ?? 'fa-bullhorn' }}"></i>{{ $announcement->type_name }}</span>
                                 @if ($announcement->member)<span><i class="fa-solid fa-user"></i>{{ $announcement->member->first_and_last_name }}</span>@endif
                                 @if ($announcement->expires_at)<span><i class="fa-regular fa-calendar"></i>{{ $announcement->status() === 'expired' ? __('Expired on :date', ['date' => $day($announcement->expires_at)]) : __('Until :date', ['date' => $day($announcement->expires_at)]) }}</span>@endif
-                                @php($toApprove = $announcement->comments->where('is_approved', false)->count())
+                                @php($rating = $announcement->ratingSummary())
+                                @if ($rating['count'])<span title="{{ __('Members\' rating') }}"><span class="notice-stars">★</span> {{ number_format($rating['average'], 1, ',', '') }} ({{ $rating['count'] }})</span>@endif
+                                @php($unread = $announcement->comments->whereNull('read_at')->count())
                                 @if ($announcement->comments->isNotEmpty())
                                     <button type="button" class="notice-talk" style="border: 0; background: none; padding: 0; cursor: pointer;" @click="ad = @js($ad); panel = 'menu'">
-                                        <i class="fa-regular fa-comment"></i>{{ trans_choice(':count comment|:count comments', $announcement->comments->count(), ['count' => $announcement->comments->count()]) }}@if ($toApprove) · {{ __(':count to approve', ['count' => $toApprove]) }}@endif
+                                        <i class="fa-regular fa-comment"></i>{{ trans_choice(':count comment|:count comments', $announcement->comments->count(), ['count' => $announcement->comments->count()]) }}@if ($unread) · {{ __(':count not read', ['count' => $unread]) }}@endif
                                     </button>
                                 @endif
                             </div>
@@ -192,20 +203,34 @@
                                 <div><dt x-text="line.label"></dt><dd x-text="line.value"></dd></div>
                             </template>
                         </dl>
-                        {{-- The members' comments: the site shows the approved ones --}}
+                        {{-- The photos of a donation or a sale --}}
+                        <div class="notice-chips" x-show="ad?.photos?.length > 1" style="margin: 0 0 1rem;">
+                            <template x-for="photo in (ad?.photos || [])" :key="photo">
+                                <a :href="photo" target="_blank" rel="noopener"><img :src="photo" alt="" style="width: 5.5rem; aspect-ratio: 16 / 10; object-fit: cover; border-radius: .5rem;"></a>
+                            </template>
+                        </div>
+                        {{-- The members' stars --}}
+                        <div class="notice-comments" x-show="ad?.ratings?.length">
+                            <h3>{{ __('Rating') }} · <span class="notice-stars">★</span> <span x-text="String(ad?.rating?.average ?? '').replace('.', ',')"></span> (<span x-text="ad?.rating?.count"></span>)</h3>
+                            <template x-for="rating in (ad?.ratings || [])" :key="rating.name">
+                                <small><span class="notice-stars" x-text="'★'.repeat(rating.stars) + '☆'.repeat(5 - rating.stars)"></span> <span x-text="rating.name"></span></small>
+                            </template>
+                        </div>
+                        {{-- The members' private comments, only for the team --}}
                         <div class="notice-comments" x-show="ad?.comments?.length">
-                            <h3>{{ __('Comments') }}</h3>
-                            <template x-for="comment in (ad?.comments || [])" :key="comment.approval">
-                                <div class="notice-comment" :class="{ 'is-pending': !comment.approved }">
-                                    <small><strong x-text="comment.name"></strong> · <span x-text="comment.date"></span> · <span x-text="comment.approved ? @js(__('Shown on the site')) : @js(__('Waiting for approval'))"></span></small>
+                            <h3>{{ __('Private comments') }}</h3>
+                            <p class="notice-private">{{ __('Sent by members to the church\'s team; they are not shown on the site.') }}</p>
+                            <template x-for="comment in (ad?.comments || [])" :key="comment.readUrl">
+                                <div class="notice-comment" :class="{ 'is-new': !comment.read }">
+                                    <small><strong x-text="comment.name"></strong> · <span x-text="comment.date"></span><span x-show="!comment.read"> · {{ __('Not read') }}</span></small>
                                     <p x-text="comment.body"></p>
                                     <div class="notice-comment-actions">
-                                        <form method="POST" :action="comment.approval">
+                                        <form method="POST" :action="comment.readUrl">
                                             @csrf
                                             @method('PATCH')
-                                            <input type="hidden" name="approved" :value="comment.approved ? 0 : 1">
-                                            <button type="submit" class="m-btn" :class="{ 'is-primary': !comment.approved }">
-                                                <i class="fa-solid" :class="comment.approved ? 'fa-rotate-left' : 'fa-check'"></i> <span x-text="comment.approved ? @js(__('Hide')) : @js(__('Approve'))"></span>
+                                            <input type="hidden" name="read" :value="comment.read ? 0 : 1">
+                                            <button type="submit" class="m-btn" :class="{ 'is-primary': !comment.read }">
+                                                <i class="fa-solid" :class="comment.read ? 'fa-envelope' : 'fa-check'"></i> <span x-text="comment.read ? @js(__('Mark as not read')) : @js(__('Mark as read'))"></span>
                                             </button>
                                         </form>
                                         <form method="POST" :action="comment.destroy" onsubmit="return confirm(@js(__('Delete this comment?')))">

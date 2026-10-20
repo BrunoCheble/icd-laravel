@@ -11,13 +11,14 @@ use Illuminate\Support\Facades\DB;
 
 class SaveAnnouncementService
 {
-    public function __construct(private FileUploadService $fileUploadService)
+    public function __construct(private FileUploadService $fileUploadService, private AnnouncementPhotosService $photos)
     {
     }
 
     /**
-     * Creates the announcement, or updates the one given: a new file replaces the old one; the approval date is set
-     * when it becomes approved and cleared when it stops being so; it expires at the end of its day.
+     * Creates the announcement, or updates the one given: a new file replaces the old one; a donation's or a sale's
+     * photos are kept, removed or added (up to its category's number; none for the other categories); the approval
+     * date is set when it becomes approved and cleared when it stops being so; it expires at the end of its day.
      */
     public function execute(array $data, ?Announcement $announcement = null): Announcement
     {
@@ -44,6 +45,8 @@ class SaveAnnouncementService
                     @unlink(public_path($old));
                 }
             }
+
+            $values['photos'] = $this->photos->execute($announcement?->photos ?? [], $data['remove_photos'] ?? [], $data['photos'] ?? [], AnnouncementCategories::photos($data['type']));
 
             if ($approved && (! $announcement || ! $announcement->is_approved)) {
                 $values['approved_at'] = now();

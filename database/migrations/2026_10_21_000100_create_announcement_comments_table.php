@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Comments that members (found by their NIF) send about an announcement; the site shows them once approved.
+     * Private comments that members (found by their NIF) send to the church's team about an announcement; only the
+     * admin shows them (read_at: when the team read it).
      */
     public function up(): void
     {
@@ -16,8 +17,7 @@ return new class extends Migration
             $table->foreignId('announcement_id')->constrained('announcements')->cascadeOnDelete();
             $table->foreignId('member_id')->nullable()->constrained('members')->nullOnDelete();
             $table->text('body');
-            $table->boolean('is_approved')->default(false);
-            $table->timestamp('approved_at')->nullable();
+            $table->timestamp('read_at')->nullable();
             $table->timestamps();
         });
     }

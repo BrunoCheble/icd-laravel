@@ -12,6 +12,7 @@
         'errors' => (object) $detailErrors->all(),
         'categories' => $categories,
         'creating' => ! $announcement->exists,
+        'kept' => count(array_filter($announcement->photos ?? [], fn ($path) => is_file(public_path($path)))),
     ]))">
     @if ($errors->any())
         <div class="m-card m-section" style="border-color: var(--bd-fecaca); background: var(--bg-fef2f2);">
@@ -107,6 +108,32 @@
         </div>
     </section>
 
+    {{-- A donation's or a sale's photos (the first one is the card's picture) --}}
+    <section class="m-card m-section" x-show="categories[type]?.photos" x-cloak>
+        <h3 class="m-section-title"><i class="fa-solid fa-images"></i> {{ __('Photos') }} <small>{{ __('optional') }}</small></h3>
+        <div class="m-grid">
+            @if ($announcement->photos)
+                <div style="display: flex; flex-wrap: wrap; gap: .75rem;">
+                    @foreach ($announcement->photos as $path)
+                        @if (is_file(public_path($path)))
+                            <label style="display: grid; gap: .3rem; font-size: .8rem; color: var(--tx-4b5563);">
+                                <img src="{{ asset($path) }}" alt="" style="width: 9rem; aspect-ratio: 16 / 10; object-fit: cover; border-radius: .5rem;">
+                                <span><input type="checkbox" name="remove_photos[]" value="{{ $path }}" @change="kept += $event.target.checked ? -1 : 1"> {{ __('Remove') }}</span>
+                            </label>
+                        @endif
+                    @endforeach
+                </div>
+            @endif
+            <div class="m-field">
+                <input id="photos" name="photos[]" type="file" multiple accept="image/jpeg,image/png,image/webp" class="m-input" :disabled="!categories[type]?.photos" @change="checkPhotos($event)">
+                <p class="m-help">{{ __('Up to 3 photos (JPG, PNG or WebP, up to 5 MB each). The first one is the card\'s picture on the site.') }}</p>
+                <p class="m-error" x-show="photoError" x-text="photoError"></p>
+                @error('photos')<p class="m-error">{{ $message }}</p>@enderror
+                @error('photos.*')<p class="m-error">{{ $message }}</p>@enderror
+            </div>
+        </div>
+    </section>
+
     {{-- Publishing --}}
     <section class="m-card m-section">
         <h3 class="m-section-title"><i class="fa-solid fa-eye"></i> {{ __('Publishing') }}</h3>
@@ -139,9 +166,15 @@
     window.memberPeople = @js($people);
 
     // The category chosen and its own fields; a new announcement takes the category's usual length.
-    function announcementCategory({ type, details, errors, categories, creating }) {
+    function announcementCategory({ type, details, errors, categories, creating, kept }) {
         return {
-            type, details, errors, categories,
+            type, details, errors, categories, kept, photoError: '',
+            // No more photos than the category takes, with the ones kept.
+            checkPhotos(event) {
+                const room = (this.categories[this.type]?.photos || 0) - this.kept;
+                this.photoError = event.target.files.length > room ? @js(__('Up to 3 photos in all: remove some first.')) : '';
+                if (this.photoError) event.target.value = '';
+            },
             // Yes / no fields kept as true / false: the form's 1 / 0.
             init() { for (const key in this.details) if (typeof this.details[key] === 'boolean') this.details[key] = this.details[key] ? '1' : '0'; },
             get fields() { return this.categories[this.type]?.fields || {}; },

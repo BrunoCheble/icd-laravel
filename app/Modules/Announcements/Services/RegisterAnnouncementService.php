@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class RegisterAnnouncementService
 {
-    public function __construct(private FileUploadService $fileUploadService)
+    public function __construct(private FileUploadService $fileUploadService, private AnnouncementPhotosService $photos)
     {
     }
 
@@ -37,6 +37,8 @@ class RegisterAnnouncementService
                 'link'        => $data['link'] ?? null,
                 'member_id'   => $member->id,
                 'image_path'  => $filePath,
+                // A donation's or a sale's photos (up to its category's number).
+                'photos'      => $this->photos->execute([], [], $data['photos'] ?? [], AnnouncementCategories::photos($data['type'])),
                 'is_approved' => false,
                 'expires_at'  => AnnouncementCategories::defaultExpiry($data['type']) . ' 23:59:59',
             ]);
