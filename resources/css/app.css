@@ -171,4 +171,4 @@ html[data-theme="dark"] :is(.bars-page, .layout-page, .practice, .song-overview,
 }
 
 /* Tags over a picture (announcements): solid, so they read on any image. */
-html[data-theme="dark"] .ad-media .m-tag { background: rgba(17, 19, 24, .85); }
+html[data-theme="dark"] .notice-media .m-tag { background: rgba(17, 19, 24, .85); }
