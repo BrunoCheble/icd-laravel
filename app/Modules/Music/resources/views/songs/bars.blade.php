@@ -451,7 +451,7 @@
                                             </template>
                                         </div>
                                     </template>
-                                    <div class="bar" x-show="!isHiddenBar(bar)" :class="{ 'is-group-start': !!bar.group, 'is-current': barsShown && b === shownBar, 'has-block': bar.blocks.some(block => !isMarker(block)), 'is-selected': isSelected(b), 'is-looped': loop && b >= loop.from && b <= loop.to }"
+                                    <div class="bar" x-show="!isHiddenBar(bar)" :class="{ 'is-group-start': !!bar.group, 'is-current': b === litBar, 'has-block': bar.blocks.some(block => !isMarker(block)), 'is-selected': isSelected(b), 'is-looped': loop && b >= loop.from && b <= loop.to }"
                                         :style="bar.blocks.length ? typeVars(blockName(bar.blocks[0])) : {}" :data-bar="b"
                                         @click="clickBar(b, $event)" @contextmenu.prevent="openBarMenu(b, $event.currentTarget)"
                                         @pointerdown="startPress(b, $event)" @pointerup="endPress()" @pointerleave="endPress()" @pointercancel="endPress()">
@@ -483,7 +483,7 @@
                                         </div>
                                         <div class="bar-beats" :style="`grid-template-columns: repeat(${bar.beats.length}, minmax(0, 1fr))`">
                                             <template x-for="(beat, i) in bar.beats" :key="i">
-                                                <span class="beat" :class="{ 'is-on': barsShown && b === shownBar && i === currentBeat }" :data-beat="i" @click.stop="clickBeat(b, i, $event.currentTarget, $event)" @dblclick.stop="mode === 'edit' && editBeat(b, i, $event)"
+                                                <span class="beat" :class="{ 'is-on': b === litBar && i === litBeat }" :data-beat="i" @click.stop="clickBeat(b, i, $event.currentTarget, $event)" @dblclick.stop="mode === 'edit' && editBeat(b, i, $event)"
                                                     :title="`${@js(__('Beat'))} ${i + 1}: ${beat.chord || '–'}${beat.and !== null ? ' → ' + (beat.and || '–') + ' (e)' : ''}`">
                                                     <template x-if="inline && Math.floor(inline.tick / 2) === b * perBar + i">
                                                         <input type="text" class="inline-chord" :class="{ 'is-invalid': inline?.invalid }" :value="inline?.text ?? ''" autocomplete="off" spellcheck="false"
@@ -1087,6 +1087,10 @@
                 phone: window.matchMedia('(max-width: 1023px)').matches,
                 get barsShown() { return !this.phone || this.pane === 'bars'; },
                 get sheetShown() { return !this.phone || this.pane === 'sheet'; },
+                // The lit bar and beat of the grid, worked out once per change (not once per beat shown); -1 while
+                // the grid is the hidden pane.
+                litBar: -1,
+                litBeat: -1,
                 history: [],
                 revision: 0,
                 dirty: false,
@@ -1173,6 +1177,10 @@
                     // following the music stays light.
                     Alpine.effect(() => {
                         this.playingSheetChord = this.sheetShown ? this.currentSheetChord : -1;
+                    });
+                    Alpine.effect(() => {
+                        this.litBar = this.barsShown ? this.shownBar : -1;
+                        this.litBeat = this.barsShown ? this.currentBeat : -1;
                     });
                     const phone = window.matchMedia('(max-width: 1023px)');
                     phone.addEventListener('change', () => { this.phone = phone.matches; });
