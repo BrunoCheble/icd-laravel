@@ -105,6 +105,9 @@
             .app-user:hover { background: var(--bg-f3f4f6); }
             .app-avatar { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 999px; background: var(--app-accent); color: #3b2502; font-size: .8rem; font-weight: 700; }
             .app-main { flex: 1; }
+            /* A thin bar at the top while the next page is on its way (only when it takes a moment) */
+            .app-progress { position: fixed; top: 0; left: 0; z-index: 100; width: 100%; height: 3px; background: var(--brand); box-shadow: 0 0 8px rgba(248, 169, 37, .6); transform: scaleX(0); transform-origin: 0 50%; opacity: 0; pointer-events: none; transition: transform .25s ease-out, opacity .2s ease; }
+            .app-progress.is-on { opacity: 1; }
             /* Theme choice in the user's menu */
             .app-theme { padding: .5rem 1rem .6rem; border-top: 1px solid var(--bd-f1f2f4); }
             .app-theme > span { display: block; margin-bottom: .35rem; font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--tx-9ca3af); }
@@ -150,6 +153,7 @@
         </style>
     </head>
     <body class="font-sans antialiased">
+        <div class="app-progress" aria-hidden="true"></div>
         <div class="app-shell" x-data="{
                 menuOpen: false,
                 collapsed: document.documentElement.classList.contains('sidebar-collapsed'),
@@ -237,5 +241,43 @@
                 @endif
             </div>
         </div>
+        <script>
+            // The bar at the top while the next page opens: after a link of the admin or a form is used, if the page
+            // has not changed 150 ms later. It moves fast and then slower, and goes away with the new page (also when
+            // coming back with the browser's back button), or after 12 s (a download, a navigation called off).
+            (() => {
+                const bar = document.querySelector('.app-progress');
+                let wait, trickle, stopAfter, value = 0;
+                const set = (next) => { value = next; bar.style.transform = `scaleX(${next})`; };
+                const stop = () => {
+                    clearTimeout(wait); clearInterval(trickle); clearTimeout(stopAfter);
+                    if (!bar.classList.contains('is-on')) return set(0);
+                    set(1);
+                    setTimeout(() => { bar.classList.remove('is-on'); set(0); }, 250);
+                };
+                const start = () => {
+                    clearTimeout(wait);
+                    wait = setTimeout(() => {
+                        bar.classList.add('is-on');
+                        set(.2);
+                        trickle = setInterval(() => set(value + (.92 - value) * .1), 250);
+                        stopAfter = setTimeout(stop, 12000);
+                    }, 150);
+                };
+                document.addEventListener('click', (event) => {
+                    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                    const link = event.target.closest('a[href]');
+                    if (!link || (link.target && link.target !== '_self') || link.hasAttribute('download')) return;
+                    const url = new URL(link.href, location.href);
+                    if (url.origin !== location.origin || !/^https?:$/.test(url.protocol)) return;
+                    if (url.pathname === location.pathname && url.search === location.search && url.hash) return;
+                    start();
+                });
+                document.addEventListener('submit', (event) => {
+                    if (!event.defaultPrevented && (!event.target.target || event.target.target === '_self')) start();
+                });
+                window.addEventListener('pageshow', stop);
+            })();
+        </script>
     </body>
 </html>
