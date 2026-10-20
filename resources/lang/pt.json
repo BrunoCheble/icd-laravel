@@ -1194,5 +1194,7 @@
     "Rotate right": "Rodar para a direita",
     "Use the crop": "Usar o recorte",
     "Announcement format": "Formato do anúncio",
-    "JPG, PNG or PDF, up to 5 MB. Pictures are cropped to the announcements' format (16:10); without one, the default picture is shown.": "JPG, PNG ou PDF, até 5 MB. As imagens são recortadas no formato dos anúncios (16:10); sem imagem, aparece a imagem por defeito."
+    "JPG, PNG or PDF, up to 5 MB. Pictures are cropped to the announcements' format (16:10); without one, the default picture is shown.": "JPG, PNG ou PDF, até 5 MB. As imagens são recortadas no formato dos anúncios (16:10); sem imagem, aparece a imagem por defeito.",
+    "The place being played, lit and followed on the screen. Hide it when the recording does not match the bars.": "O ponto que está a tocar, aceso e seguido no ecrã. Oculte-o quando a gravação não coincide com os compassos.",
+    "Tap the video to start": "Toque no vídeo para começar"
 }
