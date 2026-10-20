@@ -26,7 +26,7 @@ class RegisterPublicMemberService
             'document_number' => $data['document_number'],
             'marital_status' => $data['marital_status'],
             'phone_number' => $data['phone_number'],
-            'email' => $data['email'],
+            'email' => $data['email'] ?? null,
             'zip_code' => $data['zip_code'],
             'address' => trim(NameHelper::normalizeName($data['address']) . ' ' . $data['address_number']),
             'city' => NameHelper::normalizeName($data['city']),

@@ -24,7 +24,7 @@ class PublicMemberRequest extends FormRequest
         $this->merge([
             'document_number' => preg_replace('/\D+/', '', (string) $this->input('document_number')),
             'phone_number' => preg_replace('/\s+/', '', (string) $this->input('phone_number')),
-            'email' => mb_strtolower(trim((string) $this->input('email'))),
+            'email' => mb_strtolower(trim((string) $this->input('email'))) ?: null,
         ]);
     }
 
@@ -37,7 +37,7 @@ class PublicMemberRequest extends FormRequest
             'document_number' => ['required', 'digits:9', Rule::unique(Member::class, 'document_number')],
             'marital_status'  => ['required', Rule::in(['S', 'M', 'D', 'W'])],
             'phone_number'    => ['required', 'string', 'min:9', 'max:20'],
-            'email'           => ['required', 'email', 'max:150'],
+            'email'           => ['nullable', 'email', 'max:150'],
             'zip_code'        => ['required', 'regex:/^\d{4}-\d{3}$/'],
             'address'         => ['required', 'string', 'max:150'],
             'address_number'  => ['required', 'string', 'max:20'],

@@ -423,6 +423,10 @@ class AnnouncementsTest extends TestCase
         $this->postJson('/api/public/members', ['full_name' => 'Só', 'zip_code' => '1234', 'birthdate' => '1990-03-02', 'gender' => 'X'] + $form)
             ->assertJsonValidationErrors(['full_name', 'zip_code', 'birthdate', 'gender']);
         $this->postJson('/api/public/members', ['website' => 'http://spam', 'document_number' => '111222333'] + $form)->assertJsonValidationErrors('website');
+
+        // The email is optional
+        $this->postJson('/api/public/members', ['email' => '', 'document_number' => '444555666'] + $form)->assertCreated();
+        $this->assertNull(Member::where('document_number', '444555666')->value('email'));
     }
 
     private function announcement(array $data = []): Announcement
