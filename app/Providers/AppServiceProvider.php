@@ -45,7 +45,10 @@ class AppServiceProvider extends ServiceProvider
                 ['label' => 'Anniversaries', 'icon' => 'fa-solid fa-cake-candles', 'route' => 'report.anniversaries.index', 'active' => 'report.anniversaries.*'],
             ])
             ->section('communication', 'Communication', 20, [
-                ['label' => 'Announcements', 'icon' => 'fa-solid fa-bullhorn', 'route' => 'announcements.index'],
+                // The announcements and the members' comments waiting for approval.
+                ['label' => 'Announcements', 'icon' => 'fa-solid fa-bullhorn', 'route' => 'announcements.index',
+                    'badge' => fn () => \App\Modules\Announcements\Models\Announcement::where('is_approved', false)->count()
+                        + \App\Modules\Announcements\Models\AnnouncementComment::where('is_approved', false)->count()],
                 ['label' => 'Prayer Requests', 'icon' => 'fa-solid fa-hands-praying', 'route' => 'prayers.index'],
             ]);
 

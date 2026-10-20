@@ -1,14 +1,16 @@
-{{-- The public page where a member sends an announcement (it waits for approval before the site shows it). $types --}}
+{{-- The public page where a member sends an announcement (it waits for approval before the site shows it).
+     $categories: AnnouncementCategories::forForms() (each one's fields show when it is chosen) --}}
 @php
-    $icons = ['resume' => 'fa-file-lines', 'service' => 'fa-screwdriver-wrench', 'donation' => 'fa-hand-holding-heart', 'product' => 'fa-tag'];
-    // What follows a sent announcement, by its type.
+    // What follows a sent announcement, by its category.
     $thanks = [
-        'resume' => [__('Your résumé was received!'), __('The team will review it and it will be on the church\'s site once approved. God bless your search!'), null],
         'service' => [__('Your service was received!'), __('The team will review it and it will be on the church\'s site once approved.'), null],
-        'product' => [__('Your product was received!'), __('The team will review it and it will be on the church\'s site once approved.'), __('Sales are agreed directly between you and whoever is interested.')],
-        'donation' => [__('Your donation was received!'), __('Thank you for your generosity! It will be on the church\'s site once approved.'), null],
+        'lessons' => [__('Your lessons were received!'), __('The team will review them and they will be on the church\'s site once approved.'), null],
+        'resume' => [__('Your résumé was received!'), __('The team will review it and it will be on the church\'s site once approved. God bless your search!'), null],
+        'job' => [__('Your job offer was received!'), __('The team will review it and it will be on the church\'s site once approved.'), null],
     ];
     $sent = session('sent');
+    // The errors of the category's fields, for the form's script ("details.area" => message).
+    $detailErrors = collect($errors->getMessages())->filter(fn ($messages, $key) => str_starts_with($key, 'details.'))->map(fn ($messages) => $messages[0]);
 @endphp
 <!DOCTYPE html>
 <html lang="pt">
@@ -87,10 +89,10 @@
             </div>
         @else
             <h1>{{ __('Announce') }}</h1>
-            <p class="lead">{{ __('Members of the church can announce a service, a product, a donation or their résumé. It shows on the site once approved by the team.') }}</p>
+            <p class="lead">{{ __('Members of the church can announce their services, lessons, their résumé or a job offer. It shows on the site once approved by the team.') }}</p>
 
             <form method="POST" action="{{ route('announcement.register') }}" enctype="multipart/form-data" class="an-card"
-                x-data="announcementForm(@js(['type' => old('type', ''), 'checkUrl' => route('member.checkDocumentNumber', '__NIF__')]))" @submit="sending = true">
+                x-data="announcementForm(@js(['type' => old('type', ''), 'details' => (object) old('details', []), 'errors' => (object) $detailErrors->all(), 'categories' => $categories, 'checkUrl' => route('member.checkDocumentNumber', '__NIF__')]))" @submit="sending = true">
                 @csrf
                 {{-- Left empty by people: a filled one is a bot --}}
                 <div class="an-hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
@@ -105,14 +107,33 @@
                 </div>
 
                 <div class="an-field">
-                    <span class="label">{{ __('Type') }}</span>
-                    <div class="an-types" role="radiogroup" aria-label="{{ __('Type') }}">
-                        @foreach ($types as $value => $label)
-                            <label><input type="radio" name="type" value="{{ $value }}" x-model="type" required><span><i class="fa-solid {{ $icons[$value] ?? 'fa-bullhorn' }}"></i>{{ $label }}</span></label>
+                    <span class="label">{{ __('Category') }}</span>
+                    <div class="an-types" role="radiogroup" aria-label="{{ __('Category') }}">
+                        @foreach ($categories as $value => $category)
+                            <label><input type="radio" name="type" value="{{ $value }}" x-model="type" required><span><i class="fa-solid {{ $category['icon'] }}"></i>{{ $category['label'] }}</span></label>
                         @endforeach
                     </div>
                     @error('type')<p class="an-error">{{ $message }}</p>@enderror
                 </div>
+
+                {{-- The chosen category's own fields --}}
+                <template x-for="(field, name) in fields" :key="type + name">
+                    <div class="an-field">
+                        <label :for="'details-' + name"><span x-text="field.label" style="font-weight: 700; color: inherit;"></span> <span x-show="!field.required">({{ __('optional') }})</span></label>
+                        <template x-if="field.type === 'select' || field.type === 'yesno'">
+                            <select :id="'details-' + name" :name="'details[' + name + ']'" class="an-input" x-model="details[name]" :required="field.required">
+                                <option value="">{{ __('Choose…') }}</option>
+                                <template x-for="(label, value) in (field.type === 'yesno' ? { 1: @js(__('Yes')), 0: @js(__('No')) } : field.options)" :key="value">
+                                    <option :value="value" x-text="label" :selected="String(details[name] ?? '') === String(value)"></option>
+                                </template>
+                            </select>
+                        </template>
+                        <template x-if="field.type === 'text'">
+                            <input :id="'details-' + name" :name="'details[' + name + ']'" class="an-input" x-model="details[name]" :required="field.required" :maxlength="field.max" :placeholder="field.placeholder">
+                        </template>
+                        <p class="an-error" x-show="errors['details.' + name]" x-text="errors['details.' + name]"></p>
+                    </div>
+                </template>
 
                 <div class="an-field">
                     <label for="title">{{ __('Title') }}</label>
@@ -144,11 +165,11 @@
                     @error('link')<p class="an-error">{{ $message }}</p>@enderror
                 </div>
 
-                <div class="an-field">
-                    <label for="image_path">{{ __('Image or PDF') }} <span>({{ __('optional') }})</span></label>
-                    <input id="image_path" name="image_path" type="file" accept=".pdf,image/jpeg,image/png" class="an-input">
-                    @include('announcements::partials.image-cropper', ['input' => 'image_path'])
-                    <small>{{ __('JPG, PNG or PDF, up to 5 MB.') }}</small>
+                {{-- A résumé can go with its PDF (the site shows the category's picture, never one sent) --}}
+                <div class="an-field" x-show="categories[type]?.pdf" x-cloak>
+                    <label for="image_path">{{ __('Résumé in PDF') }} <span>({{ __('optional') }})</span></label>
+                    <input id="image_path" name="image_path" type="file" accept=".pdf,application/pdf" class="an-input" :disabled="!categories[type]?.pdf">
+                    <small>{{ __('PDF, up to 5 MB. Whoever is interested can open it from the site.') }}</small>
                     @error('image_path')<p class="an-error">{{ $message }}</p>@enderror
                 </div>
 
@@ -159,15 +180,19 @@
     </main>
 
     <script>
-        // The form: the NIF checked once per value (not on every key), sending once, and examples by type.
-        function announcementForm({ type, checkUrl }) {
+        // The form: the chosen category's fields, the NIF checked once per value (not on every key), sending once,
+        // and examples by category.
+        function announcementForm({ type, details, errors, categories, checkUrl }) {
             return {
-                type, nif: '', nifState: null, checked: null, sending: false,
+                type, details, errors, categories, nif: '', nifState: null, checked: null, sending: false,
+                // Yes / no fields kept as true / false: the form's 1 / 0.
+                init() { for (const key in this.details) if (typeof this.details[key] === 'boolean') this.details[key] = this.details[key] ? '1' : '0'; },
+                get fields() { return this.categories[this.type]?.fields || {}; },
                 hints: {
-                    service: { title: 'Ex. Pintor Profissional', description: 'Ex. Pintor com experiência em pintura residencial e comercial, oferecendo serviços de alta qualidade com acabamento profissional. Trabalho com pintura interna e externa, aplicação de massa corrida, textura, grafiato e reparos em paredes. Atendimento rápido, limpo e com foco na satisfação do cliente.' },
-                    product: { title: 'Ex. Produtos de cerâmica', description: 'Oferecemos uma variedade de produtos em cerâmica para decoração, utilitários e acabamento. Itens feitos com qualidade e ótimo custo-benefício. Consulte disponibilidade e modelos' },
-                    resume: { title: 'Ex. Restauração', description: 'Ex. Sou uma pessoa motivada e entusiasta, em busca de uma oportunidade na área de restauração. Tenho interesse em aprender e crescer no setor, buscando uma posição onde possa desenvolver minhas habilidades em atendimento ao cliente e trabalho em equipe. Estou disponível para diferentes turnos e pronto para começar imediatamente. Sou pontual, comunicativo e tenho vontade de aprender novas tarefas.', link: 'https://www.linkedin.com/in/****/' },
-                    donation: { title: 'Ex. Doação de Roupas', description: 'Ex. Doação de roupas para crianças' },
+                    service: { title: 'Ex. Pintor Profissional', description: 'Ex. Pintor com experiência em pintura residencial e comercial, oferecendo serviços de alta qualidade com acabamento profissional. Trabalho com pintura interna e externa, aplicação de massa corrida, textura e reparos em paredes.' },
+                    lessons: { title: 'Ex. Explicações de Matemática', description: 'Ex. Professora com experiência dá explicações de Matemática ao 2.º e 3.º ciclo e ao secundário. Ajuda na preparação para testes e exames, com acompanhamento à medida de cada aluno.' },
+                    resume: { title: 'Ex. Procuro trabalho em restauração', description: 'Ex. Sou uma pessoa motivada, em busca de uma oportunidade na área de restauração. Tenho interesse em aprender e crescer no setor. Sou pontual, comunicativo e estou disponível para começar de imediato.', link: 'https://www.linkedin.com/in/****/' },
+                    job: { title: 'Ex. Ajudante de cozinha', description: 'Ex. Restaurante em Sintra procura ajudante de cozinha para o turno do almoço, de segunda a sexta. Não é preciso experiência: damos formação.' },
                 },
                 async checkNif() {
                     const nif = this.nif.replace(/\D/g, '');

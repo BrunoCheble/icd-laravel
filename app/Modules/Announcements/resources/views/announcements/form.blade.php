@@ -1,10 +1,18 @@
 {{-- The announcement form (create and edit), in sections. $announcement, $people (the members to pick as author) --}}
 @php
     $field = fn (string $name) => old($name, $announcement->{$name});
-    $icons = ['resume' => 'fa-file-lines', 'service' => 'fa-screwdriver-wrench', 'donation' => 'fa-hand-holding-heart', 'product' => 'fa-tag'];
+    $categories = \App\Modules\Announcements\Support\AnnouncementCategories::forForms();
+    // The errors of the category's fields, for the script ("details.area" => message).
+    $detailErrors = collect($errors->getMessages())->filter(fn ($messages, $key) => str_starts_with($key, 'details.'))->map(fn ($messages) => $messages[0]);
 @endphp
 
-<div class="m-form">
+<div class="m-form" x-data="announcementCategory(@js([
+        'type' => (string) $field('type'),
+        'details' => (object) old('details', $announcement->details ?? []),
+        'errors' => (object) $detailErrors->all(),
+        'categories' => $categories,
+        'creating' => ! $announcement->exists,
+    ]))">
     @if ($errors->any())
         <div class="m-card m-section" style="border-color: var(--bd-fecaca); background: var(--bg-fef2f2);">
             <p class="m-error"><i class="fa-solid fa-triangle-exclamation"></i> {{ __('Check the fields marked below.') }}</p>
@@ -16,13 +24,36 @@
         <h3 class="m-section-title"><i class="fa-solid fa-bullhorn"></i> {{ __('Announcement') }}</h3>
         <div class="m-grid">
             <div class="m-field">
-                <span class="m-label">{{ __('Type') }}</span>
-                <div class="m-seg" role="radiogroup" aria-label="{{ __('Type') }}">
-                    @foreach (\App\Enums\AnnouncementType::options() as $value => $label)
-                        <label><input type="radio" name="type" value="{{ $value }}" @checked($field('type') === $value) required><span><i class="fa-solid {{ $icons[$value] ?? 'fa-bullhorn' }}"></i> <span class="m-hide-sm">{{ $label }}</span></span></label>
+                <span class="m-label">{{ __('Category') }}</span>
+                <div class="m-seg" role="radiogroup" aria-label="{{ __('Category') }}">
+                    @foreach ($categories as $value => $category)
+                        <label title="{{ $category['label'] }}"><input type="radio" name="type" value="{{ $value }}" x-model="type" @change="chosen()" required><span><i class="fa-solid {{ $category['icon'] }}"></i> <span class="m-hide-sm">{{ $category['label'] }}</span></span></label>
                     @endforeach
                 </div>
+                @if ($announcement->exists && ! \App\Modules\Announcements\Support\AnnouncementCategories::has($announcement->type))
+                    <p class="m-help">{{ __('This announcement is of an old type (:type), no longer shown on the site: choose its category.', ['type' => $announcement->type_name]) }}</p>
+                @endif
                 @error('type')<p class="m-error">{{ $message }}</p>@enderror
+            </div>
+            {{-- The chosen category's own fields --}}
+            <div class="m-grid cols-2" x-show="Object.keys(fields).length">
+                <template x-for="(field, name) in fields" :key="type + name">
+                    <div class="m-field">
+                        <label class="m-label" :for="'details-' + name"><span x-text="field.label"></span> <span class="m-optional" x-show="!field.required">({{ __('optional') }})</span></label>
+                        <template x-if="field.type === 'select' || field.type === 'yesno'">
+                            <select :id="'details-' + name" :name="'details[' + name + ']'" class="m-input" x-model="details[name]" :required="field.required">
+                                <option value="">{{ __('Choose…') }}</option>
+                                <template x-for="(label, value) in (field.type === 'yesno' ? { 1: @js(__('Yes')), 0: @js(__('No')) } : field.options)" :key="value">
+                                    <option :value="value" x-text="label" :selected="String(details[name] ?? '') === String(value)"></option>
+                                </template>
+                            </select>
+                        </template>
+                        <template x-if="field.type === 'text'">
+                            <input :id="'details-' + name" :name="'details[' + name + ']'" class="m-input" x-model="details[name]" :required="field.required" :maxlength="field.max" :placeholder="field.placeholder">
+                        </template>
+                        <p class="m-error" x-show="errors['details.' + name]" x-text="errors['details.' + name]"></p>
+                    </div>
+                </template>
             </div>
             <div class="m-field">
                 <label class="m-label" for="title">{{ __('Title') }}</label>
@@ -61,23 +92,16 @@
         </div>
     </section>
 
-    {{-- Picture or PDF --}}
-    <section class="m-card m-section">
-        <h3 class="m-section-title"><i class="fa-solid fa-image"></i> {{ __('Image or PDF') }} <small>{{ __('optional') }}</small></h3>
+    {{-- A résumé's PDF (the picture shown is the category's banner) --}}
+    <section class="m-card m-section" x-show="categories[type]?.pdf" x-cloak>
+        <h3 class="m-section-title"><i class="fa-solid fa-file-pdf"></i> {{ __('Résumé in PDF') }} <small>{{ __('optional') }}</small></h3>
         <div class="m-grid">
-            @if ($announcement->url_image)
-                <p class="m-help">
-                    @if ($announcement->isPdf())
-                        <a href="{{ $announcement->url_image }}" target="_blank" rel="noopener" class="m-link"><i class="fa-solid fa-file-pdf"></i> {{ __('Open the current file') }}</a>
-                    @else
-                        <img src="{{ $announcement->picture_url }}" alt="" style="width: 16rem; max-width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: .6rem;">
-                    @endif
-                </p>
+            @if ($announcement->isPdf() && $announcement->url_image)
+                <p class="m-help"><a href="{{ $announcement->url_image }}" target="_blank" rel="noopener" class="m-link"><i class="fa-solid fa-file-pdf"></i> {{ __('Open the current file') }}</a></p>
             @endif
             <div class="m-field">
-                <input id="image_path" name="image_path" type="file" accept=".pdf,image/jpeg,image/png" class="m-input">
-                @include('announcements::partials.image-cropper', ['input' => 'image_path'])
-                <p class="m-help">{{ __('JPG, PNG or PDF, up to 5 MB. Pictures are cropped to the announcements\' format (16:10); without one, the default picture is shown.') }}@if ($announcement->url_image) {{ __('A new file replaces the current one.') }}@endif</p>
+                <input id="image_path" name="image_path" type="file" accept=".pdf,application/pdf" class="m-input" :disabled="!categories[type]?.pdf">
+                <p class="m-help">{{ __('PDF, up to 5 MB. Whoever is interested can open it from the site.') }}@if ($announcement->isPdf()) {{ __('A new file replaces the current one.') }}@endif</p>
                 @error('image_path')<p class="m-error">{{ $message }}</p>@enderror
             </div>
         </div>
@@ -97,7 +121,8 @@
             </div>
             <div class="m-field">
                 <label class="m-label" for="expires_at">{{ __('Expires At') }} <span class="m-optional">({{ __('optional') }})</span></label>
-                <input id="expires_at" name="expires_at" type="date" class="m-input" value="{{ $field('expires_at') }}">
+                <input id="expires_at" name="expires_at" type="date" class="m-input" value="{{ $field('expires_at') }}" x-ref="expires">
+                <p class="m-help">{{ __('A new announcement lasts as long as its category usually does; change it if you need.') }}</p>
                 @error('expires_at')<p class="m-error">{{ $message }}</p>@enderror
             </div>
         </div>
@@ -112,4 +137,21 @@
 <script>
     // The members to pick as the announcement's author.
     window.memberPeople = @js($people);
+
+    // The category chosen and its own fields; a new announcement takes the category's usual length.
+    function announcementCategory({ type, details, errors, categories, creating }) {
+        return {
+            type, details, errors, categories,
+            // Yes / no fields kept as true / false: the form's 1 / 0.
+            init() { for (const key in this.details) if (typeof this.details[key] === 'boolean') this.details[key] = this.details[key] ? '1' : '0'; },
+            get fields() { return this.categories[this.type]?.fields || {}; },
+            chosen() {
+                const months = this.categories[this.type]?.months;
+                if (!creating || !months) return;
+                const end = new Date();
+                end.setMonth(end.getMonth() + months);
+                this.$refs.expires.value = end.toISOString().slice(0, 10);
+            },
+        };
+    }
 </script>

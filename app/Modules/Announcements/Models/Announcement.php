@@ -3,6 +3,7 @@
 namespace App\Modules\Announcements\Models;
 
 use App\Enums\AnnouncementType;
+use App\Modules\Announcements\Support\AnnouncementCategories;
 use App\Modules\Members\Models\Member;
 use Illuminate\Database\Eloquent\Model;
 
@@ -13,9 +14,8 @@ class Announcement extends Model
     public const PUBLISHED = 'published';
     public const EXPIRED = 'expired';
 
-    // Every announcement's picture has this format (cropped to it when sent); without one, the default picture.
-    public const PICTURE_WIDTH = 1600;
-    public const PICTURE_HEIGHT = 1000;
+    // The picture of an announcement is its category's banner (no pictures sent by people); the default one for the
+    // old types (donations, products).
     public const DEFAULT_PICTURE = 'images/announcements/default.jpg';
 
     // The site's list of announcements (see ListPublicAnnouncementsService), cached; any change clears it.
@@ -33,6 +33,7 @@ class Announcement extends Model
         'title',
         'description',
         'type',
+        'details',
         'contact',
         'link',
         'image_path',
@@ -43,6 +44,7 @@ class Announcement extends Model
 
     protected $casts = [
         'is_approved' => 'boolean',
+        'details' => 'array',
     ];
 
     /**
@@ -51,6 +53,14 @@ class Announcement extends Model
     public function member()
     {
         return $this->belongsTo(Member::class);
+    }
+
+    /**
+     * The members' comments about it (the site shows the approved ones).
+     */
+    public function comments()
+    {
+        return $this->hasMany(AnnouncementComment::class)->latest()->orderByDesc('id');
     }
 
     public function isApproved(): bool
@@ -69,11 +79,12 @@ class Announcement extends Model
 
     public function getTypeNameAttribute(): string
     {
-        return AnnouncementType::options()[$this->type] ?? (string) $this->type;
+        // A category, or one of the old types (donation, product) kept by older announcements.
+        return AnnouncementCategories::label((string) $this->type) ?? AnnouncementType::options()[$this->type] ?? (string) $this->type;
     }
 
     /**
-     * The uploaded file's address ("storage/announcements/…", on the public disk), or null without one.
+     * The file sent with it (a résumé's PDF; pictures from before the categories), or null without one.
      */
     public function getUrlImageAttribute(): ?string
     {
@@ -90,11 +101,17 @@ class Announcement extends Model
     }
 
     /**
-     * The picture to show: the one sent, or the default one (no picture, or a PDF).
+     * The picture to show: the category's banner (the default picture for the old types).
      */
     public function getPictureUrlAttribute(): string
     {
-        return $this->url_image && ! $this->isPdf() ? $this->url_image : asset(self::DEFAULT_PICTURE);
+        return asset(AnnouncementCategories::has($this->type) ? AnnouncementCategories::banner($this->type) : self::DEFAULT_PICTURE);
+    }
+
+    /** The category's fields as they read (see AnnouncementCategories::describe()). */
+    public function getDetailLinesAttribute(): array
+    {
+        return AnnouncementCategories::describe($this->type, $this->details);
     }
 
     /**

@@ -9,14 +9,16 @@ use Illuminate\Database\Eloquent\Builder;
 class ListAnnouncementsService
 {
     public const STATUSES = [Announcement::PENDING, Announcement::PUBLISHED, Announcement::EXPIRED];
+    // Not a status: the announcements with members' comments waiting for approval.
+    public const COMMENTS = 'comments';
 
     /**
-     * The announcements, newest first, by status (pending, published, expired; all by default), type and text
-     * (title, description or the member's name), each with its member.
+     * The announcements, newest first, by status (pending, published, expired, or with comments to approve; all by
+     * default), category and text (title, description or the member's name), each with its member and comments.
      */
     public function execute(array $filters = []): LengthAwarePaginator
     {
-        $query = $this->withStatus(Announcement::query()->with('member'), $filters['status'] ?? null)->latest()->orderBy('id', 'desc');
+        $query = $this->withStatus(Announcement::query()->with(['member', 'comments.member']), $filters['status'] ?? null)->latest()->orderBy('id', 'desc');
 
         if (! empty($filters['type'])) {
             $query->where('type', $filters['type']);
@@ -35,11 +37,12 @@ class ListAnnouncementsService
     }
 
     /**
-     * How many announcements each status has, e.g. ["pending" => 2, "published" => 7, "expired" => 15].
+     * How many announcements each status has, and how many have comments to approve, e.g. ["pending" => 2,
+     * "published" => 7, "expired" => 15, "comments" => 1].
      */
     public function countByStatus(): array
     {
-        return collect(self::STATUSES)->mapWithKeys(fn ($status) => [$status => $this->withStatus(Announcement::query(), $status)->count()])->all();
+        return collect([...self::STATUSES, self::COMMENTS])->mapWithKeys(fn ($status) => [$status => $this->withStatus(Announcement::query(), $status)->count()])->all();
     }
 
     private function withStatus(Builder $query, ?string $status): Builder
@@ -50,6 +53,7 @@ class ListAnnouncementsService
             Announcement::PENDING => $query->where('is_approved', false),
             Announcement::PUBLISHED => $query->where('is_approved', true)->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', $today)),
             Announcement::EXPIRED => $query->where('is_approved', true)->where('expires_at', '<', $today),
+            self::COMMENTS => $query->whereHas('comments', fn ($comments) => $comments->where('is_approved', false)),
             default => $query,
         };
     }

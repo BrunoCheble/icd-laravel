@@ -2,7 +2,7 @@
 
 namespace App\Modules\Announcements\Http\Requests;
 
-use App\Enums\AnnouncementType;
+use App\Modules\Announcements\Support\AnnouncementCategories;
 use App\Modules\Members\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -19,6 +19,8 @@ class PublicAnnouncementRequest extends FormRequest
 
     public function prepareForValidation(): void
     {
+        // The page is in Portuguese (the messages too).
+        app()->setLocale('pt');
         $this->merge([
             'member_document' => preg_replace('/\D+/', '', (string) $this->input('member_document')),
             'contact' => preg_replace('/\s+/', '', (string) $this->input('contact')),
@@ -33,11 +35,17 @@ class PublicAnnouncementRequest extends FormRequest
             'description'     => ['required', 'string', 'max:5000'],
             'link'            => ['nullable', 'string', 'max:255'],
             'contact'         => ['required', 'string', 'max:30'],
-            'type'            => ['required', 'string', Rule::in(array_keys(AnnouncementType::options()))],
-            'image_path'      => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'type'            => ['required', 'string', Rule::in(AnnouncementCategories::keys())],
+            // A résumé's PDF (the picture is the category's banner).
+            'image_path'      => ['nullable', 'file', 'mimes:pdf', 'max:5120'],
             // Left empty by people; bots fill every field.
             'website'         => ['prohibited'],
-        ];
+        ] + AnnouncementCategories::rules($this->input('type'));
+    }
+
+    public function attributes(): array
+    {
+        return AnnouncementCategories::attributes($this->input('type'));
     }
 
     public function messages(): array

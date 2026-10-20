@@ -30,15 +30,29 @@
         .notice-facts dt { font-size: .82rem; font-weight: 600; color: var(--tx-6b7280); }
         .notice-facts dd { margin: 0; font-size: .9rem; color: var(--tx-111827); overflow-wrap: anywhere; }
         .notice-facts a { color: var(--brand-text); }
+        .notice-chips { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .6rem; }
+        .notice-chips span { padding: .15rem .55rem; border-radius: 999px; background: var(--bg-f3f4f6); color: var(--tx-4b5563); font-size: .75rem; font-weight: 600; }
+        .notice-talk { font-weight: 700; color: var(--brand-text); }
+        .notice-comments { display: grid; gap: .5rem; margin: 0 0 1rem; }
+        .notice-comments h3 { margin: 0; font-size: .8rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--tx-6b7280); }
+        .notice-comment { padding: .65rem .75rem; border: 1px solid var(--bd-e5e7eb); border-radius: .7rem; }
+        .notice-comment.is-pending { border-color: var(--bd-fcd34d); background: var(--bg-fffbeb); }
+        .notice-comment p { margin: .25rem 0 .5rem; font-size: .9rem; line-height: 1.45; color: var(--tx-374151); white-space: pre-line; overflow-wrap: anywhere; }
+        .notice-comment small { font-size: .78rem; color: var(--tx-6b7280); }
+        .notice-comment-actions { display: flex; gap: .4rem; }
+        .notice-comment-actions form { margin: 0; }
+        .notice-comment-actions .m-btn { min-height: 32px; padding: 0 .65rem; font-size: .8rem; }
     </style>
 
     @php
         $status = $filters['status'] ?? '';
         $search = $filters['search'] ?? '';
-        $types = \App\Enums\AnnouncementType::options();
-        $icons = ['resume' => 'fa-file-lines', 'service' => 'fa-screwdriver-wrench', 'donation' => 'fa-hand-holding-heart', 'product' => 'fa-tag'];
+        $categories = \App\Modules\Announcements\Support\AnnouncementCategories::forForms();
+        // The categories, then the old types still found in older announcements.
+        $types = collect($categories)->map(fn ($category) => $category['label'])->all() + \App\Enums\AnnouncementType::options();
+        $icons = collect($categories)->map(fn ($category) => $category['icon'])->all() + ['donation' => 'fa-hand-holding-heart', 'product' => 'fa-tag'];
         $statuses = ['pending' => [__('Waiting for approval'), 'is-part'], 'published' => [__('Published'), 'is-ok'], 'expired' => [__('Expired'), 'is-off']];
-        $tabs = ['' => __('All'), 'pending' => __('To approve'), 'published' => __('Published'), 'expired' => __('Expired')];
+        $tabs = ['' => __('All'), 'pending' => __('To approve'), 'published' => __('Published'), 'expired' => __('Expired'), 'comments' => __('Comments to approve')];
         $day = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : null;
     @endphp
 
@@ -59,7 +73,7 @@
         <nav class="m-status" aria-label="{{ __('Status') }}">
             @foreach ($tabs as $value => $label)
                 <a href="{{ route('announcements.index', array_filter(['status' => $value, 'type' => $filters['type'] ?? null, 'search' => $search])) }}" @class(['is-active' => $status === $value])>
-                    {{ $label }} <small>{{ $value === '' ? array_sum($statusCounts) : $statusCounts[$value] }}</small>
+                    {{ $label }} <small>{{ $value === '' ? $statusCounts['pending'] + $statusCounts['published'] + $statusCounts['expired'] : $statusCounts[$value] }}</small>
                 </a>
             @endforeach
         </nav>
@@ -70,8 +84,8 @@
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="search" name="search" value="{{ $search }}" placeholder="{{ __('Title, text or member') }}" aria-label="{{ __('Search') }}">
             </label>
-            <select name="type" class="m-input" style="width: auto; min-height: 40px;" onchange="this.form.submit()" aria-label="{{ __('Type') }}">
-                <option value="">{{ __('All types') }}</option>
+            <select name="type" class="m-input" style="width: auto; min-height: 40px;" onchange="this.form.submit()" aria-label="{{ __('Category') }}">
+                <option value="">{{ __('All categories') }}</option>
                 @foreach ($types as $value => $label)
                     <option value="{{ $value }}" @selected(($filters['type'] ?? '') === $value)>{{ $label }}</option>
                 @endforeach
@@ -98,7 +112,16 @@
                             'contact' => $announcement->contact,
                             'whatsapp' => \App\Helpers\WhatsAppHelper::url($announcement->contact),
                             'link' => $announcement->link,
-                            'file' => $announcement->url_image,
+                            'file' => $announcement->isPdf() ? $announcement->url_image : null,
+                            'details' => $announcement->detail_lines,
+                            'comments' => $announcement->comments->map(fn ($comment) => [
+                                'name' => $comment->member?->first_and_last_name ?? __('Member'),
+                                'body' => $comment->body,
+                                'date' => $comment->created_at?->format('d/m/Y H:i'),
+                                'approved' => $comment->is_approved,
+                                'approval' => route('announcements.comments.approval', $comment),
+                                'destroy' => route('announcements.comments.destroy', $comment),
+                            ])->values()->all(),
                             'status' => $announcement->status(),
                             'statusLabel' => $statusLabel,
                             'created' => $announcement->created_at?->format('d/m/Y'),
@@ -120,10 +143,19 @@
                                 <button type="button" class="m-btn is-ghost is-icon" style="margin: -.4rem -.5rem 0 0;" aria-label="{{ __('Actions') }}: {{ $announcement->title }}" @click="ad = @js($ad); panel = 'menu'"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                             </div>
                             <p class="notice-text">{{ $announcement->description }}</p>
+                            @if ($announcement->detail_lines)
+                                <div class="notice-chips">@foreach ($announcement->detail_lines as $line)<span title="{{ $line['label'] }}">{{ $line['short'] }}</span>@endforeach</div>
+                            @endif
                             <div class="notice-foot">
                                 <span><i class="fa-solid {{ $icons[$announcement->type] ?? 'fa-bullhorn' }}"></i>{{ $announcement->type_name }}</span>
                                 @if ($announcement->member)<span><i class="fa-solid fa-user"></i>{{ $announcement->member->first_and_last_name }}</span>@endif
                                 @if ($announcement->expires_at)<span><i class="fa-regular fa-calendar"></i>{{ $announcement->status() === 'expired' ? __('Expired on :date', ['date' => $day($announcement->expires_at)]) : __('Until :date', ['date' => $day($announcement->expires_at)]) }}</span>@endif
+                                @php($toApprove = $announcement->comments->where('is_approved', false)->count())
+                                @if ($announcement->comments->isNotEmpty())
+                                    <button type="button" class="notice-talk" style="border: 0; background: none; padding: 0; cursor: pointer;" @click="ad = @js($ad); panel = 'menu'">
+                                        <i class="fa-regular fa-comment"></i>{{ trans_choice(':count comment|:count comments', $announcement->comments->count(), ['count' => $announcement->comments->count()]) }}@if ($toApprove) · {{ __(':count to approve', ['count' => $toApprove]) }}@endif
+                                    </button>
+                                @endif
                             </div>
                         </div>
                     </article>
@@ -156,7 +188,35 @@
                             <div x-show="ad?.file"><dt>{{ __('File') }}</dt><dd><a :href="ad?.file" target="_blank" rel="noopener">{{ __('Open file') }}</a></dd></div>
                             <div><dt>{{ __('Created At') }}</dt><dd x-text="ad?.created"></dd></div>
                             <div x-show="ad?.expires"><dt>{{ __('Expires At') }}</dt><dd x-text="ad?.expires"></dd></div>
+                            <template x-for="line in (ad?.details || [])" :key="line.label">
+                                <div><dt x-text="line.label"></dt><dd x-text="line.value"></dd></div>
+                            </template>
                         </dl>
+                        {{-- The members' comments: the site shows the approved ones --}}
+                        <div class="notice-comments" x-show="ad?.comments?.length">
+                            <h3>{{ __('Comments') }}</h3>
+                            <template x-for="comment in (ad?.comments || [])" :key="comment.approval">
+                                <div class="notice-comment" :class="{ 'is-pending': !comment.approved }">
+                                    <small><strong x-text="comment.name"></strong> · <span x-text="comment.date"></span> · <span x-text="comment.approved ? @js(__('Shown on the site')) : @js(__('Waiting for approval'))"></span></small>
+                                    <p x-text="comment.body"></p>
+                                    <div class="notice-comment-actions">
+                                        <form method="POST" :action="comment.approval">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="approved" :value="comment.approved ? 0 : 1">
+                                            <button type="submit" class="m-btn" :class="{ 'is-primary': !comment.approved }">
+                                                <i class="fa-solid" :class="comment.approved ? 'fa-rotate-left' : 'fa-check'"></i> <span x-text="comment.approved ? @js(__('Hide')) : @js(__('Approve'))"></span>
+                                            </button>
+                                        </form>
+                                        <form method="POST" :action="comment.destroy" onsubmit="return confirm(@js(__('Delete this comment?')))">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="m-btn is-ghost"><i class="fa-solid fa-trash"></i> {{ __('Delete') }}</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
                         <div class="m-menu">
                             <form method="POST" :action="ad?.approval" x-show="ad?.status === 'pending'">
                                 @csrf

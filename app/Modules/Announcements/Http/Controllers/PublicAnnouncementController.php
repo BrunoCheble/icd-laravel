@@ -2,7 +2,7 @@
 
 namespace App\Modules\Announcements\Http\Controllers;
 
-use App\Enums\AnnouncementType;
+use App\Modules\Announcements\Support\AnnouncementCategories;
 use App\Http\Controllers\Controller;
 use App\Modules\Announcements\Http\Requests\PublicAnnouncementRequest;
 use App\Modules\Announcements\Services\RegisterAnnouncementService;
@@ -18,7 +18,7 @@ class PublicAnnouncementController extends Controller
     {
         app()->setLocale('pt');
 
-        return view('announcements::public.create', ['types' => AnnouncementType::options()]);
+        return view('announcements::public.create', ['categories' => AnnouncementCategories::forForms()]);
     }
 
     public function store(PublicAnnouncementRequest $request, RegisterAnnouncementService $service): RedirectResponse

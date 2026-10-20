@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset=".55" stop-color="#fbbf24"/><stop offset="1" stop-color="#e8960f"/></linearGradient>
+    <pattern id="dots" width="44" height="44" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="3.2" fill="#fff" fill-opacity=".18"/></pattern>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#7c2d12" flood-opacity=".28"/></filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <circle cx="1420" cy="120" r="320" fill="#fff" fill-opacity=".12"/>
+  <circle cx="140" cy="930" r="260" fill="#fff" fill-opacity=".1"/>
+  <rect x="1060" y="600" width="520" height="380" fill="url(#dots)"/>
+  <rect x="40" y="40" width="420" height="300" fill="url(#dots)"/>
+  <circle cx="800" cy="500" r="250" fill="#fff" filter="url(#shadow)"/>
+  <circle cx="800" cy="500" r="250" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="28" transform="scale(1.12) translate(-85.7 -53.6)"/>
+  <g fill="none" stroke="#b45309" stroke-width="18" stroke-linejoin="round" stroke-linecap="round">
+   <path d="M700 335 h150 l70 70 v260 a20 20 0 0 1 -20 20 h-200 a20 20 0 0 1 -20 -20 v-310 a20 20 0 0 1 20 -20 z"/><path d="M850 335 v70 h70"/>
+   <circle cx="765" cy="440" r="32" fill="#b45309" stroke="none"/><path d="M718 520 c10 -40 84 -40 94 0" /><line x1="720" y1="575" x2="880" y2="575"/><line x1="720" y1="620" x2="840" y2="620"/></g>
+</svg>

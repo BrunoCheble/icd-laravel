@@ -42,33 +42,56 @@ class AnnouncementsTest extends TestCase
         parent::tearDown();
     }
 
-    /** A 1×1 PNG (the test container has no GD to draw one). */
-    private function png(string $name = 'foto.png'): UploadedFile
-    {
-        return UploadedFile::fake()->createWithContent($name, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
-    }
+    /** The fields of a service (see AnnouncementCategories). */
+    private const SERVICE = ['type' => 'service', 'details' => ['area' => 'construction', 'zone' => 'Amadora']];
 
-    public function test_the_picture_goes_to_the_public_folder_and_a_new_one_replaces_it(): void
+    public function test_a_resume_takes_its_pdf_and_a_new_one_replaces_it(): void
     {
         $member = $this->member();
         $user = User::factory()->create();
-        $data = ['member_id' => $member->id, 'type' => 'product', 'title' => 'ZZ Teste Foto', 'description' => 'Texto', 'contact' => '912345678', 'is_approved' => '1'];
+        $data = ['member_id' => $member->id, 'type' => 'resume', 'title' => 'ZZ Teste Currículo', 'description' => 'Texto', 'contact' => '912345678', 'is_approved' => '1',
+            'details' => ['area' => 'restaurant', 'experience' => 'none', 'availability' => 'full', 'driving' => '1']];
 
-        $this->actingAs($user)->post('/announcements', $data + ['image_path' => $this->png()])->assertRedirect('/announcements');
-        $announcement = Announcement::where('title', 'ZZ Teste Foto')->firstOrFail();
+        $this->actingAs($user)->post('/announcements', $data + ['image_path' => UploadedFile::fake()->create('cv.pdf', 20, 'application/pdf')])->assertRedirect('/announcements');
+        $announcement = Announcement::where('title', 'ZZ Teste Currículo')->firstOrFail();
         $first = $announcement->image_path;
         $this->assertStringStartsWith('images/announcements/', $first);
         $this->assertFileExists(public_path($first));
-        $this->assertSame(asset($first), $announcement->url_image);
+        $this->assertTrue($announcement->isPdf());
+        $lines = $announcement->detail_lines;
+        $this->assertSame('Driving licence: Yes', end($lines)['short']);
+        // The database keeps the keys in its own order
+        $this->assertEquals(['area' => 'restaurant', 'experience' => 'none', 'availability' => 'full', 'driving' => true], $announcement->details);
+        // The picture is always the category's banner
+        $this->assertSame(asset('images/announcements/categories/resume.svg'), $announcement->picture_url);
 
-        $this->actingAs($user)->patch("/announcements/{$announcement->id}", $data + ['image_path' => $this->png('outra.png')]);
+        $this->actingAs($user)->patch("/announcements/{$announcement->id}", $data + ['image_path' => UploadedFile::fake()->create('novo.pdf', 20, 'application/pdf')]);
         $this->assertFileDoesNotExist(public_path($first));
         $this->assertFileExists(public_path($announcement->fresh()->image_path));
 
-        // Sent by a member on the public page too
-        $this->post('/new-announcement', ['member_document' => $member->document_number, 'type' => 'service', 'title' => 'ZZ Teste Público',
-            'description' => 'X', 'contact' => '912345678', 'image_path' => $this->png()])->assertRedirect('/announcement');
-        $this->assertFileExists(public_path(Announcement::where('title', 'ZZ Teste Público')->value('image_path')));
+        // No pictures, and no file for the other categories
+        $this->actingAs($user)->post('/announcements', ['image_path' => UploadedFile::fake()->create('foto.png', 5, 'image/png')] + $data)->assertSessionHasErrors('image_path');
+        $this->actingAs($user)->post('/announcements', ['title' => 'ZZ Teste Serviço', 'image_path' => UploadedFile::fake()->create('x.pdf', 5, 'application/pdf')] + self::SERVICE + $data)->assertRedirect('/announcements');
+        $this->assertNull(Announcement::where('title', 'ZZ Teste Serviço')->value('image_path'));
+    }
+
+    public function test_each_category_asks_for_its_own_fields(): void
+    {
+        $member = $this->member();
+        $this->actingAs(User::factory()->create());
+        $data = ['member_id' => $member->id, 'title' => 'ZZ Teste Campos', 'description' => 'Texto', 'contact' => '912345678'];
+
+        $this->post('/announcements', $data + ['type' => 'service'])->assertSessionHasErrors(['details.area', 'details.zone']);
+        $this->post('/announcements', $data + ['type' => 'lessons', 'details' => ['subject' => 'Matemática', 'level' => 'nope', 'mode' => 'online']])->assertSessionHasErrors('details.level');
+        $this->post('/announcements', $data + ['type' => 'product'] + self::SERVICE)->assertSessionHasErrors('type');
+
+        // Only the category's fields are kept, without the empty ones
+        $this->post('/announcements', $data + ['type' => 'job', 'details' => ['role' => ' Cozinheiro ', 'area' => 'restaurant', 'contract' => 'part', 'location' => 'Sintra', 'zone' => 'outra', 'extra' => 'x']])->assertRedirect('/announcements');
+        $announcement = Announcement::where('title', 'ZZ Teste Campos')->firstOrFail();
+        // The database keeps the keys in its own order
+        $this->assertEquals(['role' => 'Cozinheiro', 'area' => 'restaurant', 'contract' => 'part', 'location' => 'Sintra'], $announcement->details);
+        $this->assertSame(['Cozinheiro', 'Restaurants and kitchen', 'Part time', 'Sintra'], array_column($announcement->detail_lines, 'value'));
+        $this->assertSame(['Role', 'Area', 'Contract', 'Place of work'], array_column($announcement->detail_lines, 'label'));
     }
 
     public function test_a_picture_sent_before_is_served_from_storage(): void
@@ -109,14 +132,14 @@ class AnnouncementsTest extends TestCase
     public function test_the_list_by_status_type_and_search(): void
     {
         $this->announcement(['title' => 'Pendente Um', 'is_approved' => false]);
-        $this->announcement(['title' => 'Publicado Dois', 'is_approved' => true, 'expires_at' => now()->addWeek(), 'type' => 'service']);
+        $this->announcement(['title' => 'Publicado Dois', 'is_approved' => true, 'expires_at' => now()->addWeek(), 'type' => 'lessons', 'details' => ['subject' => 'Inglês']]);
         $this->announcement(['title' => 'Expirado Tres', 'is_approved' => true, 'expires_at' => now()->subDay()]);
         $this->actingAs(User::factory()->create());
 
         $this->get('/announcements?status=pending')->assertSee('Pendente Um')->assertDontSee('Publicado Dois');
         $this->get('/announcements?status=published')->assertSee('Publicado Dois')->assertDontSee('Expirado Tres');
         $this->get('/announcements?status=expired')->assertSee('Expirado Tres')->assertDontSee('Pendente Um');
-        $this->get('/announcements?type=service')->assertSee('Publicado Dois')->assertDontSee('Pendente Um');
+        $this->get('/announcements?type=lessons')->assertSee('Publicado Dois')->assertSee('Inglês')->assertDontSee('Pendente Um');
         $this->get('/announcements?search=dois')->assertSee('Publicado Dois')->assertDontSee('Expirado Tres');
         $this->get('/announcements?status=nope')->assertSessionHasErrors('status');
     }
@@ -125,7 +148,7 @@ class AnnouncementsTest extends TestCase
     {
         $member = $this->member();
         $user = User::factory()->create();
-        $data = ['member_id' => $member->id, 'type' => 'product', 'title' => 'ZZ Teste Novo', 'description' => 'Texto', 'contact' => '912345678', 'is_approved' => '1'];
+        $data = ['member_id' => $member->id, 'title' => 'ZZ Teste Novo', 'description' => 'Texto', 'contact' => '912345678', 'is_approved' => '1'] + self::SERVICE;
 
         $this->actingAs($user)->post('/announcements', $data)->assertRedirect('/announcements');
         $announcement = Announcement::where('title', 'ZZ Teste Novo')->firstOrFail();
@@ -139,7 +162,7 @@ class AnnouncementsTest extends TestCase
         $this->assertNull($announcement->approved_at);
         $this->assertSame('2026-12-31', $announcement->expires_at);
 
-        $this->actingAs($user)->post('/announcements', ['type' => 'nope', 'image_path' => UploadedFile::fake()->create('x.exe', 1)] + $data)->assertSessionHasErrors(['type', 'image_path']);
+        $this->actingAs($user)->post('/announcements', ['type' => 'nope', 'image_path' => UploadedFile::fake()->create('x.exe', 1)] + $data)->assertSessionHasErrors('type');
     }
 
     public function test_approve_take_back_and_delete(): void
@@ -158,12 +181,14 @@ class AnnouncementsTest extends TestCase
         $this->assertModelMissing($announcement);
     }
 
-    public function test_the_site_api_lists_only_approved_announcements_not_expired(): void
+    public function test_the_site_api_lists_only_approved_announcements_not_expired_of_a_category(): void
     {
         $this->announcement(['title' => 'Pendente Um', 'is_approved' => false]);
         $this->announcement(['title' => 'Publicado Dois', 'is_approved' => true, 'expires_at' => now()->addWeek()]);
         $this->announcement(['title' => 'Sem Prazo', 'is_approved' => true]);
         $this->announcement(['title' => 'Expirado Tres', 'is_approved' => true, 'expires_at' => now()->subDay()]);
+        // The old types (products, donations) are no longer on the site
+        $this->announcement(['title' => 'Produto Antigo', 'is_approved' => true, 'type' => 'product', 'details' => null]);
 
         $titles = collect($this->getJson('/api/public/announcements')->assertOk()->json('data'))->pluck('title')->sort()->values()->all();
         $this->assertSame(['Publicado Dois', 'Sem Prazo'], $titles);
@@ -174,18 +199,22 @@ class AnnouncementsTest extends TestCase
         $member = $this->member();
         $this->get('/announcement')->assertOk()->assertSee('name="member_document"', false);
 
-        $this->post('/new-announcement', ['member_document' => $member->document_number, 'type' => 'service', 'title' => 'ZZ Teste Pintor',
-            'description' => 'Pinturas', 'contact' => '912 345 678'])->assertRedirect('/announcement');
+        $this->post('/new-announcement', ['member_document' => $member->document_number, 'title' => 'ZZ Teste Pintor',
+            'description' => 'Pinturas', 'contact' => '912 345 678'] + self::SERVICE)->assertRedirect('/announcement');
         $announcement = Announcement::where('title', 'ZZ Teste Pintor')->firstOrFail();
         $this->assertFalse($announcement->is_approved);
         $this->assertSame($member->id, $announcement->member_id);
         $this->assertNull($announcement->link);
+        // The database keeps the keys in its own order
+        $this->assertEquals(['area' => 'construction', 'zone' => 'Amadora'], $announcement->details);
+        // As long as a service usually lasts
+        $this->assertSame(now()->addMonths(6)->toDateString(), $announcement->expires_at);
         $this->get('/announcement')->assertSee('O seu serviço foi recebido!');
 
         // Not a member, or a bot
-        $this->post('/new-announcement', ['member_document' => '000000000', 'type' => 'service', 'title' => 'X', 'description' => 'X', 'contact' => '9'])
+        $this->post('/new-announcement', ['member_document' => '000000000', 'title' => 'X', 'description' => 'X', 'contact' => '9'] + self::SERVICE)
             ->assertSessionHasErrors('member_document');
-        $this->post('/new-announcement', ['member_document' => $member->document_number, 'type' => 'service', 'title' => 'Spam', 'description' => 'X', 'contact' => '9', 'website' => 'http://spam'])
+        $this->post('/new-announcement', ['member_document' => $member->document_number, 'title' => 'Spam', 'description' => 'X', 'contact' => '9', 'website' => 'http://spam'] + self::SERVICE)
             ->assertSessionHasErrors('website');
         $this->assertFalse(Announcement::where('title', 'Spam')->exists());
     }
@@ -193,7 +222,7 @@ class AnnouncementsTest extends TestCase
     public function test_repeated_requests_are_limited(): void
     {
         $member = $this->member();
-        $form = ['member_document' => $member->document_number, 'type' => 'service', 'description' => 'X', 'contact' => '912345678'];
+        $form = ['member_document' => $member->document_number, 'description' => 'X', 'contact' => '912345678'] + self::SERVICE;
         for ($i = 1; $i <= 5; $i++) {
             $this->post('/new-announcement', $form + ['title' => "ZZ Teste {$i}"])->assertRedirect();
         }
@@ -209,10 +238,11 @@ class AnnouncementsTest extends TestCase
     {
         $announcement = $this->announcement(['title' => 'Primeiro', 'is_approved' => true]);
         $response = $this->getJson('/api/public/announcements')->assertOk()->assertJsonPath('data.0.title', 'Primeiro')
-            ->assertJsonPath('data.0.type_name', 'Product')->assertJsonPath('data.0.whatsapp', 'https://wa.me/351912345678')
+            ->assertJsonPath('data.0.type_name', 'Serviços')->assertJsonPath('data.0.whatsapp', 'https://wa.me/351912345678')
             ->assertJsonMissingPath('data.0.member_id')
-            // No picture: the default one
-            ->assertJsonPath('data.0.has_picture', false)->assertJsonPath('data.0.image_url', asset('images/announcements/default.jpg'));
+            // The category's banner and its fields, in Portuguese
+            ->assertJsonPath('data.0.image_url', asset('images/announcements/categories/service.svg'))
+            ->assertJsonPath('data.0.details', [['label' => 'Área', 'value' => 'Construção e reparações', 'short' => 'Construção e reparações'], ['label' => 'Zona onde atende', 'value' => 'Amadora', 'short' => 'Amadora']]);
         $this->assertStringContainsString('max-age=60', $response->headers->get('Cache-Control'));
 
         // Cached: a change made without the model (as by hand in the database) is not seen…
@@ -225,11 +255,57 @@ class AnnouncementsTest extends TestCase
         $this->getJson('/api/public/announcements')->assertJsonCount(0, 'data');
     }
 
+    public function test_members_comment_and_the_site_shows_the_approved_comments(): void
+    {
+        $member = $this->member();
+        $announcement = $this->announcement(['title' => 'ZZ Teste Comentado', 'is_approved' => true]);
+        $url = $this->getJson('/api/public/announcements')->json('data.0.comments_url');
+        $this->assertSame(route('api.announcements.comments', $announcement), $url);
+
+        // From the site: a member (the NIF), not a bot
+        $this->postJson($url, ['member_document' => $member->document_number, 'body' => 'Muito bom trabalho, recomendo!'])->assertCreated();
+        $this->postJson($url, ['member_document' => '000000000', 'body' => 'Olá'])->assertUnprocessable()
+            ->assertJsonValidationErrors(['member_document' => 'Só os membros podem comentar. Se é membro, confirme o NIF ou fale connosco.']);
+        $this->postJson($url, ['member_document' => $member->document_number, 'body' => 'Spam', 'website' => 'http://spam'])->assertJsonValidationErrors('website');
+        $comment = $announcement->comments()->firstOrFail();
+        $this->assertFalse($comment->is_approved);
+        $this->assertSame($member->id, $comment->member_id);
+
+        // Waiting: not on the site, but in the admin (the menu's count, the tab, the card)
+        $this->getJson('/api/public/announcements')->assertJsonCount(0, 'data.0.comments');
+        $user = User::factory()->create();
+        $this->actingAs($user)->get('/announcements?status=comments')->assertSee('ZZ Teste Comentado')->assertSee('Muito bom trabalho, recomendo!');
+
+        // Approved: on the site, with the member's name
+        $this->actingAs($user)->patch("/announcements/comments/{$comment->id}/approval", ['approved' => '1'])->assertRedirect();
+        $this->getJson('/api/public/announcements')->assertJsonPath('data.0.comments.0.body', 'Muito bom trabalho, recomendo!')
+            ->assertJsonPath('data.0.comments.0.name', 'ZZ Teste Membro');
+
+        $this->actingAs($user)->delete("/announcements/comments/{$comment->id}")->assertRedirect();
+        $this->assertModelMissing($comment);
+        $this->getJson('/api/public/announcements')->assertJsonCount(0, 'data.0.comments');
+    }
+
+    public function test_only_announcements_on_the_site_take_comments_a_few_at_a_time(): void
+    {
+        $member = $this->member();
+        $pending = $this->announcement(['is_approved' => false]);
+        $old = $this->announcement(['is_approved' => true, 'type' => 'product', 'details' => null]);
+        foreach ([$pending, $old] as $announcement) {
+            $this->postJson(route('api.announcements.comments', $announcement), ['member_document' => $member->document_number, 'body' => 'Olá a todos'])->assertNotFound();
+        }
+
+        $url = route('api.announcements.comments', $this->announcement(['is_approved' => true]));
+        for ($i = 1; $i <= 3; $i++) {
+            $this->postJson($url, ['member_document' => $member->document_number, 'body' => "Comentário {$i}"])->assertCreated();
+        }
+        $this->postJson($url, ['member_document' => $member->document_number, 'body' => 'Comentário 6'])->assertStatus(429);
+    }
+
     private function announcement(array $data = []): Announcement
     {
-        return Announcement::create($data + [
+        return Announcement::create($data + self::SERVICE + [
             'member_id' => $this->member()->id,
-            'type' => 'product',
             'title' => 'ZZ Teste Aviso',
             'description' => 'Texto do aviso',
             'contact' => '912345678',

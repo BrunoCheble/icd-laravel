@@ -146,18 +146,23 @@ class DevDataSeeder extends Seeder
     {
         $authors = Member::query()->where('last_name', 'like', 'ZZ Teste%')->where('membership_status', MembershipStatus::ACTIVED)->pluck('id');
         foreach ([
-            ['ZZ Teste Bolos caseiros por encomenda', 'product', false, null, "Faço bolos de aniversário e doces para festas.\nEncomendas com 3 dias de antecedência."],
-            ['ZZ Teste Explicações de Matemática', 'service', true, '+1 month', 'Explicações para o 3º ciclo e secundário, presencial ou online.'],
-            ['ZZ Teste Procuro trabalho em limpezas', 'resume', true, '+10 days', 'Experiência em limpezas domésticas e de escritórios. Disponível de manhã.'],
-            ['ZZ Teste Doação de roupa de bebé', 'donation', true, '-3 days', 'Roupa de 0 a 12 meses em bom estado.'],
-            ['ZZ Teste Reparações elétricas', 'service', false, '+2 months', 'Pequenas reparações elétricas em casa.'],
-        ] as $i => [$title, $type, $approved, $expires, $text]) {
-            Announcement::create([
+            ['ZZ Teste Pintor profissional', 'service', true, '+5 months', 'Pintura de interiores e exteriores, massa corrida e pequenas reparações em paredes.', ['area' => 'construction', 'zone' => 'Amadora e Sintra', 'availability' => 'Dias úteis e sábados']],
+            ['ZZ Teste Explicações de Matemática', 'lessons', true, '+4 months', 'Explicações para o 3º ciclo e secundário, presencial ou online.', ['subject' => 'Matemática', 'level' => 'secondary', 'mode' => 'both']],
+            ['ZZ Teste Procuro trabalho em limpezas', 'resume', true, '+10 days', 'Experiência em limpezas domésticas e de escritórios. Disponível de manhã.', ['area' => 'cleaning', 'experience' => '1_3', 'availability' => 'part', 'driving' => false]],
+            ['ZZ Teste Ajudante de cozinha', 'job', true, '-3 days', 'Restaurante procura ajudante de cozinha para o turno do almoço.', ['role' => 'Ajudante de cozinha', 'area' => 'restaurant', 'contract' => 'part', 'location' => 'Lisboa']],
+            ['ZZ Teste Reparações elétricas', 'service', false, '+6 months', 'Pequenas reparações elétricas em casa.', ['area' => 'electricity', 'zone' => 'Lisboa']],
+        ] as $i => [$title, $type, $approved, $expires, $text, $details]) {
+            $announcement = Announcement::create([
                 'member_id' => $authors[$i % max(1, $authors->count())],
-                'title' => $title, 'type' => $type, 'description' => $text, 'contact' => '91234567' . $i,
+                'title' => $title, 'type' => $type, 'details' => $details, 'description' => $text, 'contact' => '91234567' . $i,
                 'is_approved' => $approved, 'approved_at' => $approved ? now() : null,
                 'expires_at' => $expires ? now()->modify($expires)->endOfDay() : null,
             ]);
+            // Members' comments: one shown on the site, one waiting for approval
+            if ($i === 0) {
+                $announcement->comments()->create(['member_id' => $authors->last(), 'body' => 'Pintou a minha sala, ficou impecável. Recomendo!', 'is_approved' => true, 'approved_at' => now()]);
+                $announcement->comments()->create(['member_id' => $authors->first(), 'body' => 'Faz orçamentos sem compromisso?', 'is_approved' => false]);
+            }
         }
     }
 }

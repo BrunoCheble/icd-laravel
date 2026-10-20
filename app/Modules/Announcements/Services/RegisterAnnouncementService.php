@@ -3,25 +3,28 @@
 namespace App\Modules\Announcements\Services;
 
 use App\Modules\Announcements\Models\Announcement;
+use App\Modules\Announcements\Support\AnnouncementCategories;
 use App\Modules\Members\Models\Member;
-use Illuminate\Support\Facades\DB;
 use App\Services\FileUploadService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 
 class RegisterAnnouncementService
 {
-    protected $fileUploadService;
-
-    public function __construct(FileUploadService $fileUploadService)
+    public function __construct(private FileUploadService $fileUploadService)
     {
-        $this->fileUploadService = $fileUploadService;
     }
 
+    /**
+     * An announcement sent from the public page by a member: waiting for approval, with its category's fields and
+     * lasting as long as its category usually does (the team can change it).
+     */
     public function execute(array $data, Member $member): Announcement
     {
         return DB::transaction(function () use ($data, $member) {
             $filePath = null;
-
-            if (!empty($data['image_path']) && $data['image_path'] instanceof \Illuminate\Http\UploadedFile) {
+            // Only a résumé takes a file (its PDF).
+            if (AnnouncementCategories::takesPdf($data['type']) && ($data['image_path'] ?? null) instanceof UploadedFile) {
                 $filePath = $this->fileUploadService->upload($data['image_path'], 'announcements');
             }
 
@@ -29,13 +32,14 @@ class RegisterAnnouncementService
                 'title'       => $data['title'],
                 'description' => $data['description'],
                 'type'        => $data['type'],
+                'details'     => AnnouncementCategories::clean($data['type'], $data['details'] ?? []),
                 'contact'     => $data['contact'],
                 'link'        => $data['link'] ?? null,
                 'member_id'   => $member->id,
                 'image_path'  => $filePath,
                 'is_approved' => false,
+                'expires_at'  => AnnouncementCategories::defaultExpiry($data['type']) . ' 23:59:59',
             ]);
         });
     }
-
 }

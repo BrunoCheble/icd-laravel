@@ -3,6 +3,7 @@
 namespace App\Modules\Announcements\Services;
 
 use App\Modules\Announcements\Models\Announcement;
+use App\Modules\Announcements\Support\AnnouncementCategories;
 use App\Services\FileUploadService;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
@@ -26,6 +27,7 @@ class SaveAnnouncementService
                 'title'       => $data['title'],
                 'description' => $data['description'],
                 'type'        => $data['type'],
+                'details'     => AnnouncementCategories::clean($data['type'], $data['details'] ?? []),
                 'contact'     => $data['contact'],
                 'link'        => $data['link'] ?? null,
                 'member_id'   => $data['member_id'],
@@ -33,7 +35,8 @@ class SaveAnnouncementService
                 'expires_at'  => ! empty($data['expires_at']) ? Carbon::parse($data['expires_at'])->endOfDay()->format('Y-m-d H:i:s') : null,
             ];
 
-            if (($data['image_path'] ?? null) instanceof UploadedFile) {
+            // Only a résumé takes a file (its PDF).
+            if (AnnouncementCategories::takesPdf($data['type']) && ($data['image_path'] ?? null) instanceof UploadedFile) {
                 $values['image_path'] = $this->fileUploadService->upload($data['image_path'], 'announcements');
                 // The file it replaces goes (only one sent to the public folder).
                 $old = $announcement?->image_path;
