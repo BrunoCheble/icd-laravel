@@ -14,8 +14,11 @@
         .m-head h1 { margin: 0; font-size: 1.35rem; font-weight: 800; color: #111827; letter-spacing: -.01em; }
         .m-head p { margin: .2rem 0 0; font-size: .875rem; color: #6b7280; }
         .m-head-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
-        /* Phones: the top bar already names the page */
-        @media (max-width: 639px) { .m-head { align-items: center; } .m-head h1 { display: none; } .m-head p { margin: 0; } }
+        /* The top bar already names the page: here only its summary and actions (a page may show its own title,
+           as the home page's greeting) */
+        .m-head { align-items: center; }
+        .m-head h1 { display: none; }
+        .m-head p { margin: 0; }
         .m-back { display: inline-flex; align-items: center; gap: .4rem; margin-bottom: .5rem; font-size: .85rem; font-weight: 600; color: #6b7280; text-decoration: none; }
         .m-back:hover { color: #111827; }
 

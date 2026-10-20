@@ -3,20 +3,14 @@
 namespace App\Http\Controllers\Site;
 
 use App\Enums\AnnouncementType;
-use Illuminate\Support\Facades\Session;
-use App\Enums\Gender;
 use App\Enums\InvitedBy;
 use App\Enums\MaritalStatus;
 use App\Enums\MembershipStatus;
-use App\Enums\VisitorGroup;
-use App\Enums\VisitorStatus;
 use App\Helpers\DateHelper;
 use App\Helpers\NameHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SiteAnnouncementRequest;
 use App\Http\Requests\SiteMemberRequest;
-use App\Http\Requests\SitePrayerRequest;
-use App\Modules\Visitors\Http\Requests\VisitorRequest;
 use App\Modules\Announcements\Models\Announcement;
 use App\Modules\Members\Models\Member;
 use App\Modules\Prayers\Models\Prayer;
@@ -63,62 +57,7 @@ class SiteController extends Controller
     }
 
 
-    public function visitor(): View
-    {
-        $visitor = new Visitor();
-        $visitor->created_by = session('visitor_created_by');
-        $visitor->invited_by = session('invited_by');
-        $visitor->phone_number = session('phone_number');
-        $visitor->city = session('city');
 
-        $genderOptions = Gender::options();
-        $invitedByOptions = InvitedBy::options();
-        $invitedByDefault = InvitedBy::WHO;
-
-        $visitorGroupOptions = VisitorGroup::options();
-        $invitedByOther = session('invited_by_other');
-
-        return view('site.visitor', compact(
-            'visitor',
-            'genderOptions',
-            'invitedByOther',
-            'invitedByOptions',
-            'invitedByDefault',
-            'visitorGroupOptions'
-        ));
-    }
-
-    public function registerVisitor(VisitorRequest $request): RedirectResponse
-    {
-        try {
-            $request->validated();
-            $visitor = new Visitor();
-            $visitor->name = NameHelper::normalizeName($request->name);
-            $visitor->phone_number = $request->phone_number;
-            $visitor->gender = $request->gender;
-            $visitor->city = NameHelper::normalizeName($request->city);
-            $visitor->group = $request->group;
-            $visitor->invited_by = $request->invited_by_other !== InvitedBy::WHO ? $request->invited_by_other : NameHelper::normalizeName($request->invited_by);
-            $visitor->created_by = NameHelper::normalizeName($request->created_by);
-            $visitor->status = VisitorStatus::ACTIVED;
-
-            Session::put('invited_by_other', $request->invited_by_other);
-            Session::put('invited_by', NameHelper::normalizeName($request->invited_by));
-            Session::put('phone_number', $visitor->phone_number);
-            Session::put('city', $visitor->city);
-            Session::put('visitor_created_by', $visitor->created_by);
-
-            $visitor->save();
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return Redirect::route('site.visitor')
-                ->withErrors($e->validator)
-                ->withInput();
-        }
-
-        return Redirect::route('site.visitor')
-            ->with('success', __('Thank you for your registration!'))
-            ->with('created_by', NameHelper::normalizeName($request->created_by));
-    }
 
     public function announcement(): View
     {
@@ -200,17 +139,7 @@ class SiteController extends Controller
         return response()->json(['exists' => false]);
     }
 
-    public function registerPrayerRequest(SitePrayerRequest $request)
-    {
-        Prayer::create($request->validated());
-        return redirect()->route('site.prayer')->with('success', 'Pedido de oração realizado com sucesso!');
-    }
 
-    public function prayerRequest(): View
-    {
-        $prayer = new Prayer();
-        return view('site.prayer', compact('prayer'));
-    }
 
     public function todayPrayer(): View
     {

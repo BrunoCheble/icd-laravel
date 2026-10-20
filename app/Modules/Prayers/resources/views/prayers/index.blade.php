@@ -81,10 +81,12 @@
                             <span class="m-initials is-lg">{{ $initials($prayer->name) }}</span>
                             <div class="prayer-who">
                                 <strong>{{ $prayer->name }}</strong>
-                                <small>{{ $when($prayer->created_at) }}</small>
+                                <small>{{ $when($prayer->created_at) }}@if ($prayer->phone_number) · <i class="fa-brands fa-whatsapp"></i> {{ $prayer->phone_number }}@endif</small>
                             </div>
                             <button type="button" class="m-btn is-ghost is-icon" aria-label="{{ __('Actions') }}: {{ $prayer->name }}"
-                                @click="prayer = @js(['name' => $prayer->name, 'request' => (string) $prayer->request, 'when' => $when($prayer->created_at), 'destroy' => route('prayers.destroy', $prayer)]); confirming = false"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                                @click="prayer = @js(['name' => $prayer->name, 'request' => (string) $prayer->request, 'when' => $when($prayer->created_at), 'phone' => $prayer->phone_number,
+                                    'whatsapp' => \App\Helpers\WhatsAppHelper::url($prayer->phone_number, 'A paz, ' . \Illuminate\Support\Str::before(trim($prayer->name), ' ') . '! Recebemos o seu pedido de oração e estamos a orar por si. 🙏'),
+                                    'destroy' => route('prayers.destroy', $prayer)]); confirming = false"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                         </div>
                         @if (trim((string) $prayer->request) !== '')
                             <p class="prayer-text">{{ $prayer->request }}</p>
@@ -112,6 +114,7 @@
                         <button type="button" class="m-btn is-ghost is-icon" @click="prayer = null" aria-label="{{ __('Close') }}"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                     <div class="m-menu" x-show="!confirming">
+                        <a x-show="prayer?.whatsapp" :href="prayer?.whatsapp" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" style="color: #25d366;"></i> {{ __('Answer on WhatsApp') }}</a>
                         <button type="button" x-data="{ copied: false }" @click="navigator.clipboard?.writeText(prayer.name + (prayer.request ? ': ' + prayer.request : '')); copied = true; setTimeout(() => copied = false, 2000)">
                             <i class="fa-solid" :class="copied ? 'fa-check' : 'fa-copy'"></i> <span x-text="copied ? @js(__('Copied')) : @js(__('Copy request'))"></span>
                         </button>
