@@ -62,7 +62,7 @@
     </section>
 
     {{-- Picture or PDF --}}
-    <section class="m-card m-section" x-data="{ preview: null }">
+    <section class="m-card m-section">
         <h3 class="m-section-title"><i class="fa-solid fa-image"></i> {{ __('Image or PDF') }} <small>{{ __('optional') }}</small></h3>
         <div class="m-grid">
             @if ($announcement->url_image)
@@ -70,15 +70,14 @@
                     @if ($announcement->isPdf())
                         <a href="{{ $announcement->url_image }}" target="_blank" rel="noopener" class="m-link"><i class="fa-solid fa-file-pdf"></i> {{ __('Open the current file') }}</a>
                     @else
-                        <img src="{{ $announcement->url_image }}" alt="" x-show="!preview" style="max-height: 12rem; border-radius: .6rem;">
+                        <img src="{{ $announcement->picture_url }}" alt="" style="width: 16rem; max-width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: .6rem;">
                     @endif
                 </p>
             @endif
-            <img x-show="preview" x-cloak :src="preview" alt="" style="max-height: 12rem; border-radius: .6rem;">
             <div class="m-field">
-                <input id="image_path" name="image_path" type="file" accept=".pdf,image/jpeg,image/png" class="m-input"
-                    @change="const file = $event.target.files[0]; preview = file && file.type.startsWith('image/') ? URL.createObjectURL(file) : null">
-                <p class="m-help">{{ __('JPG, PNG or PDF, up to 5 MB.') }}@if ($announcement->url_image) {{ __('A new file replaces the current one.') }}@endif</p>
+                <input id="image_path" name="image_path" type="file" accept=".pdf,image/jpeg,image/png" class="m-input">
+                @include('announcements::partials.image-cropper', ['input' => 'image_path'])
+                <p class="m-help">{{ __('JPG, PNG or PDF, up to 5 MB. Pictures are cropped to the announcements\' format (16:10); without one, the default picture is shown.') }}@if ($announcement->url_image) {{ __('A new file replaces the current one.') }}@endif</p>
                 @error('image_path')<p class="m-error">{{ $message }}</p>@enderror
             </div>
         </div>

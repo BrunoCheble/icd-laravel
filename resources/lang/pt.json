@@ -1184,5 +1184,15 @@
     "You need to be a member to announce. If you are, check the NIF or talk to us.": "Precisa de ser membro para anunciar. Se já é membro, verifique o NIF ou fale connosco.",
     "Shown with the announcement, for whoever is interested.": "Aparece com o anúncio, para quem estiver interessado.",
     "Send for approval": "Enviar para aprovação",
-    "Not a member yet?": "Ainda não é membro?"
+    "Not a member yet?": "Ainda não é membro?",
+    "Crop again": "Recortar de novo",
+    "Crop the picture": "Recortar a imagem",
+    "Drag to choose the part to show; the corners change its size.": "Arraste para escolher a parte a mostrar; os cantos mudam o tamanho.",
+    "Zoom out": "Afastar",
+    "Zoom in": "Aproximar",
+    "Rotate left": "Rodar para a esquerda",
+    "Rotate right": "Rodar para a direita",
+    "Use the crop": "Usar o recorte",
+    "Announcement format": "Formato do anúncio",
+    "JPG, PNG or PDF, up to 5 MB. Pictures are cropped to the announcements' format (16:10); without one, the default picture is shown.": "JPG, PNG ou PDF, até 5 MB. As imagens são recortadas no formato dos anúncios (16:10); sem imagem, aparece a imagem por defeito."
 }

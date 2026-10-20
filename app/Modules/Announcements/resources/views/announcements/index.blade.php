@@ -11,7 +11,7 @@
         /* A card per announcement, newest first, read left to right (one column on phones) */
         .ads { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(19rem, 100%), 1fr)); gap: 1rem; align-items: start; margin: .75rem 0 1rem; }
         .ad { overflow: hidden; display: flex; flex-direction: column; }
-        .ad-media { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; background: linear-gradient(135deg, var(--brand-soft), #fff7ed); color: var(--brand-hover); font-size: 2rem; text-decoration: none; }
+        .ad-media { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 10; background: linear-gradient(135deg, var(--brand-soft), #fff7ed); color: var(--brand-hover); font-size: 2rem; text-decoration: none; }
         .ad-media.is-plain { aspect-ratio: auto; height: 4.5rem; font-size: 1.4rem; }
         .ad-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
         .ad-media small { display: block; margin-top: .25rem; font-size: .75rem; font-weight: 700; text-align: center; }
@@ -109,12 +109,9 @@
                         ];
                     @endphp
                     <article class="m-card ad">
-                        <a href="{{ route('announcements.edit', $announcement) }}" @class(['ad-media', 'is-plain' => ! $announcement->url_image || $announcement->isPdf()]) aria-label="{{ $announcement->title }}">
-                            @if ($announcement->url_image && ! $announcement->isPdf())
-                                <img src="{{ $announcement->url_image }}" alt="" loading="lazy">
-                            @else
-                                <span><i class="fa-solid {{ $announcement->url_image ? 'fa-file-pdf' : ($icons[$announcement->type] ?? 'fa-bullhorn') }}"></i></span>
-                            @endif
+                        <a href="{{ route('announcements.edit', $announcement) }}" class="ad-media" aria-label="{{ $announcement->title }}">
+                            <img src="{{ $announcement->picture_url }}" alt="" loading="lazy">
+                            @if ($announcement->isPdf())<span class="m-tag is-media" style="position: absolute; right: .6rem; top: .6rem; left: auto;"><i class="fa-solid fa-file-pdf"></i> PDF</span>@endif
                             <span class="m-tag {{ $statusTag }}">{{ $statusLabel }}</span>
                         </a>
                         <div class="ad-body">

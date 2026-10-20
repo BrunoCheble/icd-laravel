@@ -31,7 +31,10 @@ class ListPublicAnnouncementsService
                 'contact' => $announcement->contact,
                 'whatsapp' => WhatsAppHelper::url($announcement->contact),
                 'link' => $announcement->link,
-                'image_url' => $announcement->url_image,
+                // The picture to show (the default one without a picture), and the PDF when one was sent.
+                'image_url' => $announcement->picture_url,
+                'has_picture' => $announcement->url_image !== null && ! $announcement->isPdf(),
+                'pdf_url' => $announcement->isPdf() ? $announcement->url_image : null,
                 'is_pdf' => $announcement->isPdf(),
                 'is_approved' => true,
                 'expires_at' => $announcement->expires_at,

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class FileUploadService
@@ -28,11 +27,12 @@ class FileUploadService
         // Validate file
         $this->validateFile($file, $allowedMimeTypes, $maxSize);
 
-        // Store the file in the specified folder
-        $path = $file->store($folder, 'public');
+        // Straight into the public folder (images/<folder>), as the members' photos: storage/app/public needs a
+        // "storage" link that the server does not have.
+        $name = time() . '-' . \Illuminate\Support\Str::random(10) . '.' . strtolower($file->guessExtension() ?: $file->getClientOriginalExtension());
+        $file->move(public_path("images/{$folder}"), $name);
 
-        // Return the publicly accessible path
-        return 'storage/' . $path;
+        return "images/{$folder}/{$name}";
     }
 
     /**

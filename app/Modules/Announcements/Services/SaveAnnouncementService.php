@@ -35,6 +35,11 @@ class SaveAnnouncementService
 
             if (($data['image_path'] ?? null) instanceof UploadedFile) {
                 $values['image_path'] = $this->fileUploadService->upload($data['image_path'], 'announcements');
+                // The file it replaces goes (only one sent to the public folder).
+                $old = $announcement?->image_path;
+                if ($old && str_starts_with($old, 'images/announcements/') && is_file(public_path($old))) {
+                    @unlink(public_path($old));
+                }
             }
 
             if ($approved && (! $announcement || ! $announcement->is_approved)) {

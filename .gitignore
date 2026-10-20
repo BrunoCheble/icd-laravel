@@ -23,3 +23,7 @@ yarn-error.log
 .codegpt
 /public/audio
 /public/lessons
+
+# Files sent with announcements (the default picture stays)
+/public/images/announcements/*
+!/public/images/announcements/default.jpg
