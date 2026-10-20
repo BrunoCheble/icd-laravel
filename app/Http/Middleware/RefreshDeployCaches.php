@@ -19,7 +19,14 @@ class RefreshDeployCaches
 
     public function handle(Request $request, Closure $next): Response
     {
-        return $next($request);
+        $response = $next($request);
+        // The health check says whether the caches and OPcache are on (yes / no only), to check the server from outside.
+        if ($request->is('up')) {
+            $response->headers->set('X-App-Cache', sprintf('config=%d; routes=%d; opcache=%d',
+                app()->configurationIsCached(), app()->routesAreCached(), (int) (function_exists('opcache_get_status') && (@opcache_get_status(false)['opcache_enabled'] ?? false))));
+        }
+
+        return $response;
     }
 
     public function terminate(Request $request, Response $response): void
