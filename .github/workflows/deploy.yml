@@ -28,3 +28,11 @@ jobs:
             --data-urlencode "repository_root=$REPO" --data-urlencode "branch=master")
           echo "$response" | jq '{status, errors, head: .data.last_update}'
           [ "$(echo "$response" | jq -r '.status')" = "1" ]
+
+      # The first request after the pull rebuilds Laravel's caches (see RefreshDeployCachesService): made here, so
+      # no visitor meets the old ones.
+      - name: Refresh the caches
+        run: |
+          curl -sS -o /dev/null -w "%{http_code}\n" https://admin.igrejaicd.pt/up
+          sleep 20
+          curl -sS --fail -o /dev/null -w "%{http_code} %{time_starttransfer}s\n" https://admin.igrejaicd.pt/up

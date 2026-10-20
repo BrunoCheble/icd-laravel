@@ -12,6 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Production: Laravel's caches rebuilt after each deploy (the deploy only pulls the code).
+        $middleware->append(\App\Http\Middleware\RefreshDeployCaches::class);
         // The app's lock for passkey users (fingerprint / face to come back after a while away).
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureSessionUnlocked::class);
     })
