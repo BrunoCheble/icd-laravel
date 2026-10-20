@@ -381,6 +381,18 @@ class AnnouncementsTest extends TestCase
         $this->post('/new-announcement', $form + ['title' => 'ZZ Teste Venda 5'])->assertSessionHasNoErrors();
     }
 
+    public function test_the_public_pages_open_inside_the_site_and_stay_there(): void
+    {
+        $member = $this->member();
+        $this->get('/announcement?embed=1')->assertOk()->assertSee('name="embed"', false)->assertDontSee('Voltar ao site');
+        $this->get('/?embed=1')->assertOk()->assertSee('name="embed"', false);
+
+        // After sending, still inside the site, with "Fechar" (it closes the site's window)
+        $this->post('/new-announcement', ['member_document' => $member->document_number, 'title' => 'ZZ Teste Embutido', 'description' => 'X', 'contact' => '912345678', 'embed' => '1'] + self::SERVICE)
+            ->assertRedirect('/announcement?embed=1');
+        $this->get('/announcement?embed=1')->assertSee('data-embed-close', false);
+    }
+
     private function announcement(array $data = []): Announcement
     {
         return Announcement::create($data + self::SERVICE + [

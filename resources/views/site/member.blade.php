@@ -3,11 +3,14 @@
         <div class="alert alert-success">
             <img class="block w-auto" src="{{ asset('img/success.jpg') }}" alt="">
         </div>
-        <div class="mt-4 flex justify-center">
-            <a href="{{ route('site.member') }}"
+        <div class="mt-4 flex justify-center gap-2">
+            <a href="{{ route('site.member', request()->boolean('embed') ? ['embed' => 1] : []) }}"
                 class="bg-primary hover:bg-[#d8881c] text-white font-bold py-2 px-4 rounded">
                 REGISTAR NOVO MEMBRO
             </a>
+            @if (request()->boolean('embed'))
+                <button type="button" data-embed-close class="border border-gray-300 font-bold py-2 px-4 rounded">{{ __('Close') }}</button>
+            @endif
         </div>
     @else
         <div x-data="formData()" x-init="init()">
@@ -38,6 +41,7 @@
             <form method="POST" action="{{ route('member.register') }}" @submit.prevent="validateAndSubmit"
                 x-ref="form" role="form" enctype="multipart/form-data">
                 @csrf
+                @if (request()->boolean('embed') || old('embed'))<input type="hidden" name="embed" value="1">@endif
                 <!-- Step 1: Personal Info -->
                 <div x-show="step === 1">
                     <div>
@@ -190,6 +194,7 @@
             /* Menor tamanho de fonte */
         }
 
+        @unless (request()->boolean('embed') || old('embed'))
         body {
             /* background com 50% do tamanho menor com opacidade na imagem */
             background: url("{{ asset('img/background.jpg') }}") repeat !important;
@@ -198,6 +203,7 @@
             background-size: 70% !important;
             background-color: #333 !important;
         }
+        @endunless
     </style>
     <script src="https://unpkg.com/imask"></script>
     <script>
