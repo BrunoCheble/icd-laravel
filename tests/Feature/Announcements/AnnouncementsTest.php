@@ -386,6 +386,8 @@ class AnnouncementsTest extends TestCase
         $member = $this->member();
         $this->get('/announcement?embed=1')->assertOk()->assertSee('name="embed"', false)->assertDontSee('Voltar ao site');
         $this->get('/?embed=1')->assertOk()->assertSee('name="embed"', false);
+        // Only the church's site may show them inside its pages
+        $this->get('/announcement')->assertHeader('Content-Security-Policy', "frame-ancestors 'self' https://igrejaicd.pt https://www.igrejaicd.pt");
 
         // After sending, still inside the site, with "Fechar" (it closes the site's window)
         $this->post('/new-announcement', ['member_document' => $member->document_number, 'title' => 'ZZ Teste Embutido', 'description' => 'X', 'contact' => '912345678', 'embed' => '1'] + self::SERVICE)
