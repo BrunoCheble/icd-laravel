@@ -41,6 +41,8 @@ function withYoutubeMini(component, url, options = {}) {
     const mini = {
         videoId: youtubeIdFrom(url),
         showVideo: false,
+        // Phones may not start the video from the page's button: then it asks for a tap on the video itself.
+        videoTapHint: false,
         playerReady: false,
         playing: false,
         videoTime: 0,
@@ -63,6 +65,7 @@ function withYoutubeMini(component, url, options = {}) {
                             player.setPlaybackRate(this.video.speed);
                         },
                         onStateChange: (event) => {
+                            if (event.data === 1 || event.data === 3) this.videoTapHint = false;
                             if (event.data === 0 && options.onEnded) options.onEnded.call(this);
                         },
                     },
@@ -87,20 +90,30 @@ function withYoutubeMini(component, url, options = {}) {
             this.showVideo = true;
             this.$nextTick(action);
         },
-        toggleVideo() {
-            this.withVisiblePlayer(() => player.getPlayerState() === 1 ? player.pauseVideo() : player.playVideo());
+        // Asked to play: if the video has not started a moment later, the phone blocked it.
+        startVideo() {
+            player.playVideo();
+            clearTimeout(this.tapHintTimer);
+            this.tapHintTimer = setTimeout(() => {
+                const state = this.videoState();
+                if (this.showVideo && state !== 1 && state !== 3) this.videoTapHint = true;
+            }, 1500);
         },
-        playVideo() { this.withVisiblePlayer(() => player.playVideo()); },
+        toggleVideo() {
+            this.withVisiblePlayer(() => player.getPlayerState() === 1 ? player.pauseVideo() : this.startVideo());
+        },
+        playVideo() { this.withVisiblePlayer(() => this.startVideo()); },
         pauseVideo() { if (player && this.playerReady) player.pauseVideo(); },
         seekVideo(seconds, play = true) {
             this.withVisiblePlayer(() => {
                 player.seekTo(seconds, true);
-                if (play) player.playVideo();
+                if (play) this.startVideo();
             });
         },
         closeVideo() {
             this.pauseVideo();
             this.showVideo = false;
+            this.videoTapHint = false;
         },
         setVideoSpeed(speed) {
             this.video.speed = speed;
