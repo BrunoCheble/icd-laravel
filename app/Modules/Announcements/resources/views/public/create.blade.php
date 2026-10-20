@@ -50,9 +50,7 @@
         .an-types input:checked + span { border-color: #f8a925; background: #fef3e2; color: #92400e; }
         .an-types input:checked + span i { color: #f8a925; }
         .an-types input:focus-visible + span { outline: 2px solid #f8a925; }
-        .an-help { border: 0; background: none; padding: 0; margin-top: .35rem; color: #b45309; font: inherit; font-size: .82rem; font-weight: 700; cursor: pointer; }
         .an-tip { margin-top: .5rem; padding: .85rem 1rem; border-radius: .8rem; background: #f9fafb; border: 1px solid #e5e7eb; font-size: .85rem; line-height: 1.5; color: #374151; }
-        .an-tip code { display: block; margin-top: .4rem; padding: .5rem .65rem; border-radius: .5rem; background: #fff; border: 1px solid #e5e7eb; font-size: .8rem; white-space: normal; }
         .an-error { margin: .35rem 0 0; font-size: .85rem; font-weight: 600; color: #dc2626; }
         .an-ok { margin: .35rem 0 0; font-size: .85rem; font-weight: 600; color: #15803d; }
         .an-btn { display: flex; align-items: center; justify-content: center; gap: .55rem; width: 100%; min-height: 54px; border: 0; border-radius: .9rem; background: #f8a925; color: #fff; font: inherit; font-size: 1.05rem; font-weight: 800; text-decoration: none; cursor: pointer; box-shadow: 0 8px 20px rgba(248, 169, 37, .3); }
@@ -143,14 +141,10 @@
                     @error('title')<p class="an-error">{{ $message }}</p>@enderror
                 </div>
 
-                <div class="an-field" x-data="{ help: false }">
+                <div class="an-field">
                     <label for="description">{{ __('Description') }}</label>
                     <textarea id="description" name="description" class="an-input" required maxlength="5000" :placeholder="hints[type]?.description || ''">{{ old('description') }}</textarea>
-                    <button type="button" class="an-help" @click="help = !help"><i class="fa-regular fa-lightbulb"></i> Precisa de ajuda para escrever?</button>
-                    <div class="an-tip" x-show="help" x-cloak>
-                        Se tiver dificuldade para escrever um <strong>título</strong> ou uma <strong>descrição</strong> clara para seu anúncio, você pode usar o <a href="https://chat.openai.com/" target="_blank" rel="noopener">ChatGPT</a> como assistente.
-                        <code>"Me ajuda a escrever um título e descrição para um anúncio de venda de peças de cerâmica artesanal."</code>
-                    </div>
+                    <small>{{ __('Write it your way: the team reviews every announcement before it shows on the site.') }}</small>
                     @error('description')<p class="an-error">{{ $message }}</p>@enderror
                 </div>
 
