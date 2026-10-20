@@ -39,6 +39,11 @@ class DevDataSeeder extends Seeder
         SentMessage::query()->where('recipient_type', 'member')->whereIn('recipient_id', (clone $members)->pluck('id'))->delete();
         SentMessage::query()->where('recipient_type', 'visitor')->whereIn('recipient_id', (clone $visitors)->pluck('id'))->delete();
 
+        // The made-up photos of donations and sales
+        foreach (glob(public_path('images/announcements/zz-teste-*')) ?: [] as $file) {
+            @unlink($file);
+        }
+
         return [
             'announcements' => Announcement::query()->where('title', 'like', 'ZZ Teste%')->delete(),
             'prayers' => Prayer::query()->where('name', 'like', 'ZZ Teste%')->delete(),
@@ -142,6 +147,19 @@ class DevDataSeeder extends Seeder
         }
     }
 
+    /** Made-up photos (copies of the default picture) for a donation or a sale. */
+    private function photos(int $announcement, int $count): array
+    {
+        $paths = [];
+        for ($n = 1; $n <= $count; $n++) {
+            $path = "images/announcements/zz-teste-{$announcement}-{$n}.jpg";
+            copy(public_path(\App\Modules\Announcements\Models\Announcement::DEFAULT_PICTURE), public_path($path));
+            $paths[] = $path;
+        }
+
+        return $paths;
+    }
+
     private function announcements(): void
     {
         $authors = Member::query()->where('last_name', 'like', 'ZZ Teste%')->where('membership_status', MembershipStatus::ACTIVED)->pluck('id');
@@ -157,6 +175,7 @@ class DevDataSeeder extends Seeder
             $announcement = Announcement::create([
                 'member_id' => $authors[$i % max(1, $authors->count())],
                 'title' => $title, 'type' => $type, 'details' => $details, 'description' => $text, 'contact' => '91234567' . $i,
+                'photos' => \App\Modules\Announcements\Support\AnnouncementCategories::photos($type) ? $this->photos($i, $type === 'sale' ? 3 : 2) : null,
                 'is_approved' => $approved, 'approved_at' => $approved ? now() : null,
                 'expires_at' => $expires ? now()->modify($expires)->endOfDay() : null,
             ]);
