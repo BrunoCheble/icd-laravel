@@ -1538,6 +1538,7 @@
                     this.togglePlayNow();
                 },
                 togglePlayNow() {
+                    if (!this.isPlaying()) this.startClicksAt(this.clock);
                     // With the music turned off the MP3 stays silent: only the BPM clock plays.
                     if (this.clickOnly) return this.playing ? this.stopClock() : this.startClock(this.atEnd() ? 0 : this.clickOffset);
                     if (audio) return audio.paused ? audio.play() : audio.pause();
@@ -1618,6 +1619,7 @@
                     const time = Math.max(0, this.timeOfTick(tick));
                     this.currentTick = tick;
                     this.followSheet(true);
+                    this.startClicksAt(time);
                     if (this.clickOnly) {
                         this.startClock(time);
                     } else if (audio) {
@@ -3224,6 +3226,18 @@
                 // Metronome: the clicks of the next moments are scheduled ahead on the audio clock, so each one
                 // sounds right on its beat (clicking when a frame notices the beat passed comes late).
                 clickUntil: null,
+                // Where playing (re)started: its own beat clicks too, though the first frame comes a little after it.
+                clickStart: null,
+                startClicksAt(time) {
+                    this.clickStart = time;
+                    this.clickUntil = null;
+                    // Phones only let the sound start in the tap itself.
+                    if (!this.metronome && !this.clickOnly) return;
+                    try {
+                        const context = this.clickContext = this.clickContext || new AudioContext();
+                        if (context.state === 'suspended') context.resume();
+                    } catch (e) {}
+                },
                 scheduleClicks() {
                     if (!(this.metronome || this.clickOnly) || !this.isPlaying()) { this.clickUntil = null; return; }
                     let context;
@@ -3234,7 +3248,11 @@
                     const now = this.clock;
                     const rate = this.clickOnly ? 1 : audio ? (audio.playbackRate || 1) : (this.video?.speed || 1);
                     // Started, or jumped (seek, repeat): scheduling starts again from here.
-                    if (this.clickUntil === null || now < this.clickUntil - 0.25 || now > this.clickUntil + 0.25) this.clickUntil = now - 0.005;
+                    if (this.clickUntil === null || now < this.clickUntil - 0.25 || now > this.clickUntil + 0.25) {
+                        const start = this.clickStart;
+                        this.clickUntil = (start !== null && start <= now && now - start < 0.3 ? start : now) - 0.005;
+                    }
+                    this.clickStart = null;
                     let until = now + 0.15;
                     if (this.loop) until = Math.min(until, this.timeOfTick(Math.min((this.loop.to + 1) * this.perBar * 2, this.ticks.length)) - 0.001);
                     for (let tick = Math.max(0, this.tickAt(this.clickUntil)); tick < this.ticks.length; tick++) {
