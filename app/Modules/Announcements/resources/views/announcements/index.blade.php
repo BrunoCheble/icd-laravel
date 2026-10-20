@@ -143,7 +143,7 @@
                         <a href="{{ route('announcements.edit', $announcement) }}" class="notice-media" aria-label="{{ $announcement->title }}">
                             <img src="{{ $announcement->picture_url }}" alt="" loading="lazy">
                             @if ($announcement->isPdf())<span class="m-tag is-media" style="position: absolute; right: .6rem; top: .6rem; left: auto;"><i class="fa-solid fa-file-pdf"></i> PDF</span>@endif
-                            @if (count($announcement->photo_urls) > 1)<span class="m-tag is-media" style="position: absolute; right: .6rem; top: .6rem; left: auto;"><i class="fa-solid fa-images"></i> {{ count($announcement->photo_urls) }}</span>@endif
+                            @if ($announcement->photo_urls)<span class="m-tag is-media" style="position: absolute; right: .6rem; top: .6rem; left: auto;"><i class="fa-solid fa-images"></i> {{ count($announcement->photo_urls) }}</span>@endif
                             <span class="m-tag {{ $statusTag }}">{{ $statusLabel }}</span>
                         </a>
                         <div class="notice-body">
@@ -204,7 +204,7 @@
                             </template>
                         </dl>
                         {{-- The photos of a donation or a sale --}}
-                        <div class="notice-chips" x-show="ad?.photos?.length > 1" style="margin: 0 0 1rem;">
+                        <div class="notice-chips" x-show="ad?.photos?.length" style="margin: 0 0 1rem;">
                             <template x-for="photo in (ad?.photos || [])" :key="photo">
                                 <a :href="photo" target="_blank" rel="noopener"><img :src="photo" alt="" style="width: 5.5rem; aspect-ratio: 16 / 10; object-fit: cover; border-radius: .5rem;"></a>
                             </template>

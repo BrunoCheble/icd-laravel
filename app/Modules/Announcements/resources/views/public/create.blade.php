@@ -167,11 +167,11 @@
                     @error('link')<p class="an-error">{{ $message }}</p>@enderror
                 </div>
 
-                {{-- A donation or a sale can go with up to 3 photos (the first one is the card's picture) --}}
+                {{-- A donation or a sale can go with up to 3 photos (shown in a gallery; the card keeps the category's banner) --}}
                 <div class="an-field" x-show="categories[type]?.photos" x-cloak>
                     <label for="photos">{{ __('Photos') }} <span>({{ __('optional') }})</span></label>
                     <input id="photos" name="photos[]" type="file" multiple accept="image/jpeg,image/png,image/webp" class="an-input" :disabled="!categories[type]?.photos" @change="checkPhotos($event)">
-                    <small>{{ __('Up to 3 photos (JPG, PNG or WebP, up to 5 MB each). The first one is the card\'s picture on the site.') }}</small>
+                    <small>{{ __('Up to 3 photos (JPG, PNG or WebP, up to 5 MB each). They show in a gallery on the announcement; the card keeps the category\'s picture.') }}</small>
                     <p class="an-error" x-show="photoError" x-text="photoError"></p>
                     @error('photos')<p class="an-error">{{ $message }}</p>@enderror
                     @error('photos.*')<p class="an-error">{{ $message }}</p>@enderror

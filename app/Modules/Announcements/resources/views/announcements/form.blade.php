@@ -108,7 +108,7 @@
         </div>
     </section>
 
-    {{-- A donation's or a sale's photos (the first one is the card's picture) --}}
+    {{-- A donation's or a sale's photos (shown in a gallery; the card keeps the category's banner) --}}
     <section class="m-card m-section" x-show="categories[type]?.photos" x-cloak>
         <h3 class="m-section-title"><i class="fa-solid fa-images"></i> {{ __('Photos') }} <small>{{ __('optional') }}</small></h3>
         <div class="m-grid">
@@ -126,7 +126,7 @@
             @endif
             <div class="m-field">
                 <input id="photos" name="photos[]" type="file" multiple accept="image/jpeg,image/png,image/webp" class="m-input" :disabled="!categories[type]?.photos" @change="checkPhotos($event)">
-                <p class="m-help">{{ __('Up to 3 photos (JPG, PNG or WebP, up to 5 MB each). The first one is the card\'s picture on the site.') }}</p>
+                <p class="m-help">{{ __('Up to 3 photos (JPG, PNG or WebP, up to 5 MB each). They show in a gallery on the announcement; the card keeps the category\'s picture.') }}</p>
                 <p class="m-error" x-show="photoError" x-text="photoError"></p>
                 @error('photos')<p class="m-error">{{ $message }}</p>@enderror
                 @error('photos.*')<p class="m-error">{{ $message }}</p>@enderror

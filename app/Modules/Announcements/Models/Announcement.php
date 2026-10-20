@@ -14,8 +14,8 @@ class Announcement extends Model
     public const PUBLISHED = 'published';
     public const EXPIRED = 'expired';
 
-    // The picture of an announcement is its category's banner, or the first photo of a donation or a sale; the default
-    // one for the old types (products).
+    // The picture of an announcement is always its category's banner (a donation's or a sale's photos are shown apart,
+    // in a gallery); the default one for the old types (products).
     public const DEFAULT_PICTURE = 'images/announcements/default.jpg';
 
     // The site's list of announcements (see ListPublicAnnouncementsService), cached; any change clears it.
@@ -111,16 +111,10 @@ class Announcement extends Model
     }
 
     /**
-     * The picture to show: the first photo of a donation or a sale, otherwise the category's banner (the default
-     * picture for the old types).
+     * The picture to show: the category's banner (the default picture for the old types), never a photo sent.
      */
     public function getPictureUrlAttribute(): string
     {
-        $photo = $this->photo_urls[0] ?? null;
-        if ($photo) {
-            return $photo;
-        }
-
         return asset(AnnouncementCategories::has($this->type) ? AnnouncementCategories::banner($this->type) : self::DEFAULT_PICTURE);
     }
 

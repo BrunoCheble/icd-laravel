@@ -14,8 +14,8 @@ class ListPublicAnnouncementsService
 
     /**
      * The announcements the site shows: approved, not expired and of a category (the old products are left out),
-     * newest first, with what the site needs to show them: the picture (the first photo or the category's banner),
-     * the photos, the category's fields, the WhatsApp link, the résumé's PDF, the members' average stars and where to
+     * newest first, with what the site needs to show them: the category's banner, the photos (shown apart, in a
+     * gallery), the category's fields, the WhatsApp link, the résumé's PDF, the members' average stars and where to
      * send stars or a private comment (the comments themselves are only for the team). In Portuguese, as the site.
      * Cached, so many visits make one query.
      */

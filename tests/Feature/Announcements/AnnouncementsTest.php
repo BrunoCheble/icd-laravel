@@ -346,8 +346,9 @@ class AnnouncementsTest extends TestCase
         foreach ($announcement->photos as $path) {
             $this->assertFileExists(public_path($path));
         }
-        // The first photo is the card's picture
-        $this->assertSame(asset($announcement->photos[0]), $announcement->picture_url);
+        // The card keeps the category's banner (the photos go apart, in a gallery)
+        $this->assertSame(asset('images/announcements/categories/donation.svg'), $announcement->picture_url);
+        $this->assertSame([asset($announcement->photos[0]), asset($announcement->photos[1])], $announcement->photo_urls);
         // Other categories take none
         $this->post('/new-announcement', ['title' => 'ZZ Teste Sem Fotos', 'photos' => [$this->png()]] + self::SERVICE + $form)->assertSessionHasErrors('photos');
 
