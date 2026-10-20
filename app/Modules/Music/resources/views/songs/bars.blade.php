@@ -527,7 +527,7 @@
                             <div class="sheet-box">
                                 <p class="sheet-preview-note" x-show="!versionId && dirty && previewSheet.changed">{{ __('Preview: the chord sheet will look like this when the map is saved (new chords in green).') }}</p>
                                 <template x-for="(section, s) in shownSheet" :key="`${sheetRevision}-${versionId}-${s}`">
-                                    <div class="sheet-section" :class="{ 'is-current': sheetShown && s === currentSheetSection }" :style="typeStyle(section.label)" :data-sheet="s">
+                                    <div class="sheet-section" :class="{ 'is-current': sheetShown && (showCursor || !playing) && s === currentSheetSection }" :style="typeStyle(section.label)" :data-sheet="s">
                                         <div class="sheet-head">
                                             <div class="sheet-label" x-text="section.label" @click="playFromSheet(s)"></div>
                                             <template x-if="freeTiming && !versionId && !section.marker && sheetBlock(s)">
@@ -869,6 +869,14 @@
                             </span>
                         </div>
                         @include('music::songs.partials.video-options')
+                        <div class="ws-panel-section" x-show="canPlay">
+                            <div class="ws-panel-label"><i class="fa-solid fa-i-cursor"></i> {{ __('Cursor') }}</div>
+                            <span class="ws-seg" role="group" aria-label="{{ __('Cursor') }}">
+                                <button type="button" :class="{ 'is-active': showCursor }" @click="setCursor(true)">{{ __('Show') }}</button>
+                                <button type="button" :class="{ 'is-active': !showCursor }" @click="setCursor(false)">{{ __('Hide') }}</button>
+                            </span>
+                            <p class="ws-panel-help mt-2">{{ __('The place being played, lit and followed on the screen. Hide it when the recording does not match the bars.') }}</p>
+                        </div>
                         <div class="ws-panel-section">
                             <div class="ws-panel-label"><i class="fa-solid fa-file-csv"></i> CSV</div>
                             <div class="ws-panel-row">
@@ -1091,6 +1099,14 @@
                 // the grid is the hidden pane.
                 litBar: -1,
                 litBeat: -1,
+                // The place being played, lit and followed while playing (or not: the recording is not always exact).
+                // Stopped, the lit beat is still shown: it is where playing starts and what the keys edit.
+                showCursor: (() => { try { return localStorage.getItem('bars-cursor') !== '0'; } catch (error) { return true; } })(),
+                setCursor(show) {
+                    this.showCursor = show;
+                    try { localStorage.setItem('bars-cursor', show ? '1' : '0'); } catch (error) {}
+                },
+                get cursorShown() { return this.showCursor || !this.playing; },
                 history: [],
                 revision: 0,
                 dirty: false,
@@ -1176,17 +1192,18 @@
                     // What is being played in the sheet, worked out once per change (not once per chord shown), so
                     // following the music stays light.
                     Alpine.effect(() => {
-                        this.playingSheetChord = this.sheetShown ? this.currentSheetChord : -1;
+                        this.playingSheetChord = this.sheetShown && this.cursorShown ? this.currentSheetChord : -1;
                     });
                     Alpine.effect(() => {
-                        this.litBar = this.barsShown ? this.shownBar : -1;
-                        this.litBeat = this.barsShown ? this.currentBeat : -1;
+                        const lit = this.barsShown && this.cursorShown;
+                        this.litBar = lit ? this.shownBar : -1;
+                        this.litBeat = lit ? this.currentBeat : -1;
                     });
                     const phone = window.matchMedia('(max-width: 1023px)');
                     phone.addEventListener('change', () => { this.phone = phone.matches; });
                     // The pane that comes into view while playing catches up with the place being played.
                     this.$watch('pane', () => this.$nextTick(() => {
-                        if (!this.isPlaying()) return;
+                        if (!this.isPlaying() || !this.showCursor) return;
                         if (this.barsShown) { this.followAccordion(); this.scrollToBar(this.shownBar); }
                         if (this.sheetShown) this.followSheet(true);
                     }));
@@ -1200,9 +1217,9 @@
                             const before = this.currentBar;
                             const chordBefore = this.playingSheetChord;
                             this.currentTick = tick;
-                            if (this.isPlaying() && this.barsShown && this.currentBar !== before) { this.followAccordion(); this.scrollToBar(this.shownBar); }
+                            if (this.isPlaying() && this.showCursor && this.barsShown && this.currentBar !== before) { this.followAccordion(); this.scrollToBar(this.shownBar); }
                             // A new block goes to the top of the chord sheet; within a block, the lit chord is kept in view.
-                            if (this.isPlaying() && this.sheetShown) {
+                            if (this.isPlaying() && this.showCursor && this.sheetShown) {
                                 const chord = this.currentSheetChord;
                                 if (!this.followSheet() && chord >= 0 && chord !== chordBefore) this.scrollToSheetChord(chord);
                             }

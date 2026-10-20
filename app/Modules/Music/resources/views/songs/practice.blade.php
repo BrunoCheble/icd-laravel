@@ -222,6 +222,14 @@
                                 <button type="button" :class="{ 'is-active': settings.passing === 'hide' }" @click="setPassing('hide')">{{ __('Hide') }}</button>
                             </span>
                         </div>
+                        <div class="ws-panel-section" x-show="hasPlayer">
+                            <div class="ws-panel-label"><i class="fa-solid fa-i-cursor"></i> {{ __('Cursor') }}</div>
+                            <span class="ws-seg" role="group" aria-label="{{ __('Cursor') }}">
+                                <button type="button" :class="{ 'is-active': showCursor }" @click="setCursor('show')">{{ __('Show') }}</button>
+                                <button type="button" :class="{ 'is-active': !showCursor }" @click="setCursor('hide')">{{ __('Hide') }}</button>
+                            </span>
+                            <p class="ws-panel-help mt-2">{{ __('The place being played, lit and followed on the screen. Hide it when the recording does not match the bars.') }}</p>
+                        </div>
                         <div class="ws-panel-section">
                             <div class="ws-panel-label"><i class="fa-solid fa-text-height"></i> {{ __('Font size') }}</div>
                             <div class="ws-panel-row">
@@ -257,7 +265,7 @@
                         <p class="hint ws-desktop" x-show="settings.mode === 'test'" x-cloak>{{ __('Tap a "?" and choose the chord (keys 1 to 4 also answer).') }}</p>
 
                         <template x-for="(section, s) in sections" :key="`${view}-${s}`">
-                            <section class="section" :class="{ 'is-current': s === currentIndex }" :data-section="s">
+                            <section class="section" :class="{ 'is-current': showCursor && s === currentIndex }" :data-section="s">
                                 <div class="section-head">
                                     <button type="button" class="section-label" :class="{ 'can-seek': canSeek(section) }" @click="seekTo(section)">
                                         <span x-text="section.label"></span><small x-show="section.start !== null" x-text="formatTime(section.start)"></small>
@@ -356,7 +364,7 @@
         // Practice page: some chords of the song are hidden ("?"); hovering (or tapping) one shows it.
         // Nothing is saved on the server; the chosen amount, view and size stay in this browser.
         const PRACTICE_KEY = 'practice-settings';
-        const PRACTICE_DEFAULTS = { percent: 0, view: 'sheet', scale: 1, mode: 'practice', passing: 'show' };
+        const PRACTICE_DEFAULTS = { percent: 0, view: 'sheet', scale: 1, mode: 'practice', passing: 'show', cursor: 'show' };
 
         // A song always opens with every chord shown (study it first), whatever was hidden last time.
         function loadPracticeSettings() {
@@ -586,7 +594,7 @@
                         'is-wrong': !!answer && !answer.right,
                         'is-asking': this.question?.g === g,
                         'is-passing': this.isPassing(g),
-                        'is-playing': g === this.currentChord,
+                        'is-playing': this.showCursor && g === this.currentChord,
                     };
                 },
                 // Practice: a tap (or click) shows a hidden chord until it is tapped again. Test: asks for it.
@@ -692,6 +700,13 @@
                     savePracticeSettings(this.settings);
                 },
 
+                // The place being played, lit and followed on the screen (or not: the recording is not always exact).
+                get showCursor() { return this.settings.cursor !== 'hide'; },
+                setCursor(value) {
+                    this.settings.cursor = value;
+                    savePracticeSettings(this.settings);
+                },
+
                 // ---- Player: the song's MP3, or its YouTube video (shared small player, see youtube-mini.js) ----
                 get hasPlayer() { return !!audio || !!this.videoId; },
                 // Ready to play and seek.
@@ -717,6 +732,7 @@
                         this.restartLoop();
                     }
                     // While playing, the chord being played is kept in view (or the current block, without chord times).
+                    if (!this.showCursor) return;
                     const chord = this.currentChord;
                     const current = this.currentIndex;
                     if (state === 1 && chord >= 0 && chord !== this.lastChord) {
