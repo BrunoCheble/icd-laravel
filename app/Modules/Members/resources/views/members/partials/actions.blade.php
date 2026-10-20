@@ -25,7 +25,7 @@
                         <span class="m-tag is-part" style="margin-left: auto;" x-text="member?.pending.length"></span>
                     </button>
                     <button type="button" @click="$refs.photo.click()"><i class="fa-solid fa-camera"></i> {{ __('Change photo') }}</button>
-                    <a :href="member?.activate" x-show="member && member.status !== 'actived'"><i class="fa-solid fa-check" style="color: #16a34a;"></i> {{ __('Activate') }}</a>
+                    <a :href="member?.activate" x-show="member && member.status !== 'actived'"><i class="fa-solid fa-check" style="color: var(--tx-16a34a);"></i> {{ __('Activate') }}</a>
                     <button type="button" class="is-danger" x-show="member?.status === 'actived'" @click="panel = 'remove'"><i class="fa-solid fa-user-slash"></i> {{ __('Deactivate') }}</button>
                     <button type="button" class="is-danger" x-show="member?.status === 'pending'" @click="panel = 'remove'"><i class="fa-solid fa-trash"></i> {{ __('Delete') }}</button>
                 </div>
@@ -106,8 +106,8 @@
 @once
     <style>
         .member-pending { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
-        .member-pending li { display: flex; align-items: flex-start; gap: .6rem; padding: .55rem .75rem; border-radius: .6rem; background: #fffbeb; color: #78350f; font-size: .9rem; }
-        .member-pending i { margin-top: .2rem; color: #d97706; }
+        .member-pending li { display: flex; align-items: flex-start; gap: .6rem; padding: .55rem .75rem; border-radius: .6rem; background: var(--bg-fffbeb); color: var(--tx-78350f); font-size: .9rem; }
+        .member-pending i { margin-top: .2rem; color: var(--tx-d97706); }
     </style>
     <script>
         // The actions of the member picked (sent by its "⋯" button), in panels: menu, WhatsApp, pending, remove.

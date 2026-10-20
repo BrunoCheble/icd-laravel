@@ -79,7 +79,7 @@
                 <label class="m-label" for="source_url">{{ __('Source') }} <span class="m-optional">· {{ __('optional') }}</span></label>
                 <input id="source_url" name="source_url" type="url" class="m-input" value="{{ old('source_url', $song?->source_url) }}" placeholder="https://www.cifraclub.com.br/…">
                 <x-input-error :messages="$errors->get('source_url')" />
-                <p id="source-duplicate" class="m-help" style="display: none; font-weight: 600; color: #b45309;"></p>
+                <p id="source-duplicate" class="m-help" style="display: none; font-weight: 600; color: var(--tx-b45309);"></p>
             </div>
 
             {{-- Audio file: played instead of the YouTube video in the setlist app, also offline --}}
@@ -88,9 +88,9 @@
                 @if ($song?->audioUrl())
                     <div class="flex flex-wrap items-center gap-3" x-show="!remove">
                         <audio controls preload="none" src="{{ $song->audioUrl() }}" style="max-width: 100%;"></audio>
-                        <button type="button" class="m-btn is-ghost" style="color: #dc2626;" @click="remove = true"><i class="fa-solid fa-trash"></i> {{ __('Remove audio') }}</button>
+                        <button type="button" class="m-btn is-ghost" style="color: var(--tx-dc2626);" @click="remove = true"><i class="fa-solid fa-trash"></i> {{ __('Remove audio') }}</button>
                     </div>
-                    <p class="m-help" style="color: #dc2626;" x-show="remove" x-cloak>
+                    <p class="m-help" style="color: var(--tx-dc2626);" x-show="remove" x-cloak>
                         {{ __('The audio will be removed when you save.') }}
                         <button type="button" class="m-link" @click="remove = false">{{ __('Undo') }}</button>
                     </p>

@@ -10,31 +10,31 @@
     <style>
         .anniv-months { display: flex; gap: .35rem; margin-bottom: 1rem; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
         .anniv-months::-webkit-scrollbar { display: none; }
-        .anniv-months a { flex: none; scroll-snap-align: center; display: inline-flex; align-items: center; gap: .35rem; min-height: 36px; padding: 0 .85rem; border: 1px solid #e5e7eb; border-radius: 999px; background: #fff; color: #4b5563; font-size: .85rem; font-weight: 600; text-decoration: none; text-transform: capitalize; }
-        .anniv-months a:hover { border-color: #d1d5db; color: #111827; }
+        .anniv-months a { flex: none; scroll-snap-align: center; display: inline-flex; align-items: center; gap: .35rem; min-height: 36px; padding: 0 .85rem; border: 1px solid var(--bd-e5e7eb); border-radius: 999px; background: var(--bg-fff); color: var(--tx-4b5563); font-size: .85rem; font-weight: 600; text-decoration: none; text-transform: capitalize; }
+        .anniv-months a:hover { border-color: var(--bd-d1d5db); color: var(--tx-111827); }
         .anniv-months a.is-active { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-strong); }
         .anniv-months a.is-now::after { content: ''; width: .4rem; height: .4rem; border-radius: 999px; background: var(--brand); }
 
         .anniv-grid { display: grid; gap: 1rem; align-items: start; }
         @media (min-width: 1280px) { .anniv-grid { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
-        .anniv-title { display: flex; align-items: center; gap: .5rem; margin: 0; padding: 1rem 1.1rem .5rem; font-size: .95rem; font-weight: 800; color: #111827; }
+        .anniv-title { display: flex; align-items: center; gap: .5rem; margin: 0; padding: 1rem 1.1rem .5rem; font-size: .95rem; font-weight: 800; color: var(--tx-111827); }
         .anniv-title i { width: 1.9rem; height: 1.9rem; display: grid; place-items: center; border-radius: .55rem; background: var(--brand-soft); color: var(--brand-hover); font-size: .85rem; }
-        .anniv-title small { margin-left: auto; font-size: .78rem; font-weight: 700; color: #9ca3af; }
+        .anniv-title small { margin-left: auto; font-size: .78rem; font-weight: 700; color: var(--tx-9ca3af); }
 
-        .anniv-row { display: flex; align-items: center; gap: .85rem; padding: .7rem 1.1rem; border-top: 1px solid #f1f2f4; }
+        .anniv-row { display: flex; align-items: center; gap: .85rem; padding: .7rem 1.1rem; border-top: 1px solid var(--bd-f1f2f4); }
         .anniv-row.is-past { opacity: .55; }
         .anniv-row.is-today { background: var(--brand-soft); }
-        .anniv-day { flex: none; width: 3rem; padding: .3rem 0; border: 1px solid #e5e7eb; border-radius: .65rem; background: #fff; text-align: center; line-height: 1.1; }
-        .anniv-day strong { display: block; font-size: 1.15rem; font-weight: 800; color: #111827; }
-        .anniv-day small { display: block; font-size: .68rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; }
+        .anniv-day { flex: none; width: 3rem; padding: .3rem 0; border: 1px solid var(--bd-e5e7eb); border-radius: .65rem; background: var(--bg-fff); text-align: center; line-height: 1.1; }
+        .anniv-day strong { display: block; font-size: 1.15rem; font-weight: 800; color: var(--tx-111827); }
+        .anniv-day small { display: block; font-size: .68rem; font-weight: 700; color: var(--tx-9ca3af); text-transform: uppercase; }
         .anniv-row.is-today .anniv-day { border-color: var(--brand); }
         .anniv-row.is-today .anniv-day strong { color: var(--brand-strong); }
         .anniv-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: .7rem; color: inherit; text-decoration: none; }
         .anniv-text { min-width: 0; }
-        .anniv-text strong { display: block; font-weight: 700; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .anniv-text strong { display: block; font-weight: 700; color: var(--tx-111827); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .anniv-text strong a { color: inherit; text-decoration: none; }
         .anniv-text a:hover, a.anniv-main:hover strong { color: var(--brand-text); }
-        .anniv-text small { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: .1rem; font-size: .82rem; color: #6b7280; }
+        .anniv-text small { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: .1rem; font-size: .82rem; color: var(--tx-6b7280); }
         .anniv-couple { flex: none; display: flex; }
         .anniv-couple > * { box-shadow: 0 0 0 2px #fff; }
         .anniv-couple > * + * { margin-left: -.6rem; }
@@ -54,7 +54,7 @@
         <div class="m-head">
             <div>
                 <h1 style="text-transform: capitalize;">{{ __('Anniversaries') }} · {{ $monthName($month) }}</h1>
-                <p><strong style="color: #111827; text-transform: capitalize;">{{ $monthName($month) }}</strong> · {{ trans_choice(':count birthday|:count birthdays', $birthdays->count(), ['count' => $birthdays->count()]) }} · {{ trans_choice(':count wedding anniversary|:count wedding anniversaries', $weddings->count(), ['count' => $weddings->count()]) }}</p>
+                <p><strong style="color: var(--tx-111827); text-transform: capitalize;">{{ $monthName($month) }}</strong> · {{ trans_choice(':count birthday|:count birthdays', $birthdays->count(), ['count' => $birthdays->count()]) }} · {{ trans_choice(':count wedding anniversary|:count wedding anniversaries', $weddings->count(), ['count' => $weddings->count()]) }}</p>
             </div>
             <div class="m-head-actions">
                 <a href="{{ route('report.anniversaries.index', ['month' => $month === 1 ? 12 : $month - 1]) }}" class="m-btn is-icon" aria-label="{{ __('Previous month') }}"><i class="fa-solid fa-chevron-left"></i></a>

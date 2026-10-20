@@ -22,10 +22,10 @@
 
 @once
     <style>
-        .song-tabs { display: flex; gap: .25rem; margin-bottom: 1.25rem; border-bottom: 1px solid #e5e7eb; overflow-x: auto; scrollbar-width: none; }
+        .song-tabs { display: flex; gap: .25rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--bd-e5e7eb); overflow-x: auto; scrollbar-width: none; }
         .song-tabs::-webkit-scrollbar { display: none; }
-        .song-tab { display: inline-flex; align-items: center; gap: .4rem; padding: .55rem .8rem; margin-bottom: -1px; border-bottom: 2px solid transparent; font-size: .875rem; font-weight: 600; color: #6b7280; white-space: nowrap; text-decoration: none; }
-        .song-tab:hover { color: #111827; border-bottom-color: #d1d5db; }
+        .song-tab { display: inline-flex; align-items: center; gap: .4rem; padding: .55rem .8rem; margin-bottom: -1px; border-bottom: 2px solid transparent; font-size: .875rem; font-weight: 600; color: var(--tx-6b7280); white-space: nowrap; text-decoration: none; }
+        .song-tab:hover { color: var(--tx-111827); border-bottom-color: var(--bd-d1d5db); }
         .song-tab.is-current { color: var(--brand-text); border-bottom-color: var(--brand); }
         /* By the room the tabs have (it changes with the side menu open or folded, not only with the screen): all
            names when they fit, else icons and the name of the page being shown, and only icons when very narrow */

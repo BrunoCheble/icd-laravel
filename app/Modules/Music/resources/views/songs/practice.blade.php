@@ -15,14 +15,14 @@
         }
 
         .counter-button { border: 0; background: none; padding: .35rem .25rem; border-radius: .375rem; cursor: pointer; text-decoration: underline dotted; text-underline-offset: .25em; }
-        .counter-button:hover { background: #f3f4f6; color: var(--brand-text); }
+        .counter-button:hover { background: var(--bg-f3f4f6); color: var(--brand-text); }
         .song-pick { display: grid; gap: .25rem; }
-        .song-pick-item { display: flex; align-items: center; gap: .6rem; padding: .55rem .6rem; border-radius: .5rem; color: #111827; text-decoration: none; }
-        .song-pick-item:hover { background: #f3f4f6; }
+        .song-pick-item { display: flex; align-items: center; gap: .6rem; padding: .55rem .6rem; border-radius: .5rem; color: var(--tx-111827); text-decoration: none; }
+        .song-pick-item:hover { background: var(--bg-f3f4f6); }
         .song-pick-item.is-current { background: var(--brand-soft); box-shadow: inset 3px 0 0 var(--brand); }
-        .song-pick-number { min-width: 1.5rem; font-size: .8rem; font-weight: 700; color: #9ca3af; text-align: right; font-variant-numeric: tabular-nums; }
+        .song-pick-number { min-width: 1.5rem; font-size: .8rem; font-weight: 700; color: var(--tx-9ca3af); text-align: right; font-variant-numeric: tabular-nums; }
         .song-pick-title { flex: 1; min-width: 0; font-weight: 600; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .song-pick-title small { display: block; font-weight: 400; color: #6b7280; overflow: hidden; text-overflow: ellipsis; }
+        .song-pick-title small { display: block; font-weight: 400; color: var(--tx-6b7280); overflow: hidden; text-overflow: ellipsis; }
         .song-pick-key { padding: .1rem .5rem; border: 1px solid var(--brand-200); border-radius: 999px; font-size: .75rem; font-weight: 700; color: var(--brand-text); }
         .counter { white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; font-size: .85rem; color: var(--muted); min-width: 2.4rem; text-align: center; }
         /* Phones: the toolbar has room (songs are picked from the counter), so it is not squeezed */
@@ -52,7 +52,7 @@
         .percent strong { min-width: 2.6rem; color: var(--text); font-variant-numeric: tabular-nums; }
 
         .stage { width: 100%; max-width: 60rem; padding: .7rem 0 4rem; box-sizing: border-box; }
-        .key-select { width: auto; min-height: 36px; padding: .2rem 2rem .2rem .6rem; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); font-weight: 700; font-size: .9rem; background-color: #fff; }
+        .key-select { width: auto; min-height: 36px; padding: .2rem 2rem .2rem .6rem; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); font-weight: 700; font-size: .9rem; background-color: var(--bg-fff); }
         .song-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: .5rem; }
         .song-title { margin: 0; font-size: clamp(1.15rem, 3.4vw, 1.6rem); line-height: 1.15; }
         .meta { margin: .15rem 0 0; color: var(--muted); font-size: .9rem; }
@@ -84,12 +84,12 @@
         .map-anchor { margin-top: .15rem; font-size: calc(.95rem * var(--scale, 1)); font-style: italic; color: var(--muted); }
         .pbars { display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); gap: .35rem; margin-top: .4rem; }
         @media (max-width: 639px) { .pbars { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        .pbar { display: flex; align-items: center; gap: .15rem; min-height: 2.6rem; padding: .3rem .4rem; border: 1px solid #e5e7eb; border-top: 3px solid var(--type-color, #d1d5db); border-radius: .5rem; background: #fff; font-size: calc(1rem * var(--scale, 1)); }
+        .pbar { display: flex; align-items: center; gap: .15rem; min-height: 2.6rem; padding: .3rem .4rem; border: 1px solid var(--bd-e5e7eb); border-top: 3px solid var(--type-color, var(--bd-d1d5db)); border-radius: .5rem; background: var(--bg-fff); font-size: calc(1rem * var(--scale, 1)); }
         @media (max-width: 639px) { .pbar { padding: .3rem; font-size: calc(.9rem * var(--scale, 1)); } }
         .pbeat { flex: 1 0 auto; display: flex; align-items: baseline; gap: .1rem; min-width: .9em; }
         .pbeat .chord { min-width: 1.6em; padding-right: .1em; white-space: nowrap; }
         .pbeat .chord.is-and { font-size: .8em; }
-        .pcont { color: #c4c8cf; font-weight: 600; }
+        .pcont { color: var(--tx-c4c8cf); font-weight: 600; }
 
         /* A chord; hidden ones keep their width and show a "?" */
         .chord { position: relative; align-self: flex-start; display: inline-block; min-width: 1.5em; padding-right: .35em; font-weight: 700; color: var(--chord); cursor: default; }
@@ -103,8 +103,8 @@
         .chord.is-passing:not(.is-hidden) .chord-name { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .22em; }
         .chord.was-hidden:not(.is-hidden) .chord-name { text-decoration: underline dotted var(--accent); text-underline-offset: .2em; }
         /* Test mode: answers in green / red (showing the right chord); the chord being asked is outlined. */
-        .chord.is-right .chord-name { color: #15803d; text-decoration: none; }
-        .chord.is-wrong .chord-name { color: #dc2626; text-decoration: line-through dotted #dc2626; }
+        .chord.is-right .chord-name { color: var(--tx-15803d); text-decoration: none; }
+        .chord.is-wrong .chord-name { color: var(--tx-dc2626); text-decoration: line-through dotted #dc2626; }
         .chord.is-asking .chord-mask { background: var(--accent); color: var(--accent-text); border-style: solid; }
         /* The chord being played (MP3 or video); a hidden one stays hidden, only its "?" is lit. */
         .chord.is-playing .chord-name { margin: 0 -.2em; padding: 0 .2em; border-radius: .25rem; background: var(--accent); color: var(--accent-text); }
@@ -124,7 +124,7 @@
         .test-option:hover { border-color: var(--accent); }
         .test-option small { display: block; font-size: .65rem; font-weight: 500; color: var(--muted); }
         .test-wrong { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .5rem; }
-        .test-wrong span { padding: .1rem .5rem; border-radius: 999px; background: #fee2e2; color: #b91c1c; font-size: .8rem; font-weight: 700; }
+        .test-wrong span { padding: .1rem .5rem; border-radius: 999px; background: var(--bg-fee2e2); color: var(--tx-b91c1c); font-size: .8rem; font-weight: 700; }
         .test-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .7rem; }
 
         .empty { margin-top: 2rem; text-align: center; color: var(--muted); }

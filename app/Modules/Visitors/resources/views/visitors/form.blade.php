@@ -7,7 +7,7 @@
 
 <div class="m-form">
     @if ($errors->any())
-        <div class="m-card m-section" style="border-color: #fecaca; background: #fef2f2;">
+        <div class="m-card m-section" style="border-color: var(--bd-fecaca); background: var(--bg-fef2f2);">
             <p class="m-error"><i class="fa-solid fa-triangle-exclamation"></i> {{ __('Check the fields marked below.') }}</p>
         </div>
     @endif

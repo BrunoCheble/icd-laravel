@@ -1,17 +1,17 @@
 @include('partials.ui')
 
 <style>
-    .sf-song { padding: .75rem; border: 1px solid #e5e7eb; border-radius: .75rem; background: #fff; }
+    .sf-song { padding: .75rem; border: 1px solid var(--bd-e5e7eb); border-radius: .75rem; background: var(--bg-fff); }
     .sf-song-head { display: flex; align-items: center; gap: .6rem; }
     .sf-n { flex: none; width: 1.75rem; height: 1.75rem; display: grid; place-items: center; border-radius: 999px; background: var(--brand-soft); color: var(--brand-strong); font-size: .8rem; font-weight: 800; }
     .sf-song-main { flex: 1; min-width: 0; display: grid; }
-    .sf-song-main strong { color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .sf-song-main small { font-size: .8rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sf-song-main strong { color: var(--tx-111827); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sf-song-main small { font-size: .8rem; color: var(--tx-6b7280); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sf-song-tools { display: flex; gap: .15rem; flex: none; }
     .sf-song-fields { display: grid; grid-template-columns: minmax(0, 1fr) 9rem; gap: .6rem; margin-top: .65rem; }
     @media (max-width: 479px) { .sf-song-fields { grid-template-columns: minmax(0, 1fr) 7rem; } }
-    .sf-results { position: absolute; z-index: 10; left: 0; right: 0; margin-top: .3rem; max-height: 16rem; overflow: auto; border: 1px solid #e5e7eb; border-radius: .75rem; background: #fff; box-shadow: 0 12px 30px rgba(0, 0, 0, .12); }
-    .sf-results button { display: block; width: 100%; padding: .55rem .85rem; border: 0; border-bottom: 1px solid #f3f4f6; background: none; text-align: left; cursor: pointer; }
+    .sf-results { position: absolute; z-index: 10; left: 0; right: 0; margin-top: .3rem; max-height: 16rem; overflow: auto; border: 1px solid var(--bd-e5e7eb); border-radius: .75rem; background: var(--bg-fff); box-shadow: 0 12px 30px rgba(0, 0, 0, .12); }
+    .sf-results button { display: block; width: 100%; padding: .55rem .85rem; border: 0; border-bottom: 1px solid var(--bd-f3f4f6); background: none; text-align: left; cursor: pointer; }
     .sf-results button:hover:not(:disabled) { background: var(--brand-soft); }
 </style>
 
@@ -118,7 +118,7 @@
                         <div class="sf-song-tools">
                             <button type="button" class="m-btn is-ghost is-icon" @click="move(index, -1)" :disabled="index === 0" title="{{ __('Move up') }}" aria-label="{{ __('Move up') }}"><i class="fa-solid fa-arrow-up"></i></button>
                             <button type="button" class="m-btn is-ghost is-icon" @click="move(index, 1)" :disabled="index === songs.length - 1" title="{{ __('Move down') }}" aria-label="{{ __('Move down') }}"><i class="fa-solid fa-arrow-down"></i></button>
-                            <button type="button" class="m-btn is-ghost is-icon" style="color: #dc2626;" @click="remove(index)" title="{{ __('Remove') }}" aria-label="{{ __('Remove') }}"><i class="fa-solid fa-trash"></i></button>
+                            <button type="button" class="m-btn is-ghost is-icon" style="color: var(--tx-dc2626);" @click="remove(index)" title="{{ __('Remove') }}" aria-label="{{ __('Remove') }}"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
 

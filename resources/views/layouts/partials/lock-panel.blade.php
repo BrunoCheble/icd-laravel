@@ -37,16 +37,16 @@
     <style>
         .lock-panel { width: min(22rem, 100%); margin: 0 auto; text-align: center; }
         .lock-logo { margin: 0 auto 1rem; border-radius: 1.25rem; box-shadow: 0 4px 16px rgba(0, 0, 0, .12); }
-        .lock-title { margin: 0; font-size: 1.25rem; font-weight: 800; color: #111827; }
+        .lock-title { margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--tx-111827); }
         .lock-title i { margin-right: .3rem; font-size: .9em; color: var(--brand-hover, #d8881c); }
-        .lock-text { margin: .5rem 0 1.5rem; color: #6b7280; font-size: .95rem; }
+        .lock-text { margin: .5rem 0 1.5rem; color: var(--tx-6b7280); font-size: .95rem; }
         .lock-primary { display: inline-flex; align-items: center; justify-content: center; gap: .6rem; width: 100%; min-height: 52px; border: 0; border-radius: .9rem; background: var(--brand, #f8a925); color: #fff; font-size: 1.05rem; font-weight: 800; cursor: pointer; }
         .lock-primary i { font-size: 1.4rem; }
         .lock-primary:disabled { opacity: .7; }
-        .lock-error { margin: .75rem 0 0; color: #dc2626; font-size: .875rem; font-weight: 600; }
-        .lock-link { margin-top: 1rem; border: 0; background: none; color: #6b7280; font-size: .9rem; font-weight: 600; text-decoration: underline; cursor: pointer; }
+        .lock-error { margin: .75rem 0 0; color: var(--tx-dc2626); font-size: .875rem; font-weight: 600; }
+        .lock-link { margin-top: 1rem; border: 0; background: none; color: var(--tx-6b7280); font-size: .9rem; font-weight: 600; text-decoration: underline; cursor: pointer; }
         .lock-password { display: flex; gap: .5rem; margin-top: 1rem; }
-        .lock-password input { flex: 1; min-width: 0; min-height: 46px; padding: 0 .8rem; border: 1px solid #d1d5db; border-radius: .7rem; font-size: 16px; }
+        .lock-password input { flex: 1; min-width: 0; min-height: 46px; padding: 0 .8rem; border: 1px solid var(--bd-d1d5db); border-radius: .7rem; font-size: 16px; }
         .lock-password button { min-height: 46px; padding: 0 1rem; border: 0; border-radius: .7rem; background: #111827; color: #fff; font-weight: 700; }
         .lock-logout { margin-top: .5rem; }
     </style>

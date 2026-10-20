@@ -9,7 +9,7 @@
 
     <style>
         /* Headings splitting the list by the period of the visit */
-        .m-group-row td, div.m-group-row { padding: .5rem .9rem; background: #f9fafb; border-bottom: 1px solid #f1f2f4; font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--brand-text); }
+        .m-group-row td, div.m-group-row { padding: .5rem .9rem; background: var(--bg-f9fafb); border-bottom: 1px solid var(--bd-f1f2f4); font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--brand-text); }
         .m-table tbody tr.m-group-row:hover { background: none; }
     </style>
 

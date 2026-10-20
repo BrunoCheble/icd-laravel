@@ -99,7 +99,7 @@
         .lesson-body { margin-top: .35rem; }
         .lesson-title { font-size: 1rem; }
         .lesson-type { color: var(--lc-muted); }
-        .lesson-type.fa-youtube { color: #dc2626; }
+        .lesson-type.fa-youtube { color: var(--tx-dc2626); }
         .lp-chip.is-mine { border-style: dashed; }
         .lesson-notes { margin: .45rem 0 0; white-space: pre-wrap; font-size: .9rem; color: var(--lc-text); }
         .lesson-image { display: block; max-width: 100%; max-height: 24rem; margin-top: .6rem; border-radius: .4rem; border: 1px solid var(--lc-border); }
@@ -147,6 +147,6 @@
             .lesson-card { padding: .65rem; }
             .lp-label { display: none; }
         }
-        .lp-error { color: #dc2626; font-size: .8rem; }
+        .lp-error { color: var(--tx-dc2626); font-size: .8rem; }
     </style>
 @endonce

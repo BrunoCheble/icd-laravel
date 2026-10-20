@@ -9,8 +9,8 @@
     <style>
         /* Colors by kind of block, as on the public page (see blockType in chord-lines.js) */
         .layout-page { --type-intro: #0369a1; --type-verse: #047857; --type-prechorus: #b45309; --type-chorus: #be123c; --type-bridge: #6d28d9; --type-instrumental: #4338ca; --type-ending: #475569; --type-other: #111827; }
-        .layout-btn { min-height: 2.25rem; padding: 0 .65rem; border: 1px solid #d1d5db; border-radius: .375rem; background: #fff; font-weight: 600; font-size: .8rem; color: #374151; }
-        .layout-btn:hover:not(:disabled) { background: #f9fafb; }
+        .layout-btn { min-height: 2.25rem; padding: 0 .65rem; border: 1px solid var(--bd-d1d5db); border-radius: .375rem; background: var(--bg-fff); font-weight: 600; font-size: .8rem; color: var(--tx-374151); }
+        .layout-btn:hover:not(:disabled) { background: var(--bg-f9fafb); }
         .layout-btn:disabled { opacity: .45; cursor: default; }
         /* Narrow screens: one pane at a time (chord sheet or map), picked in the toolbar */
         @media (min-width: 1024px) { .ws-narrow { display: none !important; } }
@@ -23,16 +23,16 @@
             .layout-grid.has-sheet { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
             .layout-grid.has-sheet .layout-map { position: sticky; top: 3.5rem; max-height: calc(100vh - 4.5rem); overflow-y: auto; padding-right: .25rem; }
         }
-        .layout-block { border: 1px solid #d1d5db; border-radius: .5rem; padding: .6rem .75rem .75rem; }
+        .layout-block { border: 1px solid var(--bd-d1d5db); border-radius: .5rem; padding: .6rem .75rem .75rem; }
         .layout-block { cursor: pointer; transition: border-color .15s, background .15s; }
         /* Block being played by the video (amber; the indigo highlight is the one picked by a click) */
-        .layout-block.is-playing { box-shadow: inset 4px 0 0 #f59e0b; background: #fffbeb; }
-        .layout-time { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .5rem; border: 1px solid #fcd34d; border-radius: 999px; background: #fffbeb; color: #92400e; font-size: .75rem; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
-        .layout-time:hover { background: #fef3c7; }
-        .layout-block.is-selected { border-color: var(--brand); background: #f5f7ff; box-shadow: 0 0 0 2px var(--brand-200); }
+        .layout-block.is-playing { box-shadow: inset 4px 0 0 #f59e0b; background: var(--bg-fffbeb); }
+        .layout-time { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .5rem; border: 1px solid var(--bd-fcd34d); border-radius: 999px; background: var(--bg-fffbeb); color: var(--tx-92400e); font-size: .75rem; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
+        .layout-time:hover { background: var(--bg-fef3c7); }
+        .layout-block.is-selected { border-color: var(--brand); background: var(--bg-f5f7ff); box-shadow: 0 0 0 2px var(--brand-200); }
         .key-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; }
-        .key-chip { min-height: 38px; border: 1px solid #d1d5db; border-radius: .5rem; background: #fff; color: #374151; font-weight: 700; font-size: .9rem; cursor: pointer; }
-        .key-chip:hover { background: #f3f4f6; }
+        .key-chip { min-height: 38px; border: 1px solid var(--bd-d1d5db); border-radius: .5rem; background: var(--bg-fff); color: var(--tx-374151); font-weight: 700; font-size: .9rem; cursor: pointer; }
+        .key-chip:hover { background: var(--bg-f3f4f6); }
         .key-chip.is-active { background: var(--brand); border-color: var(--brand); color: #fff; }
         .layout-timing { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-bottom: .5rem; }
         .layout-time-input { width: 4.75rem; padding: .25rem .4rem; text-align: center; font-variant-numeric: tabular-nums; }
@@ -40,56 +40,56 @@
         .layout-name { width: 12rem; max-width: 100%; padding: .3rem .5rem; font-size: .85rem; font-weight: 700; text-transform: uppercase; }
         .layout-suggest { padding: .25rem .55rem; border: 1px dashed var(--brand-300); border-radius: .375rem; background: var(--brand-soft); font-size: .75rem; font-weight: 700; color: var(--brand-strong); text-transform: uppercase; }
         .layout-suggest:hover { background: var(--brand-100); }
-        .layout-tag { font-size: .75rem; color: #6b7280; }
+        .layout-tag { font-size: .75rem; color: var(--tx-6b7280); }
         .layout-lines { display: grid; gap: .35rem; }
-        .layout-line { display: flex; flex-wrap: wrap; gap: .3rem; padding-left: .5rem; border-left: 3px solid var(--type-color, #e5e7eb); }
-        .layout-chord { position: relative; min-width: 2.5rem; padding: .3rem .55rem; border: 1px solid #e5e7eb; border-radius: .375rem; background: #f9fafb; font-weight: 700; color: var(--type-color, #111827); cursor: pointer; }
+        .layout-line { display: flex; flex-wrap: wrap; gap: .3rem; padding-left: .5rem; border-left: 3px solid var(--type-color, var(--bd-e5e7eb)); }
+        .layout-chord { position: relative; min-width: 2.5rem; padding: .3rem .55rem; border: 1px solid var(--bd-e5e7eb); border-radius: .375rem; background: var(--bg-f9fafb); font-weight: 700; color: var(--type-color, var(--tx-111827)); cursor: pointer; }
         .layout-chord:hover { border-color: var(--brand); background: var(--brand-soft); }
         .layout-chord:disabled { cursor: default; }
-        .layout-chord:disabled:hover { border-color: #e5e7eb; background: #f9fafb; }
+        .layout-chord:disabled:hover { border-color: var(--bd-e5e7eb); background: var(--bg-f9fafb); }
         /* Where a click would act: before the chord (new line or new block). */
         .layout-chord:not(:disabled):hover::before { content: ''; position: absolute; left: -.25rem; top: .15rem; bottom: .15rem; width: 3px; border-radius: 2px; background: var(--brand); }
         /* Passing chords: dotted underline (here and wherever the map is shown) */
         .layout-chord.is-passing, .sheet-chord.is-passing > span:last-child { text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: .25em; }
         /* Phones: play without its time, so the toolbar fits in one line */
         @media (max-width: 639px) { .layout-page .ws-play .ws-time { display: none; } }
-        .layout-empty { font-size: .85rem; color: #9ca3af; }
+        .layout-empty { font-size: .85rem; color: var(--tx-9ca3af); }
         .layout-lyrics { margin-top: .5rem; }
         .layout-lyrics textarea { width: 100%; font-size: .85rem; line-height: 1.4; }
         .layout-link { font-size: .8rem; font-weight: 600; color: var(--brand-text); background: none; border: 0; padding: 0; cursor: pointer; }
-        .layout-notice { padding: .75rem 1rem; border: 1px solid #fcd34d; border-radius: .5rem; background: #fffbeb; font-size: .875rem; color: #92400e; }
+        .layout-notice { padding: .75rem 1rem; border: 1px solid var(--bd-fcd34d); border-radius: .5rem; background: var(--bg-fffbeb); font-size: .875rem; color: var(--tx-92400e); }
 
         /* Chord sheet: each chord over the lyric it starts on; clicking a chord acts on the map. */
         .sheet-section + .sheet-section { margin-top: 1.25rem; }
         /* "Back to the start" marker */
-        .layout-block.is-return { display: flex; align-items: center; gap: .4rem; padding: .4rem .75rem; border-style: dashed; background: #f9fafb; }
-        .return-name { font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
-        .sheet-return { padding: .25rem .5rem; border-left: 3px dashed #9ca3af; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
-        .sheet-label { font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
+        .layout-block.is-return { display: flex; align-items: center; gap: .4rem; padding: .4rem .75rem; border-style: dashed; background: var(--bg-f9fafb); }
+        .return-name { font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--tx-6b7280); }
+        .sheet-return { padding: .25rem .5rem; border-left: 3px dashed #9ca3af; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--tx-6b7280); }
+        .sheet-label { font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--tx-6b7280); }
         .sheet-line { display: flex; flex-wrap: wrap; align-items: flex-start; margin-top: 1.35rem; font-size: .95rem; line-height: 1.3; }
         /* A line belongs to a block of the map: clicking it (not a chord) highlights both. */
         .sheet-line, .sheet-comment, .sheet-label { cursor: pointer; border-radius: .25rem; margin-left: -.35rem; padding-left: .35rem; transition: background .15s; }
-        .sheet-line:hover, .sheet-comment:hover { background: #f9fafb; }
-        .sheet-line.is-playing, .sheet-comment.is-playing, .sheet-label.is-playing { background: #fffbeb; box-shadow: inset 3px 0 0 #f59e0b; }
+        .sheet-line:hover, .sheet-comment:hover { background: var(--bg-f9fafb); }
+        .sheet-line.is-playing, .sheet-comment.is-playing, .sheet-label.is-playing { background: var(--bg-fffbeb); box-shadow: inset 3px 0 0 #f59e0b; }
         .sheet-line.is-selected, .sheet-comment.is-selected, .sheet-label.is-selected { background: var(--brand-soft); box-shadow: inset 3px 0 0 var(--brand); }
         .sheet-chord.is-selected { background: var(--brand-200); }
         /* Lines with chords only (intro, riffs) have no lyric row */
         .sheet-line.only-chords .sheet-text { display: none; }
         .sheet-line.only-chords .sheet-seg { padding-right: .35em; }
-        .sheet-comment { margin-top: .5rem; font-size: .8rem; font-style: italic; color: #6b7280; }
+        .sheet-comment { margin-top: .5rem; font-size: .8rem; font-style: italic; color: var(--tx-6b7280); }
         /* Editing the lyrics of a section of the chord sheet (the chords stay the same) */
         .sheet-head { display: flex; align-items: center; gap: .35rem; }
-        .sheet-edit-btn { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: #9ca3af; font-size: .75rem; cursor: pointer; }
+        .sheet-edit-btn { border: 0; background: none; padding: .1rem .3rem; border-radius: .3rem; color: var(--tx-9ca3af); font-size: .75rem; cursor: pointer; }
         .sheet-edit-btn:hover { color: var(--brand-text); background: var(--brand-soft); }
         .sheet-editor textarea { width: 100%; margin-top: .3rem; padding: .4rem .5rem; border: 1px solid var(--brand-200); border-radius: .4rem; font: .85rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
         .sheet-editor .row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .3rem; }
-        .sheet-editor .help { font-size: .75rem; color: #6b7280; margin-top: .3rem; }
-        .sheet-editor .error { font-size: .78rem; color: #dc2626; margin-top: .3rem; }
+        .sheet-editor .help { font-size: .75rem; color: var(--tx-6b7280); margin-top: .3rem; }
+        .sheet-editor .error { font-size: .78rem; color: var(--tx-dc2626); margin-top: .3rem; }
         .sheet-seg { position: relative; display: inline-flex; flex-direction: column; }
         /* Lyrics before the first chord keep an empty chord row, so all the text stays on one row. */
         .sheet-chord-space { height: 1.3em; }
-        .sheet-text { min-height: 1.3em; color: #374151; white-space: pre; }
-        .sheet-chord { position: relative; align-self: flex-start; padding: 0 .2rem; margin-left: -.2rem; border-radius: .25rem; font-weight: 700; color: var(--type-color, #111827); background: none; border: 0; cursor: pointer; line-height: 1.3; white-space: nowrap; }
+        .sheet-text { min-height: 1.3em; color: var(--tx-374151); white-space: pre; }
+        .sheet-chord { position: relative; align-self: flex-start; padding: 0 .2rem; margin-left: -.2rem; border-radius: .25rem; font-weight: 700; color: var(--type-color, var(--tx-111827)); background: none; border: 0; cursor: pointer; line-height: 1.3; white-space: nowrap; }
         .sheet-chord:hover { background: var(--brand-soft); }
         .sheet-chord:disabled { cursor: default; background: none; }
         .sheet-chord.is-line-start::before { content: ''; position: absolute; left: -.15rem; top: .1rem; bottom: .1rem; width: 3px; border-radius: 2px; background: var(--type-color, #9ca3af); }
@@ -109,7 +109,7 @@
                     <h1 class="text-base font-semibold leading-6 text-gray-900">
                         {{ $song->title }}
                         @if ($song->isReviewed())
-                            <span class="ml-2 text-sm font-semibold" style="color: #15803d;" title="{{ __('Saved as reviewed on :date', ['date' => $song->reviewed_at?->format('d/m/Y')]) }}"><i class="fa-solid fa-check"></i> {{ __('Reviewed') }}</span>
+                            <span class="ml-2 text-sm font-semibold" style="color: var(--tx-15803d);" title="{{ __('Saved as reviewed on :date', ['date' => $song->reviewed_at?->format('d/m/Y')]) }}"><i class="fa-solid fa-check"></i> {{ __('Reviewed') }}</span>
                         @endif
                     </h1>
                     <p class="mt-2 text-sm text-gray-700">{{ __('Choose where the chord map breaks lines and blocks, and fix its chords. The lines are shown as in the public page.') }}</p>
@@ -230,13 +230,13 @@
                             <div class="ws-panel-section">
                                 <input type="text" x-ref="chordInput" x-model="chordEdit.value" class="w-full border-gray-300 rounded-md shadow-sm text-lg font-bold"
                                     autocapitalize="off" autocomplete="off" spellcheck="false" @keydown.enter.prevent="renameChord()" :aria-label="@js(__('Chord'))">
-                                <p class="mt-1 text-sm" style="color: #dc2626;" x-show="chordEdit && chordEdit.value.trim() && !validChord(chordEdit.value)">{{ __('This is not a chord name.') }}</p>
+                                <p class="mt-1 text-sm" style="color: var(--tx-dc2626);" x-show="chordEdit && chordEdit.value.trim() && !validChord(chordEdit.value)">{{ __('This is not a chord name.') }}</p>
                                 <p class="mt-1 ws-panel-help" x-show="chordEdit && chordEdit.withSheet">{{ __('The chord sheet changes too.') }}</p>
                             </div>
                             <div class="ws-panel-row">
                                 <button type="button" class="ws-btn ws-btn-primary" @click="renameChord()" :disabled="!validChord(chordEdit?.value)"><i class="fa-solid fa-check"></i> {{ __('Save') }}</button>
                                 <button type="button" class="ws-btn" @click="insertChord()" :disabled="!validChord(chordEdit?.value)"><i class="fa-solid fa-plus"></i> {{ __('Insert after') }}</button>
-                                <button type="button" class="ws-btn" style="color: #dc2626;" @click="removeChord()"><i class="fa-solid fa-trash"></i> {{ __('Remove') }}</button>
+                                <button type="button" class="ws-btn" style="color: var(--tx-dc2626);" @click="removeChord()"><i class="fa-solid fa-trash"></i> {{ __('Remove') }}</button>
                             </div>
                             </div></template>
                         </x-song-options>
@@ -338,7 +338,7 @@
                                                     :title="@js(__('Move up'))" :aria-label="@js(__('Move up'))"><i class="fa-solid fa-arrow-up"></i></button>
                                                 <button type="button" class="layout-btn" :disabled="b === blocks.length - 1" @click="moveBlock(b, 1)"
                                                     :title="@js(__('Move down'))" :aria-label="@js(__('Move down'))"><i class="fa-solid fa-arrow-down"></i></button>
-                                                <button type="button" class="layout-btn" style="color: #dc2626;" @click="removeBlock(b)" :title="@js(__('Remove'))" :aria-label="@js(__('Remove'))"><i class="fa-solid fa-trash"></i></button>
+                                                <button type="button" class="layout-btn" style="color: var(--tx-dc2626);" @click="removeBlock(b)" :title="@js(__('Remove'))" :aria-label="@js(__('Remove'))"><i class="fa-solid fa-trash"></i></button>
                                             </div>
                                         </template>
                                         <template x-if="!isReturn(block)"><div>
@@ -364,7 +364,7 @@
                                                 :title="@js(__('Move down'))" :aria-label="@js(__('Move down'))"><i class="fa-solid fa-arrow-down"></i></button>
                                             <button type="button" class="layout-btn" x-show="b > 0 && !isReturn(blocks[b - 1])" @click="mergeWithPrevious(b)"
                                                 :title="@js(__('Join to the block above'))" :aria-label="@js(__('Join to the block above'))"><i class="fa-solid fa-object-group"></i></button>
-                                            <button type="button" class="layout-btn" style="color: #dc2626;" @click="removeBlock(b)" :title="@js(__('Remove block'))" :aria-label="@js(__('Remove block'))"><i class="fa-solid fa-trash"></i></button>
+                                            <button type="button" class="layout-btn" style="color: var(--tx-dc2626);" @click="removeBlock(b)" :title="@js(__('Remove block'))" :aria-label="@js(__('Remove block'))"><i class="fa-solid fa-trash"></i></button>
                                         </div>
 
                                         {{-- Times mode: start of the block (from the video) --}}

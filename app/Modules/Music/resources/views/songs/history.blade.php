@@ -4,19 +4,19 @@
     </x-slot>
 
     <style>
-        .revision { border-top: 1px solid #f3f4f6; padding: .75rem 0; }
+        .revision { border-top: 1px solid var(--bd-f3f4f6); padding: .75rem 0; }
         .revision:first-of-type { border-top: 0; }
         .revision-head { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .75rem; }
         .revision-date { font-weight: 700; font-variant-numeric: tabular-nums; }
-        .revision-source { font-size: .85rem; color: #4b5563; }
+        .revision-source { font-size: .85rem; color: var(--tx-4b5563); }
         .revision-tags { display: flex; flex-wrap: wrap; gap: .25rem; }
         .revision-tag { padding: .05rem .5rem; border-radius: 999px; background: var(--brand-soft); color: var(--brand-strong); font-size: .72rem; font-weight: 700; }
-        .revision-summary { font-size: .8rem; color: #6b7280; }
+        .revision-summary { font-size: .8rem; color: var(--tx-6b7280); }
         .revision details summary { cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--brand-text); margin-top: .35rem; }
         .revision-preview { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; margin-top: .5rem; }
         @media (min-width: 1024px) { .revision-preview { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
-        .revision-preview h4 { margin: 0 0 .3rem; font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
-        .revision-preview pre { margin: 0; padding: .6rem .7rem; border-radius: .4rem; background: #f9fafb; font: .8rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; max-height: 28rem; overflow: auto; }
+        .revision-preview h4 { margin: 0 0 .3rem; font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--tx-6b7280); }
+        .revision-preview pre { margin: 0; padding: .6rem .7rem; border-radius: .4rem; background: var(--bg-f9fafb); font: .8rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; max-height: 28rem; overflow: auto; }
     </style>
 
     @include('music::songs.partials.workspace')

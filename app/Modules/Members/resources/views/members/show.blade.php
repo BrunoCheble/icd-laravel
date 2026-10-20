@@ -11,10 +11,10 @@
         .member-hero { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.25rem; padding: 1.25rem; }
         .member-photo { position: relative; flex: none; display: block; width: 6rem; height: 6rem; padding: 0; border: 0; border-radius: 999px; background: none; cursor: pointer; }
         .member-photo img { width: 100%; height: 100%; border-radius: 999px; object-fit: cover; box-shadow: 0 0 0 3px #fff, 0 0 0 4px #e5e7eb; }
-        .member-photo span { position: absolute; right: 0; bottom: 0; width: 2rem; height: 2rem; display: grid; place-items: center; border: 2px solid #fff; border-radius: 999px; background: var(--brand); color: #fff; font-size: .8rem; }
+        .member-photo span { position: absolute; right: 0; bottom: 0; width: 2rem; height: 2rem; display: grid; place-items: center; border: 2px solid var(--bd-fff); border-radius: 999px; background: var(--brand); color: #fff; font-size: .8rem; }
         .member-hero-main { flex: 1 1 14rem; min-width: 0; }
-        .member-hero-main h1 { margin: 0; font-size: 1.4rem; font-weight: 800; color: #111827; letter-spacing: -.01em; }
-        .member-hero-main p { margin: .15rem 0 0; font-size: .9rem; color: #6b7280; }
+        .member-hero-main h1 { margin: 0; font-size: 1.4rem; font-weight: 800; color: var(--tx-111827); letter-spacing: -.01em; }
+        .member-hero-main p { margin: .15rem 0 0; font-size: .9rem; color: var(--tx-6b7280); }
         .member-hero-tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .6rem; }
         .member-hero-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
         @media (max-width: 639px) {
@@ -28,18 +28,18 @@
         .member-cards-grid { display: grid; gap: 1rem; margin-top: 1rem; }
         @media (min-width: 768px) { .member-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .member-cards-grid .is-wide { grid-column: span 2; } }
         .member-facts { display: grid; gap: .1rem; margin: 0; }
-        .member-facts > div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: .75rem; padding: .5rem 0; border-bottom: 1px solid #f3f4f6; }
+        .member-facts > div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: .75rem; padding: .5rem 0; border-bottom: 1px solid var(--bd-f3f4f6); }
         .member-facts > div:last-child { border-bottom: 0; }
-        .member-facts dt { font-size: .82rem; font-weight: 600; color: #6b7280; }
-        .member-facts dd { margin: 0; font-size: .9rem; color: #111827; overflow-wrap: anywhere; }
+        .member-facts dt { font-size: .82rem; font-weight: 600; color: var(--tx-6b7280); }
+        .member-facts dd { margin: 0; font-size: .9rem; color: var(--tx-111827); overflow-wrap: anywhere; }
         .member-facts dd a { color: var(--brand-text); text-decoration: none; }
         .member-facts dd a:hover { text-decoration: underline; }
         @media (max-width: 639px) { .member-facts > div { grid-template-columns: 7.5rem minmax(0, 1fr); } }
-        .member-person { display: flex; align-items: center; gap: .65rem; padding: .5rem .25rem; border-radius: .6rem; color: #111827; text-decoration: none; }
-        .member-person:hover { background: #f9fafb; }
+        .member-person { display: flex; align-items: center; gap: .65rem; padding: .5rem .25rem; border-radius: .6rem; color: var(--tx-111827); text-decoration: none; }
+        .member-person:hover { background: var(--bg-f9fafb); }
         .member-person strong { display: block; font-size: .9rem; font-weight: 700; }
-        .member-person small { display: block; font-size: .78rem; color: #6b7280; }
-        .member-notes { margin: 0; font-size: .9rem; color: #374151; white-space: pre-line; }
+        .member-person small { display: block; font-size: .78rem; color: var(--tx-6b7280); }
+        .member-notes { margin: 0; font-size: .9rem; color: var(--tx-374151); white-space: pre-line; }
     </style>
 
     @php
@@ -87,7 +87,7 @@
 
         <div class="member-cards-grid">
             @if ($pending)
-                <section class="m-card m-section is-wide" style="border-color: #fde68a;">
+                <section class="m-card m-section is-wide" style="border-color: var(--bd-fde68a);">
                     <h3 class="m-section-title"><i class="fa-solid fa-circle-exclamation"></i> {{ __('Pending Informations') }}</h3>
                     <ul class="member-pending">
                         @foreach ($pending as $item)

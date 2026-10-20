@@ -8,39 +8,39 @@
     <style>
 
         .sl-list { display: grid; gap: .6rem; margin-top: 1rem; }
-        .sl-card { border: 1px solid #e5e7eb; border-radius: .75rem; background: #fff; overflow: hidden; scroll-margin-top: 5rem; }
+        .sl-card { border: 1px solid var(--bd-e5e7eb); border-radius: .75rem; background: var(--bg-fff); overflow: hidden; scroll-margin-top: 5rem; }
         .sl-card.is-next { border-color: var(--brand-300); box-shadow: 0 0 0 1px var(--brand-300); }
-        .sl-card.is-past .sl-title, .sl-card.is-past .sl-date { color: #6b7280; }
+        .sl-card.is-past .sl-title, .sl-card.is-past .sl-date { color: var(--tx-6b7280); }
         .sl-row { display: flex; align-items: center; gap: .75rem; padding: .7rem .9rem; }
         .sl-toggle { display: flex; align-items: center; gap: .75rem; flex: 1; min-width: 0; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; }
-        .sl-chevron { flex: none; width: 1.75rem; height: 1.75rem; display: grid; place-items: center; border-radius: 999px; background: #f3f4f6; color: #6b7280; transition: transform .15s; }
+        .sl-chevron { flex: none; width: 1.75rem; height: 1.75rem; display: grid; place-items: center; border-radius: 999px; background: var(--bg-f3f4f6); color: var(--tx-6b7280); transition: transform .15s; }
         .sl-card.is-open .sl-chevron { transform: rotate(90deg); background: var(--brand-100); color: var(--brand-text); }
-        .sl-date { flex: none; width: 6.5rem; display: grid; line-height: 1.2; color: #111827; }
+        .sl-date { flex: none; width: 6.5rem; display: grid; line-height: 1.2; color: var(--tx-111827); }
         .sl-date strong { font-size: .95rem; }
-        .sl-date small { font-size: .72rem; color: #6b7280; }
+        .sl-date small { font-size: .72rem; color: var(--tx-6b7280); }
         .sl-main { flex: 1; min-width: 0; display: grid; gap: .1rem; }
-        .sl-title { font-weight: 700; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .sl-meta { font-size: .8rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sl-title { font-weight: 700; color: var(--tx-111827); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sl-meta { font-size: .8rem; color: var(--tx-6b7280); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .sl-badge { display: inline-flex; align-items: center; gap: .25rem; padding: .05rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 800; letter-spacing: .03em; vertical-align: middle; }
         .sl-badge.is-next { background: var(--brand); color: #fff; }
-        .sl-count { flex: none; min-width: 2.2rem; padding: .15rem .55rem; border-radius: 999px; background: #f3f4f6; color: #374151; font-size: .8rem; font-weight: 700; text-align: center; }
+        .sl-count { flex: none; min-width: 2.2rem; padding: .15rem .55rem; border-radius: 999px; background: var(--bg-f3f4f6); color: var(--tx-374151); font-size: .8rem; font-weight: 700; text-align: center; }
         .sl-actions { display: flex; align-items: center; gap: .25rem; flex: none; }
-        .sl-icon { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid transparent; border-radius: .5rem; background: none; color: #6b7280; cursor: pointer; text-decoration: none; }
-        .sl-icon:hover { background: #f3f4f6; color: #111827; }
-        .sl-icon.is-danger:hover { background: #fef2f2; color: #dc2626; }
+        .sl-icon { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid transparent; border-radius: .5rem; background: none; color: var(--tx-6b7280); cursor: pointer; text-decoration: none; }
+        .sl-icon:hover { background: var(--bg-f3f4f6); color: var(--tx-111827); }
+        .sl-icon.is-danger:hover { background: var(--bg-fef2f2); color: var(--tx-dc2626); }
 
-        .sl-songs { margin: 0; padding: .25rem .9rem .8rem 3.4rem; list-style: none; border-top: 1px solid #f3f4f6; }
-        .sl-song { display: flex; align-items: center; gap: .6rem; padding: .45rem 0; border-bottom: 1px dashed #f3f4f6; }
+        .sl-songs { margin: 0; padding: .25rem .9rem .8rem 3.4rem; list-style: none; border-top: 1px solid var(--bd-f3f4f6); }
+        .sl-song { display: flex; align-items: center; gap: .6rem; padding: .45rem 0; border-bottom: 1px dashed var(--bd-f3f4f6); }
         .sl-song:last-child { border-bottom: 0; }
-        .sl-n { flex: none; width: 1.5rem; color: #9ca3af; font-size: .8rem; font-weight: 700; text-align: right; }
+        .sl-n { flex: none; width: 1.5rem; color: var(--tx-9ca3af); font-size: .8rem; font-weight: 700; text-align: right; }
         .sl-song-main { flex: 1; min-width: 0; display: grid; }
         .sl-song-main a { font-weight: 600; color: var(--brand-text); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .sl-song-main a:hover { text-decoration: underline; }
-        .sl-song-main small { font-size: .78rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sl-song-main small { font-size: .78rem; color: var(--tx-6b7280); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .sl-key { flex: none; min-width: 2.4rem; padding: .1rem .45rem; border: 1px solid var(--brand); border-radius: 999px; color: var(--brand-text); font-size: .78rem; font-weight: 800; text-align: center; }
-        .sl-key small { color: #9ca3af; font-weight: 600; }
-        .sl-bpm { flex: none; font-size: .75rem; font-weight: 700; color: #6b7280; font-variant-numeric: tabular-nums; }
-        .sl-empty { padding: .6rem 0; font-size: .85rem; color: #6b7280; }
+        .sl-key small { color: var(--tx-9ca3af); font-weight: 600; }
+        .sl-bpm { flex: none; font-size: .75rem; font-weight: 700; color: var(--tx-6b7280); font-variant-numeric: tabular-nums; }
+        .sl-empty { padding: .6rem 0; font-size: .85rem; color: var(--tx-6b7280); }
 
         /* Phones: the date over the title, the actions under them */
         @media (max-width: 640px) {

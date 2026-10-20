@@ -25,7 +25,7 @@
                     <div class="m-menu mt-4">
                         <a :href="visitor?.edit"><i class="fa-solid fa-pen"></i> {{ __('Edit') }}</a>
                         <button type="button" x-show="visitor?.whatsapp" @click="panel = 'whatsapp'"><i class="fa-brands fa-whatsapp"></i> {{ __('WhatsApp') }}</button>
-                        <a :href="visitor?.activate" x-show="visitor && visitor.status !== 'actived'"><i class="fa-solid fa-check" style="color: #16a34a;"></i> {{ __('Activate') }}</a>
+                        <a :href="visitor?.activate" x-show="visitor && visitor.status !== 'actived'"><i class="fa-solid fa-check" style="color: var(--tx-16a34a);"></i> {{ __('Activate') }}</a>
                         <button type="button" class="is-danger" x-show="visitor?.status === 'actived'" @click="panel = 'remove'"><i class="fa-solid fa-user-slash"></i> {{ __('Deactivate') }}</button>
                         <button type="button" class="is-danger" x-show="visitor && visitor.status !== 'actived'" @click="panel = 'remove'"><i class="fa-solid fa-trash"></i> {{ __('Delete') }}</button>
                     </div>
@@ -75,10 +75,10 @@
 @once
     <style>
         .visitor-facts { display: grid; margin: 0; }
-        .visitor-facts > div { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: .75rem; padding: .45rem 0; border-bottom: 1px solid #f3f4f6; }
+        .visitor-facts > div { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: .75rem; padding: .45rem 0; border-bottom: 1px solid var(--bd-f3f4f6); }
         .visitor-facts > div:last-child { border-bottom: 0; }
-        .visitor-facts dt { font-size: .82rem; font-weight: 600; color: #6b7280; }
-        .visitor-facts dd { margin: 0; font-size: .9rem; color: #111827; overflow-wrap: anywhere; white-space: pre-line; }
+        .visitor-facts dt { font-size: .82rem; font-weight: 600; color: var(--tx-6b7280); }
+        .visitor-facts dd { margin: 0; font-size: .9rem; color: var(--tx-111827); overflow-wrap: anywhere; white-space: pre-line; }
     </style>
     <script>
         // The actions of the visitor picked (sent by its "⋯" button), in panels: menu, WhatsApp, remove.

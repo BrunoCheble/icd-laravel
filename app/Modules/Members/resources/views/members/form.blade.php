@@ -13,13 +13,13 @@
 
 <div class="m-form" x-data="memberForm(@js(['gender' => $field('gender'), 'marital' => $field('marital_status'), 'spouse' => (bool) ($field('spouse_id') || $field('spouse_name'))]))">
     @if ($pendingFields)
-        <div class="m-card m-section" style="border-color: #fde68a; background: #fffbeb;">
-            <p class="m-help" style="color: #92400e;"><i class="fa-solid fa-circle-exclamation"></i> {{ trans_choice(':count detail is missing; it is marked "Pending" below.|:count details are missing; they are marked "Pending" below.', count($pendingFields), ['count' => count($pendingFields)]) }}</p>
+        <div class="m-card m-section" style="border-color: var(--bd-fde68a); background: var(--bg-fffbeb);">
+            <p class="m-help" style="color: var(--tx-92400e);"><i class="fa-solid fa-circle-exclamation"></i> {{ trans_choice(':count detail is missing; it is marked "Pending" below.|:count details are missing; they are marked "Pending" below.', count($pendingFields), ['count' => count($pendingFields)]) }}</p>
         </div>
     @endif
 
     @if ($errors->any())
-        <div class="m-card m-section" style="border-color: #fecaca; background: #fef2f2;">
+        <div class="m-card m-section" style="border-color: var(--bd-fecaca); background: var(--bg-fef2f2);">
             <p class="m-error"><i class="fa-solid fa-triangle-exclamation"></i> {{ __('Check the fields marked below.') }}</p>
         </div>
     @endif

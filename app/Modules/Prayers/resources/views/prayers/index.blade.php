@@ -14,12 +14,12 @@
         .prayer.is-new { border-color: var(--brand-200); box-shadow: 0 0 0 3px var(--brand-soft); }
         .prayer-head { display: flex; align-items: center; gap: .7rem; }
         .prayer-who { flex: 1; min-width: 0; }
-        .prayer-who strong { display: block; font-weight: 700; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .prayer-who small { display: block; font-size: .8rem; color: #6b7280; }
-        .prayer-text { margin: .75rem 0 0; color: #374151; font-size: .95rem; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; }
-        .prayer-text.is-empty { color: #9ca3af; font-style: italic; }
-        .prayers-empty { padding: 2.5rem 1rem; text-align: center; color: #6b7280; }
-        .prayers-empty i { display: block; margin-bottom: .5rem; font-size: 1.6rem; color: #d1d5db; }
+        .prayer-who strong { display: block; font-weight: 700; color: var(--tx-111827); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .prayer-who small { display: block; font-size: .8rem; color: var(--tx-6b7280); }
+        .prayer-text { margin: .75rem 0 0; color: var(--tx-374151); font-size: .95rem; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; }
+        .prayer-text.is-empty { color: var(--tx-9ca3af); font-style: italic; }
+        .prayers-empty { padding: 2.5rem 1rem; text-align: center; color: var(--tx-6b7280); }
+        .prayers-empty i { display: block; margin-bottom: .5rem; font-size: 1.6rem; color: var(--tx-d1d5db); }
     </style>
 
     @php

@@ -14,3 +14,161 @@
     --brand-200: #fbd896;
     --brand-300: #f9c35f;
 }
+
+/* ---- Light and dark theme (html[data-theme], set before the page shows: see layouts/app) ----
+   The pages' fixed colors are variables named after their light color (--bg- backgrounds, --tx- text, --bd- borders),
+   so the light theme stays exactly as it was and the dark one gives each its own value. */
+:root {
+    --bg-fff: #fff;
+    --bg-f9fafb: #f9fafb;
+    --bg-fafafa: #fafafa;
+    --bg-f8fafc: #f8fafc;
+    --bg-f5f7ff: #f5f7ff;
+    --bg-f3f4f6: #f3f4f6;
+    --bg-e5e7eb: #e5e7eb;
+    --bg-f4f5f7: #f4f5f7;
+    --bg-fef2f2: #fef2f2;
+    --bg-fee2e2: #fee2e2;
+    --bg-fffbeb: #fffbeb;
+    --bg-fef3c7: #fef3c7;
+    --bg-fff7ed: #fff7ed;
+    --bg-fef3e2: #fef3e2;
+    --bg-dcfce7: #dcfce7;
+    --bg-f0fdf4: #f0fdf4;
+    --bg-eef2ff: #eef2ff;
+    --tx-111827: #111827;
+    --tx-374151: #374151;
+    --tx-4b5563: #4b5563;
+    --tx-6b7280: #6b7280;
+    --tx-9ca3af: #9ca3af;
+    --tx-d1d5db: #d1d5db;
+    --tx-c4c8cf: #c4c8cf;
+    --tx-c7cbd3: #c7cbd3;
+    --tx-92400e: #92400e;
+    --tx-78350f: #78350f;
+    --tx-b45309: #b45309;
+    --tx-c2410c: #c2410c;
+    --tx-d97706: #d97706;
+    --tx-166534: #166534;
+    --tx-15803d: #15803d;
+    --tx-16a34a: #16a34a;
+    --tx-991b1b: #991b1b;
+    --tx-b91c1c: #b91c1c;
+    --tx-dc2626: #dc2626;
+    --tx-2563eb: #2563eb;
+    --bd-e5e7eb: #e5e7eb;
+    --bd-d1d5db: #d1d5db;
+    --bd-f1f2f4: #f1f2f4;
+    --bd-f3f4f6: #f3f4f6;
+    --bd-c4c8cf: #c4c8cf;
+    --bd-fff: #fff;
+    --bd-fecaca: #fecaca;
+    --bd-86efac: #86efac;
+    --bd-fcd34d: #fcd34d;
+    --bd-fde68a: #fde68a;
+    --bd-a5b4fc: #a5b4fc;
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg-fff: #1b1e25;
+    --bg-f9fafb: #20242c;
+    --bg-fafafa: #20242c;
+    --bg-f8fafc: #20242c;
+    --bg-f5f7ff: #20242c;
+    --bg-f3f4f6: #262b34;
+    --bg-e5e7eb: #313743;
+    --bg-f4f5f7: #111318;
+    --bg-fef2f2: rgba(239, 68, 68, .12);
+    --bg-fee2e2: rgba(239, 68, 68, .2);
+    --bg-fffbeb: rgba(245, 158, 11, .1);
+    --bg-fef3c7: rgba(245, 158, 11, .18);
+    --bg-fff7ed: rgba(245, 158, 11, .1);
+    --bg-fef3e2: rgba(248, 169, 37, .14);
+    --bg-dcfce7: rgba(34, 197, 94, .18);
+    --bg-f0fdf4: rgba(34, 197, 94, .1);
+    --bg-eef2ff: rgba(99, 102, 241, .16);
+    --tx-111827: #f3f4f6;
+    --tx-374151: #d1d5db;
+    --tx-4b5563: #b4bcc8;
+    --tx-6b7280: #9aa3b2;
+    --tx-9ca3af: #7c8594;
+    --tx-d1d5db: #4b5361;
+    --tx-c4c8cf: #5b6371;
+    --tx-c7cbd3: #5b6371;
+    --tx-92400e: #fcd34d;
+    --tx-78350f: #fcd34d;
+    --tx-b45309: #fbbf24;
+    --tx-c2410c: #fdba74;
+    --tx-d97706: #fbbf24;
+    --tx-166534: #86efac;
+    --tx-15803d: #4ade80;
+    --tx-16a34a: #4ade80;
+    --tx-991b1b: #fca5a5;
+    --tx-b91c1c: #f87171;
+    --tx-dc2626: #f87171;
+    --tx-2563eb: #60a5fa;
+    --bd-e5e7eb: #313743;
+    --bd-d1d5db: #3d4451;
+    --bd-f1f2f4: #2a2f38;
+    --bd-f3f4f6: #2a2f38;
+    --bd-c4c8cf: #4b5361;
+    --bd-fff: #1b1e25;
+    --bd-fecaca: rgba(239, 68, 68, .4);
+    --bd-86efac: rgba(34, 197, 94, .4);
+    --bd-fcd34d: rgba(245, 158, 11, .45);
+    --bd-fde68a: rgba(245, 158, 11, .35);
+    --bd-a5b4fc: rgba(129, 140, 248, .5);
+    --brand-text: #fbbf24;
+    --brand-strong: #fcd34d;
+    --brand-soft: rgba(248, 169, 37, .14);
+    --brand-100: rgba(248, 169, 37, .22);
+    --brand-200: rgba(248, 169, 37, .35);
+}
+html[data-theme="dark"] body { color: #e5e7eb; }
+
+/* Tailwind's colors used by the admin's pages and components (forms, dropdowns, modals, tables). */
+html[data-theme="dark"] .bg-white { background-color: #1b1e25; }
+html[data-theme="dark"] .bg-gray-50 { background-color: #20242c; }
+html[data-theme="dark"] .bg-gray-100 { background-color: #262b34; }
+html[data-theme="dark"] .bg-gray-200 { background-color: #313743; }
+html[data-theme="dark"] .bg-red-50 { background-color: rgba(239, 68, 68, .12); }
+html[data-theme="dark"] .bg-green-50 { background-color: rgba(34, 197, 94, .1); }
+html[data-theme="dark"] .bg-primary-50, html[data-theme="dark"] .bg-primary-100 { background-color: rgba(248, 169, 37, .14); }
+html[data-theme="dark"] .text-black, html[data-theme="dark"] .text-gray-900, html[data-theme="dark"] .text-gray-800 { color: #f3f4f6; }
+html[data-theme="dark"] .text-gray-700 { color: #d1d5db; }
+html[data-theme="dark"] .text-gray-600 { color: #b4bcc8; }
+html[data-theme="dark"] .text-gray-500 { color: #9aa3b2; }
+html[data-theme="dark"] .text-gray-400 { color: #7c8594; }
+html[data-theme="dark"] .text-red-500, html[data-theme="dark"] .text-red-600 { color: #f87171; }
+html[data-theme="dark"] .text-red-700, html[data-theme="dark"] .text-red-800 { color: #fca5a5; }
+html[data-theme="dark"] .text-green-600, html[data-theme="dark"] .text-green-700 { color: #4ade80; }
+html[data-theme="dark"] .text-primary-700 { color: #fbbf24; }
+html[data-theme="dark"] .text-primary-800, html[data-theme="dark"] .text-primary-900 { color: #fcd34d; }
+html[data-theme="dark"] .border-gray-100, html[data-theme="dark"] .border-gray-200 { border-color: #313743; }
+html[data-theme="dark"] .border-gray-300 { border-color: #3d4451; }
+html[data-theme="dark"] .border-red-300 { border-color: rgba(239, 68, 68, .4); }
+html[data-theme="dark"] .border-green-300 { border-color: rgba(34, 197, 94, .4); }
+html[data-theme="dark"] .divide-gray-200 > * + *, html[data-theme="dark"] .divide-gray-300 > * + * { border-color: #313743; }
+html[data-theme="dark"] .ring-black { --tw-ring-color: rgba(0, 0, 0, .6); }
+html[data-theme="dark"] .hover\:bg-gray-100:hover, html[data-theme="dark"] .hover\:bg-gray-50:hover { background-color: #262b34; }
+html[data-theme="dark"] .hover\:text-gray-700:hover, html[data-theme="dark"] .hover\:text-gray-800:hover { color: #f3f4f6; }
+html[data-theme="dark"] .focus\:bg-gray-100:focus { background-color: #262b34; }
+/* Breeze's main button (dark gray on white): light on the dark theme. */
+html[data-theme="dark"] .bg-gray-800 { background-color: #f3f4f6; color: #111827; }
+html[data-theme="dark"] .hover\:bg-gray-700:hover, html[data-theme="dark"] .focus\:bg-gray-700:focus { background-color: #e5e7eb; }
+/* Form fields without the pages' own classes (Breeze and the forms plugin give them a white background). */
+html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), html[data-theme="dark"] select, html[data-theme="dark"] textarea { background-color: #1b1e25; color: #f3f4f6; border-color: #3d4451; }
+html[data-theme="dark"] input::placeholder, html[data-theme="dark"] textarea::placeholder { color: #7c8594; }
+html[data-theme="dark"] [type="checkbox"], html[data-theme="dark"] [type="radio"] { background-color: #1b1e25; border-color: #4b5361; }
+html[data-theme="dark"] [type="checkbox"]:checked, html[data-theme="dark"] [type="radio"]:checked { background-color: currentColor; border-color: transparent; }
+
+/* Music pages: their own color variables (the kinds of block take the dark palette of the repertoire app). */
+html[data-theme="dark"] .practice { --surface: #1b1e25; --surface-2: #262b34; --border: #3d4451; --text: #f3f4f6; --muted: #9aa3b2; --chord: #ffffff; }
+html[data-theme="dark"] :is(.bars-page, .layout-page, .practice, .song-overview, .sheet-page, .lesson-card) {
+    --type-intro: #7dd3fc; --type-verse: #6ee7b7; --type-prechorus: #fcd34d; --type-chorus: #fda4af;
+    --type-bridge: #c4b5fd; --type-instrumental: #a5b4fc; --type-ending: #cbd5e1; --type-other: #e5e7eb;
+}
+
+/* Tags over a picture (announcements): solid, so they read on any image. */
+html[data-theme="dark"] .ad-media .m-tag { background: rgba(17, 19, 24, .85); }

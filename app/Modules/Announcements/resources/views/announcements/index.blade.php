@@ -11,24 +11,24 @@
         /* A card per announcement, newest first, read left to right (one column on phones) */
         .ads { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(19rem, 100%), 1fr)); gap: 1rem; align-items: start; margin: .75rem 0 1rem; }
         .ad { overflow: hidden; display: flex; flex-direction: column; }
-        .ad-media { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 10; background: linear-gradient(135deg, var(--brand-soft), #fff7ed); color: var(--brand-hover); font-size: 2rem; text-decoration: none; }
+        .ad-media { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 10; background: linear-gradient(135deg, var(--brand-soft), var(--bg-fff7ed)); color: var(--brand-hover); font-size: 2rem; text-decoration: none; }
         .ad-media.is-plain { aspect-ratio: auto; height: 4.5rem; font-size: 1.4rem; }
         .ad-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
         .ad-media small { display: block; margin-top: .25rem; font-size: .75rem; font-weight: 700; text-align: center; }
         .ad-media .m-tag { position: absolute; top: .6rem; left: .6rem; box-shadow: 0 1px 2px rgba(0, 0, 0, .15); }
         .ad-body { padding: .85rem 1rem 1rem; }
         .ad-head { display: flex; align-items: flex-start; gap: .5rem; }
-        .ad-head h3 { flex: 1; min-width: 0; margin: 0; font-size: 1rem; font-weight: 800; color: #111827; line-height: 1.3; }
-        .ad-text { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: .4rem 0 0; font-size: .88rem; line-height: 1.45; color: #4b5563; white-space: pre-line; }
-        .ad-foot { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .75rem; margin-top: .75rem; font-size: .8rem; color: #6b7280; }
-        .ad-foot i { margin-right: .25rem; color: #9ca3af; }
-        .ad-empty { padding: 2.5rem 1rem; text-align: center; color: #6b7280; }
-        .ad-empty i { display: block; margin-bottom: .5rem; font-size: 1.6rem; color: #d1d5db; }
-        .ad-detail { margin: 0 0 1rem; font-size: .92rem; line-height: 1.5; color: #374151; white-space: pre-line; overflow-wrap: anywhere; }
+        .ad-head h3 { flex: 1; min-width: 0; margin: 0; font-size: 1rem; font-weight: 800; color: var(--tx-111827); line-height: 1.3; }
+        .ad-text { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: .4rem 0 0; font-size: .88rem; line-height: 1.45; color: var(--tx-4b5563); white-space: pre-line; }
+        .ad-foot { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .75rem; margin-top: .75rem; font-size: .8rem; color: var(--tx-6b7280); }
+        .ad-foot i { margin-right: .25rem; color: var(--tx-9ca3af); }
+        .ad-empty { padding: 2.5rem 1rem; text-align: center; color: var(--tx-6b7280); }
+        .ad-empty i { display: block; margin-bottom: .5rem; font-size: 1.6rem; color: var(--tx-d1d5db); }
+        .ad-detail { margin: 0 0 1rem; font-size: .92rem; line-height: 1.5; color: var(--tx-374151); white-space: pre-line; overflow-wrap: anywhere; }
         .ad-facts { display: grid; margin: 0 0 1rem; }
-        .ad-facts > div { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: .75rem; padding: .45rem 0; border-bottom: 1px solid #f3f4f6; }
-        .ad-facts dt { font-size: .82rem; font-weight: 600; color: #6b7280; }
-        .ad-facts dd { margin: 0; font-size: .9rem; color: #111827; overflow-wrap: anywhere; }
+        .ad-facts > div { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: .75rem; padding: .45rem 0; border-bottom: 1px solid var(--bd-f3f4f6); }
+        .ad-facts dt { font-size: .82rem; font-weight: 600; color: var(--tx-6b7280); }
+        .ad-facts dd { margin: 0; font-size: .9rem; color: var(--tx-111827); overflow-wrap: anywhere; }
         .ad-facts a { color: var(--brand-text); }
     </style>
 
@@ -162,7 +162,7 @@
                                 @csrf
                                 @method('PATCH')
                                 <input type="hidden" name="approved" value="1">
-                                <button type="submit"><i class="fa-solid fa-check" style="color: #16a34a;"></i> {{ __('Approve') }}</button>
+                                <button type="submit"><i class="fa-solid fa-check" style="color: var(--tx-16a34a);"></i> {{ __('Approve') }}</button>
                             </form>
                             <a :href="ad?.edit"><i class="fa-solid fa-pen"></i> {{ __('Edit') }}</a>
                             <form method="POST" :action="ad?.approval" x-show="ad && ad.status !== 'pending'">

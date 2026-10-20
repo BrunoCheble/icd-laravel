@@ -15,47 +15,47 @@
         /* Shortcuts to each section, with what is left to send */
         .today-chips { display: flex; gap: .4rem; margin: -.25rem 0 1rem; overflow-x: auto; scrollbar-width: none; }
         .today-chips::-webkit-scrollbar { display: none; }
-        .today-chips a { flex: none; display: inline-flex; align-items: center; gap: .45rem; min-height: 38px; padding: 0 .85rem; border: 1px solid #e5e7eb; border-radius: 999px; background: #fff; color: #374151; font-size: .85rem; font-weight: 700; text-decoration: none; }
-        .today-chips a:hover { border-color: #d1d5db; }
+        .today-chips a { flex: none; display: inline-flex; align-items: center; gap: .45rem; min-height: 38px; padding: 0 .85rem; border: 1px solid var(--bd-e5e7eb); border-radius: 999px; background: var(--bg-fff); color: var(--tx-374151); font-size: .85rem; font-weight: 700; text-decoration: none; }
+        .today-chips a:hover { border-color: var(--bd-d1d5db); }
         .today-chips i { color: var(--brand-hover); }
         .today-chips b { min-width: 1.3rem; padding: 0 .35rem; border-radius: 999px; background: var(--brand); color: #fff; font-size: .72rem; line-height: 1.3rem; text-align: center; }
-        .today-chips b.is-done { background: #dcfce7; color: #166534; }
+        .today-chips b.is-done { background: var(--bg-dcfce7); color: var(--tx-166534); }
 
         /* Cards flow in columns: one on phones and tablets, two on larger screens */
         .today-grid { columns: 2 24rem; column-gap: 1rem; }
         .today-grid > * { break-inside: avoid; margin-bottom: 1rem; scroll-margin-top: 5rem; }
-        .today-title { display: flex; align-items: center; gap: .5rem; margin: 0; padding: .9rem 1rem .55rem; font-size: .95rem; font-weight: 800; color: #111827; }
+        .today-title { display: flex; align-items: center; gap: .5rem; margin: 0; padding: .9rem 1rem .55rem; font-size: .95rem; font-weight: 800; color: var(--tx-111827); }
         .today-title i { flex: none; width: 1.9rem; height: 1.9rem; display: grid; place-items: center; border-radius: .55rem; background: var(--brand-soft); color: var(--brand-hover); font-size: .85rem; }
-        .today-title small { margin-left: auto; font-size: .78rem; font-weight: 700; color: #9ca3af; white-space: nowrap; }
-        .today-title small.is-done { color: #16a34a; }
+        .today-title small { margin-left: auto; font-size: .78rem; font-weight: 700; color: var(--tx-9ca3af); white-space: nowrap; }
+        .today-title small.is-done { color: var(--tx-16a34a); }
         /* Sent messages go to the end of their section */
         .today-section { display: flex; flex-direction: column; }
         .today-section .today-item.is-sent { order: 1; }
 
-        .today-item { display: flex; gap: .75rem; padding: .8rem 1rem; border-top: 1px solid #f1f2f4; }
-        .today-item.is-sent { background: #fafafa; }
+        .today-item { display: flex; gap: .75rem; padding: .8rem 1rem; border-top: 1px solid var(--bd-f1f2f4); }
+        .today-item.is-sent { background: var(--bg-fafafa); }
         .today-item.is-sent .today-faces, .today-item.is-sent .today-text { opacity: .6; }
         .today-faces { flex: none; display: flex; align-self: flex-start; }
         .today-faces > * { box-shadow: 0 0 0 2px #fff; }
         .today-faces > * + * { margin-left: -.9rem; }
-        .today-face { width: 2.6rem; height: 2.6rem; border-radius: 999px; object-fit: cover; background: #f3f4f6; }
+        .today-face { width: 2.6rem; height: 2.6rem; border-radius: 999px; object-fit: cover; background: var(--bg-f3f4f6); }
         .today-body { flex: 1; min-width: 0; }
         .today-line { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .5rem; }
         .today-text { flex: 1 1 0; min-width: 0; }
-        .today-text strong { display: block; font-weight: 700; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .today-text strong { display: block; font-weight: 700; color: var(--tx-111827); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .today-text strong a { color: inherit; text-decoration: none; }
         .today-text strong a:hover { color: var(--brand-text); }
-        .today-text small { display: block; margin-top: .05rem; font-size: .8rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .today-text small { display: block; margin-top: .05rem; font-size: .8rem; color: var(--tx-6b7280); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .today-actions { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: .35rem; margin-left: auto; }
         /* A couple: a button for each, under the names */
         .today-actions.is-many { flex: 1 0 100%; }
         .today-actions .m-btn { min-height: 38px; }
         .m-btn.is-whatsapp { background: #25d366; border-color: #25d366; color: #fff; }
         .m-btn.is-whatsapp:hover { background: #1ebe5b; border-color: #1ebe5b; }
-        .today-sent { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 700; color: #16a34a; white-space: nowrap; }
-        .today-sent small { font-weight: 600; color: #6b7280; }
+        .today-sent { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 700; color: var(--tx-16a34a); white-space: nowrap; }
+        .today-sent small { font-weight: 600; color: var(--tx-6b7280); }
         /* The message: two lines, tap to edit it */
-        .today-preview { margin: .45rem 0 0; padding: .45rem .65rem; border-radius: .55rem; background: #f0fdf4; color: #374151; font-size: .84rem; line-height: 1.4; cursor: text; }
+        .today-preview { margin: .45rem 0 0; padding: .45rem .65rem; border-radius: .55rem; background: var(--bg-f0fdf4); color: var(--tx-374151); font-size: .84rem; line-height: 1.4; cursor: text; }
         .today-preview span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
         .today-edit { margin-top: .45rem; }
         .today-edit textarea { font-size: .88rem; }
@@ -68,22 +68,22 @@
             .today-actions.is-many .m-btn.is-whatsapp { flex: 1; }
         }
 
-        .today-pager { order: 2; display: flex; align-items: center; justify-content: center; gap: .75rem; padding: .6rem 1rem; border-top: 1px solid #f1f2f4; font-size: .85rem; font-weight: 600; color: #6b7280; }
+        .today-pager { order: 2; display: flex; align-items: center; justify-content: center; gap: .75rem; padding: .6rem 1rem; border-top: 1px solid var(--bd-f1f2f4); font-size: .85rem; font-weight: 600; color: var(--tx-6b7280); }
         .today-pager .m-btn { min-height: 36px; width: 36px; }
 
         .today-search { display: block; margin: 0 0 1rem; max-width: 28rem; }
         .today-nothing { margin: -.5rem 0 1rem; }
 
         .today-done { padding: 2.5rem 1rem; text-align: center; }
-        .today-done i { display: block; margin-bottom: .6rem; font-size: 2rem; color: #16a34a; }
-        .today-done strong { display: block; font-size: 1.05rem; color: #111827; }
-        .today-done small { color: #6b7280; }
+        .today-done i { display: block; margin-bottom: .6rem; font-size: 2rem; color: var(--tx-16a34a); }
+        .today-done strong { display: block; font-size: 1.05rem; color: var(--tx-111827); }
+        .today-done small { color: var(--tx-6b7280); }
 
-        .today-next { display: flex; align-items: center; gap: .75rem; padding: .6rem 1rem; border-top: 1px solid #f1f2f4; }
-        .today-next-day { flex: none; width: 2.75rem; padding: .2rem 0; border: 1px solid #e5e7eb; border-radius: .6rem; text-align: center; line-height: 1.1; }
-        .today-next-day strong { display: block; font-size: 1rem; font-weight: 800; color: #111827; }
-        .today-next-day small { display: block; font-size: .62rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; }
-        .today-next > i { flex: none; width: 1rem; color: #9ca3af; text-align: center; }
+        .today-next { display: flex; align-items: center; gap: .75rem; padding: .6rem 1rem; border-top: 1px solid var(--bd-f1f2f4); }
+        .today-next-day { flex: none; width: 2.75rem; padding: .2rem 0; border: 1px solid var(--bd-e5e7eb); border-radius: .6rem; text-align: center; line-height: 1.1; }
+        .today-next-day strong { display: block; font-size: 1rem; font-weight: 800; color: var(--tx-111827); }
+        .today-next-day small { display: block; font-size: .62rem; font-weight: 700; color: var(--tx-9ca3af); text-transform: uppercase; }
+        .today-next > i { flex: none; width: 1rem; color: var(--tx-9ca3af); text-align: center; }
     </style>
 
     @php

@@ -68,21 +68,21 @@
 @once
     <style>
         .song-switcher-button { display: block; max-width: 100%; padding: .25rem .5rem; margin: -.25rem -.5rem; border: 0; border-radius: .5rem; background: none; text-align: left; cursor: pointer; }
-        .song-switcher-button:hover { background: #f3f4f6; }
+        .song-switcher-button:hover { background: var(--bg-f3f4f6); }
         .song-switcher-button h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .song-switcher-button i { margin-left: .2rem; font-size: .7em; color: #9ca3af; }
-        .song-switcher-tab { font-weight: 600; color: #6b7280; }
+        .song-switcher-button i { margin-left: .2rem; font-size: .7em; color: var(--tx-9ca3af); }
+        .song-switcher-tab { font-weight: 600; color: var(--tx-6b7280); }
         /* Phones: only the song's name (the tab is in the tabs) */
         @media (max-width: 639px) { .song-switcher-tab { display: none; } }
         .song-switcher-box { width: min(34rem, 100%); }
         .song-switcher-group { margin-top: 1rem; }
-        .song-switcher-title { margin: 0 0 .35rem; font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #9ca3af; }
-        .song-switcher-item { display: flex; align-items: center; gap: .75rem; padding: .55rem .65rem; border-radius: .6rem; color: #111827; text-decoration: none; }
-        .song-switcher-item:hover { background: #f9fafb; }
+        .song-switcher-title { margin: 0 0 .35rem; font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--tx-9ca3af); }
+        .song-switcher-item { display: flex; align-items: center; gap: .75rem; padding: .55rem .65rem; border-radius: .6rem; color: var(--tx-111827); text-decoration: none; }
+        .song-switcher-item:hover { background: var(--bg-f9fafb); }
         .song-switcher-item.is-current { background: var(--brand-soft); }
         .song-switcher-main { flex: 1; min-width: 0; display: grid; }
         .song-switcher-main strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .song-switcher-main small { font-size: .8rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .song-switcher-main small { font-size: .8rem; color: var(--tx-6b7280); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     </style>
     <script>
         // The song picker: lately opened songs (kept on this device), the next setlist's, or the songs found.

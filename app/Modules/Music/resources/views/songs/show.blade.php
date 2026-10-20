@@ -12,36 +12,36 @@
         .overview-key { padding: .05rem .6rem; border: 1px solid var(--brand); border-radius: 999px; color: var(--brand-text); font-weight: 700; font-size: .9rem; }
         .overview-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; margin-top: .35rem; font-size: .85rem; }
         .overview-links a { color: var(--brand-text); font-weight: 600; }
-        .overview-title { margin: 1.5rem 0 .6rem; font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+        .overview-title { margin: 1.5rem 0 .6rem; font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--tx-6b7280); }
 
         /* What is done / missing: each card opens the page where it is done */
         .status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
         @media (min-width: 768px) { .status-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
         @media (min-width: 1280px) { .status-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-        .status-card { display: flex; flex-direction: column; gap: .2rem; padding: .7rem .8rem; border: 1px solid #e5e7eb; border-left: 4px solid #d1d5db; border-radius: .5rem; background: #fff; color: #111827; text-align: left; text-decoration: none; cursor: pointer; }
-        .status-card:hover { background: #f9fafb; }
+        .status-card { display: flex; flex-direction: column; gap: .2rem; padding: .7rem .8rem; border: 1px solid var(--bd-e5e7eb); border-left: 4px solid var(--bd-d1d5db); border-radius: .5rem; background: var(--bg-fff); color: var(--tx-111827); text-align: left; text-decoration: none; cursor: pointer; }
+        .status-card:hover { background: var(--bg-f9fafb); }
         .status-card.is-done { border-left-color: #16a34a; }
         .status-card.is-partial { border-left-color: #f59e0b; }
-        .status-card .status-label { font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
+        .status-card .status-label { font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--tx-6b7280); }
         .status-card .status-value { font-size: .95rem; font-weight: 700; }
         .status-card .status-action { font-size: .78rem; color: var(--brand-text); font-weight: 600; }
 
-        .setlist-row { display: flex; align-items: center; gap: .75rem; padding: .55rem 0; border-top: 1px solid #f3f4f6; }
+        .setlist-row { display: flex; align-items: center; gap: .75rem; padding: .55rem 0; border-top: 1px solid var(--bd-f3f4f6); }
         .setlist-row:first-child { border-top: 0; }
         .setlist-row .setlist-title { flex: 1; min-width: 0; }
-        .setlist-row .setlist-title a { font-weight: 600; color: #111827; }
-        .setlist-row .setlist-title small { display: block; color: #6b7280; }
+        .setlist-row .setlist-title a { font-weight: 600; color: var(--tx-111827); }
+        .setlist-row .setlist-title small { display: block; color: var(--tx-6b7280); }
 
         /* Chord sheet, as on the layout page (songs/bars.blade.php) */
-        .sheet-box { padding: .75rem; border: 1px solid #e5e7eb; border-radius: .5rem; background: #fafafa; overflow-x: auto; }
+        .sheet-box { padding: .75rem; border: 1px solid var(--bd-e5e7eb); border-radius: .5rem; background: var(--bg-fafafa); overflow-x: auto; }
         .sheet-section { padding: .35rem .5rem; border-radius: .4rem; border-left: 3px solid transparent; }
         .sheet-section + .sheet-section { margin-top: .6rem; }
-        .sheet-label { font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, #6b7280); }
+        .sheet-label { font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, var(--tx-6b7280)); }
         .sheet-line { display: flex; flex-wrap: wrap; margin-top: .15rem; font-size: .92rem; line-height: 1.15; }
         .sheet-seg { display: inline-flex; flex-direction: column; }
         .sheet-seg .c { min-height: 1.05em; font-size: .82rem; font-weight: 800; color: var(--brand-text); padding-right: .3rem; }
         .sheet-seg .t { white-space: pre; }
-        .sheet-comment { margin-top: .15rem; font-size: .82rem; font-style: italic; color: #6b7280; }
+        .sheet-comment { margin-top: .15rem; font-size: .82rem; font-style: italic; color: var(--tx-6b7280); }
         .sheet-head { display: flex; align-items: center; gap: .35rem; }
     </style>
 

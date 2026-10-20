@@ -11,26 +11,26 @@
         [x-cloak] { display: none !important; }
         /* Large screens: a table; phones and tablets: a card per song */
         .songs-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .songs-table th { padding: .65rem .75rem; border-bottom: 1px solid #e5e7eb; font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; text-align: left; white-space: nowrap; }
+        .songs-table th { padding: .65rem .75rem; border-bottom: 1px solid var(--bd-e5e7eb); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--tx-6b7280); text-align: left; white-space: nowrap; }
         .songs-table th a { color: inherit; text-decoration: none; }
-        .songs-table th a:hover, .songs-table th a.is-sorted { color: #111827; }
-        .songs-table td { padding: .7rem .75rem; border-bottom: 1px solid #f1f2f4; font-size: .875rem; color: #4b5563; vertical-align: middle; }
+        .songs-table th a:hover, .songs-table th a.is-sorted { color: var(--tx-111827); }
+        .songs-table td { padding: .7rem .75rem; border-bottom: 1px solid var(--bd-f1f2f4); font-size: .875rem; color: var(--tx-4b5563); vertical-align: middle; }
         .songs-table tbody tr { transition: background .1s; }
-        .songs-table tbody tr:hover { background: #fafafa; }
-        .songs-table tbody tr.is-selected { background: #fef2f2; }
-        .songs-table .song-title { display: block; font-weight: 700; color: #111827; text-decoration: none; }
+        .songs-table tbody tr:hover { background: var(--bg-fafafa); }
+        .songs-table tbody tr.is-selected { background: var(--bg-fef2f2); }
+        .songs-table .song-title { display: block; font-weight: 700; color: var(--tx-111827); text-decoration: none; }
         .songs-table .song-title:hover { color: var(--brand-text); }
-        .songs-table .song-artist { display: block; font-size: .8rem; color: #6b7280; }
+        .songs-table .song-artist { display: block; font-size: .8rem; color: var(--tx-6b7280); }
         .songs-table .is-check { width: 2.5rem; padding-right: 0; }
         .songs-media { display: flex; flex-wrap: wrap; gap: .3rem; }
 
         .song-cards { display: none; }
-        .song-card { display: flex; align-items: flex-start; gap: .7rem; padding: .85rem .9rem; border-bottom: 1px solid #f1f2f4; }
+        .song-card { display: flex; align-items: flex-start; gap: .7rem; padding: .85rem .9rem; border-bottom: 1px solid var(--bd-f1f2f4); }
         .song-card:last-child { border-bottom: 0; }
         .song-card-main { flex: 1; min-width: 0; text-decoration: none; }
-        .song-card-title { display: flex; align-items: center; gap: .5rem; font-weight: 700; color: #111827; }
+        .song-card-title { display: flex; align-items: center; gap: .5rem; font-weight: 700; color: var(--tx-111827); }
         .song-card-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .song-card-artist { margin-top: .1rem; font-size: .82rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .song-card-artist { margin-top: .1rem; font-size: .82rem; color: var(--tx-6b7280); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .song-card-tags { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; }
         @media (max-width: 1023px) {
             .songs-table { display: none; }
@@ -39,9 +39,9 @@
             .songs-bulk { display: none !important; }
         }
         .songs-list { overflow: hidden; }
-        .songs-empty { padding: 2.5rem 1rem; text-align: center; color: #6b7280; }
-        .songs-empty i { display: block; margin-bottom: .5rem; font-size: 1.6rem; color: #d1d5db; }
-        .songs-pages { padding: .75rem 1rem; border-top: 1px solid #f1f2f4; }
+        .songs-empty { padding: 2.5rem 1rem; text-align: center; color: var(--tx-6b7280); }
+        .songs-empty i { display: block; margin-bottom: .5rem; font-size: 1.6rem; color: var(--tx-d1d5db); }
+        .songs-pages { padding: .75rem 1rem; border-top: 1px solid var(--bd-f1f2f4); }
     </style>
 
     @php
@@ -130,10 +130,10 @@
         @endif
 
         {{-- Several songs selected (on any page): deleted together --}}
-        <div class="m-card mt-3 songs-bulk" style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; padding: .7rem .9rem; border-color: #fecaca; background: #fef2f2;" x-show="selected.length" x-cloak>
+        <div class="m-card mt-3 songs-bulk" style="display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; padding: .7rem .9rem; border-color: var(--bd-fecaca); background: var(--bg-fef2f2);" x-show="selected.length" x-cloak>
             <strong class="text-sm" x-text="@js(__(':count selected')).replace(':count', selected.length)"></strong>
             <button type="button" class="m-link" x-show="selected.length < all.length" @click="selectAll()" x-text="@js(__('Select all :count songs')).replace(':count', all.length)"></button>
-            <button type="button" class="m-link" style="color: #6b7280;" @click="clear()">{{ __('Clear selection') }}</button>
+            <button type="button" class="m-link" style="color: var(--tx-6b7280);" @click="clear()">{{ __('Clear selection') }}</button>
             <span style="flex: 1;"></span>
             <template x-if="!bulkConfirm">
                 <button type="button" class="m-btn is-danger" @click="bulkConfirm = true"><i class="fa-solid fa-trash"></i> {{ __('Delete selected') }}</button>

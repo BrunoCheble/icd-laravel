@@ -41,18 +41,18 @@
     <style>
         .person-picker { position: relative; }
         .person-picker .m-search { display: block; }
-        .person-picker-current { display: flex; align-items: center; gap: .65rem; min-height: 42px; padding: 0 .25rem 0 .75rem; border: 1px solid #d1d5db; border-radius: .6rem; background: var(--brand-soft); }
+        .person-picker-current { display: flex; align-items: center; gap: .65rem; min-height: 42px; padding: 0 .25rem 0 .75rem; border: 1px solid var(--bd-d1d5db); border-radius: .6rem; background: var(--brand-soft); }
         .person-picker-current > i { color: var(--brand-text); }
         .person-picker-current span { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 .5rem; }
-        .person-picker-current strong { font-size: .92rem; font-weight: 700; color: #111827; }
-        .person-picker-current small, .person-picker-list small { font-size: .78rem; color: #6b7280; }
-        .person-picker-list { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px); max-height: 15rem; overflow-y: auto; padding: .3rem; border: 1px solid #e5e7eb; border-radius: .7rem; background: #fff; box-shadow: 0 12px 30px rgba(16, 24, 40, .15); }
+        .person-picker-current strong { font-size: .92rem; font-weight: 700; color: var(--tx-111827); }
+        .person-picker-current small, .person-picker-list small { font-size: .78rem; color: var(--tx-6b7280); }
+        .person-picker-list { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px); max-height: 15rem; overflow-y: auto; padding: .3rem; border: 1px solid var(--bd-e5e7eb); border-radius: .7rem; background: var(--bg-fff); box-shadow: 0 12px 30px rgba(16, 24, 40, .15); }
         .person-picker-list button { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 .5rem; width: 100%; padding: .55rem .65rem; border: 0; border-radius: .5rem; background: none; text-align: left; cursor: pointer; }
-        .person-picker-list button strong { font-size: .9rem; font-weight: 600; color: #111827; }
-        .person-picker-list button:hover, .person-picker-list button.is-active { background: #f3f4f6; }
-        .person-picker-list button.is-free { border-top: 1px solid #f1f2f4; border-radius: 0 0 .5rem .5rem; color: var(--brand-text); }
+        .person-picker-list button strong { font-size: .9rem; font-weight: 600; color: var(--tx-111827); }
+        .person-picker-list button:hover, .person-picker-list button.is-active { background: var(--bg-f3f4f6); }
+        .person-picker-list button.is-free { border-top: 1px solid var(--bd-f1f2f4); border-radius: 0 0 .5rem .5rem; color: var(--brand-text); }
         .person-picker-list button.is-free i { align-self: center; }
-        .person-picker-list p { margin: 0; padding: .55rem .65rem; font-size: .85rem; color: #6b7280; }
+        .person-picker-list p { margin: 0; padding: .55rem .65rem; font-size: .85rem; color: var(--tx-6b7280); }
     </style>
     <script>
         // Search a member by name or NIF (accents and case ignored), of the wanted gender; the chosen one is kept.

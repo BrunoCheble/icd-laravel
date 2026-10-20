@@ -4,43 +4,43 @@
     </x-slot>
 
     <style>
-        .suggestion { padding: 1rem 0; border-top: 1px solid #e5e7eb; }
+        .suggestion { padding: 1rem 0; border-top: 1px solid var(--bd-e5e7eb); }
         /* The chord sheet with the suggested changes: new chords green, removed red (struck through), changed blue. */
-        .sheet-preview summary { cursor: pointer; font-size: .85rem; font-weight: 600; color: #374151; }
+        .sheet-preview summary { cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--tx-374151); }
         .sheet-preview .legend { margin-left: .5rem; font-weight: 700; font-size: .75rem; }
-        .sheet-preview .inserted { color: #16a34a; }
-        .sheet-preview .removed { color: #dc2626; text-decoration: line-through; }
-        .sheet-preview .changed { color: #2563eb; }
-        .sheet-sections { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: .6rem 1.5rem; margin-top: .6rem; padding: .75rem; border: 1px solid #e5e7eb; border-radius: .5rem; background: #fafafa; }
-        .sheet-label { font-size: .7rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+        .sheet-preview .inserted { color: var(--tx-16a34a); }
+        .sheet-preview .removed { color: var(--tx-dc2626); text-decoration: line-through; }
+        .sheet-preview .changed { color: var(--tx-2563eb); }
+        .sheet-sections { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: .6rem 1.5rem; margin-top: .6rem; padding: .75rem; border: 1px solid var(--bd-e5e7eb); border-radius: .5rem; background: var(--bg-fafafa); }
+        .sheet-label { font-size: .7rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--tx-6b7280); }
         .sheet-line { display: flex; flex-wrap: wrap; margin-top: .1rem; font-size: .9rem; line-height: 1.15; }
         .sheet-line .seg { display: inline-flex; flex-direction: column; }
-        .sheet-line .chord { min-height: 1.05em; padding-right: .3rem; font-size: .8rem; font-weight: 700; color: #4b5563; }
-        .sheet-line .chord.inserted { color: #16a34a; }
-        .sheet-line .chord.removed { color: #dc2626; text-decoration: line-through; }
-        .sheet-line .chord.changed { color: #2563eb; font-weight: 800; }
+        .sheet-line .chord { min-height: 1.05em; padding-right: .3rem; font-size: .8rem; font-weight: 700; color: var(--tx-4b5563); }
+        .sheet-line .chord.inserted { color: var(--tx-16a34a); }
+        .sheet-line .chord.removed { color: var(--tx-dc2626); text-decoration: line-through; }
+        .sheet-line .chord.changed { color: var(--tx-2563eb); font-weight: 800; }
         .sheet-line .chord.inserted, .sheet-line .chord.removed { font-weight: 800; }
-        .change .insert { color: #16a34a; font-weight: 700; }
+        .change .insert { color: var(--tx-16a34a); font-weight: 700; }
         .sheet-line .text { white-space: pre; }
-        .sheet-comment { font-size: .8rem; font-style: italic; color: #6b7280; }
+        .sheet-comment { font-size: .8rem; font-style: italic; color: var(--tx-6b7280); }
         .suggestion:first-of-type { border-top: 0; }
         .suggestion-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .75rem; }
         .suggestion-head a { font-weight: 700; color: var(--brand-text); }
-        .suggestion-meta { font-size: .85rem; color: #6b7280; }
-        .suggestion-note { margin-top: .35rem; padding: .4rem .6rem; border-left: 3px solid var(--brand-200); background: #f9fafb; font-size: .9rem; white-space: pre-line; }
+        .suggestion-meta { font-size: .85rem; color: var(--tx-6b7280); }
+        .suggestion-note { margin-top: .35rem; padding: .4rem .6rem; border-left: 3px solid var(--brand-200); background: var(--bg-f9fafb); font-size: .9rem; white-space: pre-line; }
         .change { display: flex; align-items: center; gap: .6rem; padding: .3rem 0; font-size: .95rem; }
-        .change .where { min-width: 11rem; color: #6b7280; font-size: .85rem; }
-        .change .from { font-weight: 700; text-decoration: line-through; color: #9ca3af; }
-        .change .to { font-weight: 800; color: #111827; }
-        .change .removed { font-weight: 700; color: #dc2626; }
+        .change .where { min-width: 11rem; color: var(--tx-6b7280); font-size: .85rem; }
+        .change .from { font-weight: 700; text-decoration: line-through; color: var(--tx-9ca3af); }
+        .change .to { font-weight: 800; color: var(--tx-111827); }
+        .change .removed { font-weight: 700; color: var(--tx-dc2626); }
         .change .badge { padding: .05rem .45rem; border-radius: 999px; font-size: .7rem; font-weight: 700; }
-        .badge.outdated { background: #fef3c7; color: #92400e; }
-        .badge.applied { background: #dcfce7; color: #166534; }
-        .badge.rejected { background: #f3f4f6; color: #6b7280; }
+        .badge.outdated { background: var(--bg-fef3c7); color: var(--tx-92400e); }
+        .badge.applied { background: var(--bg-dcfce7); color: var(--tx-166534); }
+        .badge.rejected { background: var(--bg-f3f4f6); color: var(--tx-6b7280); }
         .change input { flex: none; }
         /* Phones: where the change is goes over it; the chord sheet in one column */
         @media (max-width: 639px) {
-            .change { flex-wrap: wrap; gap: .25rem .5rem; padding: .45rem 0; border-bottom: 1px dashed #f3f4f6; }
+            .change { flex-wrap: wrap; gap: .25rem .5rem; padding: .45rem 0; border-bottom: 1px dashed var(--bd-f3f4f6); }
             .change .where { min-width: 0; flex-basis: calc(100% - 2rem); }
             .sheet-sections { grid-template-columns: minmax(0, 1fr); overflow-x: auto; }
         }
