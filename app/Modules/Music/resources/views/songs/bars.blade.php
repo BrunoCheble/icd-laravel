@@ -1448,8 +1448,8 @@
                     if (this.isPlaying()) return this.playFromTick(tick);
                     this.currentTick = tick;
                     const time = Math.max(0, this.timeOfTick(tick));
-                    if (audio) audio.currentTime = time;
-                    else if (this.clickOnly) this.clickOffset = time;
+                    if (this.clickOnly) this.clickOffset = time;
+                    else if (audio) audio.currentTime = time;
                     else if (this.playerReady) this.seekVideo(time, false);
                     this.scrollToBar(this.currentBar);
                     this.followSheet(true);
@@ -1516,8 +1516,9 @@
                     this.togglePlayNow();
                 },
                 togglePlayNow() {
-                    if (audio) return audio.paused ? audio.play() : audio.pause();
+                    // With the music turned off the MP3 stays silent: only the BPM clock plays.
                     if (this.clickOnly) return this.playing ? this.stopClock() : this.startClock(this.atEnd() ? 0 : this.clickOffset);
+                    if (audio) return audio.paused ? audio.play() : audio.pause();
                     this.toggleVideo();
                 },
                 // Count-in: a bar of drumsticks at the BPM before the song starts playing (not when it jumps while
@@ -1595,11 +1596,11 @@
                     const time = Math.max(0, this.timeOfTick(tick));
                     this.currentTick = tick;
                     this.followSheet(true);
-                    if (audio) {
+                    if (this.clickOnly) {
+                        this.startClock(time);
+                    } else if (audio) {
                         audio.currentTime = time;
                         audio.play();
-                    } else if (this.clickOnly) {
-                        this.startClock(time);
                     } else {
                         this.seekVideo(time);
                     }
