@@ -213,7 +213,7 @@ class AnnouncementsTest extends TestCase
             ->assertJsonMissingPath('data.0.member_id')
             // No picture: the default one
             ->assertJsonPath('data.0.has_picture', false)->assertJsonPath('data.0.image_url', asset('images/announcements/default.jpg'));
-        $this->assertStringContainsString('max-age=300', $response->headers->get('Cache-Control'));
+        $this->assertStringContainsString('max-age=60', $response->headers->get('Cache-Control'));
 
         // Cached: a change made without the model (as by hand in the database) is not seen…
         \Illuminate\Support\Facades\DB::table('announcements')->where('id', $announcement->id)->update(['title' => 'Escondido']);

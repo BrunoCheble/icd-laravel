@@ -9,11 +9,11 @@ use Illuminate\Http\JsonResponse;
 class ApiController extends Controller
 {
     /**
-     * The announcements the site shows (see ListPublicAnnouncementsService), cached here and in the browser.
+     * The announcements the site shows (see ListPublicAnnouncementsService), cached here and in the browser (a minute, so an approval soon shows on the site).
      */
     public function index(ListPublicAnnouncementsService $service): JsonResponse
     {
         return response()->json(['data' => $service->execute()], 200)
-            ->header('Cache-Control', 'public, max-age=300');
+            ->header('Cache-Control', 'public, max-age=60');
     }
 }
