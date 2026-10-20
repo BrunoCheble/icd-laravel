@@ -43,8 +43,7 @@ class SiteController extends Controller
                 ]
             ));
 
-            // Embedded in the church's site, the page stays embedded.
-            return Redirect::route('site.member', $request->boolean('embed') ? ['embed' => 1] : [])
+            return Redirect::route('site.member')
                 ->with('success', __('Thank you for your registration!'));
         } catch (\Illuminate\Validation\ValidationException $e) {
             return Redirect::route('site.member')

@@ -381,18 +381,9 @@ class AnnouncementsTest extends TestCase
         $this->post('/new-announcement', $form + ['title' => 'ZZ Teste Venda 5'])->assertSessionHasNoErrors();
     }
 
-    public function test_the_public_pages_open_inside_the_site_and_stay_there(): void
+    public function test_only_the_church_site_may_show_the_pages_inside_its_own(): void
     {
-        $member = $this->member();
-        $this->get('/announcement?embed=1')->assertOk()->assertSee('name="embed"', false)->assertDontSee('Voltar ao site');
-        $this->get('/?embed=1')->assertOk()->assertSee('name="embed"', false);
-        // Only the church's site may show them inside its pages
         $this->get('/announcement')->assertHeader('Content-Security-Policy', "frame-ancestors 'self' https://igrejaicd.pt https://www.igrejaicd.pt");
-
-        // After sending, still inside the site, with "Fechar" (it closes the site's window)
-        $this->post('/new-announcement', ['member_document' => $member->document_number, 'title' => 'ZZ Teste Embutido', 'description' => 'X', 'contact' => '912345678', 'embed' => '1'] + self::SERVICE)
-            ->assertRedirect('/announcement?embed=1');
-        $this->get('/announcement?embed=1')->assertSee('data-embed-close', false);
     }
 
     private function announcement(array $data = []): Announcement

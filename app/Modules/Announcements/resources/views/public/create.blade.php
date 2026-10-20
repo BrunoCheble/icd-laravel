@@ -11,8 +11,6 @@
         'sale' => [__('Your sale was received!'), __('The team will review it and it will be on the church\'s site once approved.'), __('Sales are agreed directly between you and whoever is interested.')],
     ];
     $sent = session('sent');
-    // Embedded in the church's site (?embed=1, kept through the sending): no top bar; "back to the site" closes it.
-    $embed = request()->boolean('embed') || old('embed');
     // The errors of the category's fields, for the form's script ("details.area" => message).
     $detailErrors = collect($errors->getMessages())->filter(fn ($messages, $key) => str_starts_with($key, 'details.'))->map(fn ($messages) => $messages[0]);
 @endphp
@@ -72,12 +70,10 @@
 </head>
 <body>
     <main class="an">
-        @unless ($embed)
         <div class="an-top">
             <img src="{{ asset('icons/icon-192.png') }}" alt="Igreja Cidade de David">
             <a href="https://igrejaicd.pt/#announcements"><i class="fa-solid fa-arrow-left"></i> {{ __('Back to the site') }}</a>
         </div>
-        @endunless
 
         @if ($sent && isset($thanks[$sent]))
             @php([$title, $message, $note] = $thanks[$sent])
@@ -87,22 +83,17 @@
                 <p>{{ $message }}</p>
                 @if ($note)<p class="note">{{ $note }}</p>@endif
                 <div class="actions">
-                    <a href="{{ route('site.announcement', $embed ? ['embed' => 1] : []) }}" class="an-btn is-light"><i class="fa-solid fa-plus"></i> {{ __('Send another announcement') }}</a>
-                    @if ($embed)
-                        <button type="button" class="an-btn" data-embed-close>{{ __('Close') }}</button>
-                    @else
-                        <a href="https://igrejaicd.pt/#announcements" class="an-btn">{{ __('Back to the site') }}</a>
-                    @endif
+                    <a href="{{ route('site.announcement') }}" class="an-btn is-light"><i class="fa-solid fa-plus"></i> {{ __('Send another announcement') }}</a>
+                    <a href="https://igrejaicd.pt/#announcements" class="an-btn">{{ __('Back to the site') }}</a>
                 </div>
             </div>
         @else
-            @unless ($embed)<h1>{{ __('Announce') }}</h1>@endunless
+            <h1>{{ __('Announce') }}</h1>
             <p class="lead">{{ __('Members of the church can announce their services, lessons, their résumé, a job offer, a donation or something for sale. It shows on the site once approved by the team.') }}</p>
 
             <form method="POST" action="{{ route('announcement.register') }}" enctype="multipart/form-data" class="an-card"
                 x-data="announcementForm(@js(['type' => old('type', ''), 'details' => (object) old('details', []), 'errors' => (object) $detailErrors->all(), 'categories' => $categories, 'checkUrl' => route('member.checkDocumentNumber', '__NIF__')]))" @submit="sending = true">
                 @csrf
-                @if ($embed)<input type="hidden" name="embed" value="1">@endif
                 {{-- Left empty by people: a filled one is a bot --}}
                 <div class="an-hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
 
@@ -112,7 +103,7 @@
                         x-model="nif" @change="checkNif()">
                     <p class="an-ok" x-show="nifState === true" x-cloak><i class="fa-solid fa-check"></i> {{ __('Member found.') }}</p>
                     <p class="an-error" x-show="nifState === false" x-cloak>{{ __('You need to be a member to announce. If you are, check the NIF or talk to us.') }}
-                        <a href="{{ route('site.member', $embed ? ['embed' => 1] : []) }}" style="color: #b45309;">{{ __('Register as a member') }}</a></p>
+                        <a href="{{ route('site.member') }}" style="color: #b45309;">{{ __('Register as a member') }}</a></p>
                     @error('member_document')<p class="an-error">{{ $message }}</p>@enderror
                 </div>
 
@@ -192,14 +183,11 @@
 
                 <button type="submit" class="an-btn" :disabled="sending"><i class="fa-solid" :class="sending ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i> <span x-text="sending ? @js(__('Sending…')) : @js(__('Send for approval'))">{{ __('Send for approval') }}</span></button>
             </form>
-            <p class="an-foot">{{ __('Not a member yet?') }} <a href="{{ route('site.member', $embed ? ['embed' => 1] : []) }}">{{ __('To be a member!') }}</a></p>
+            <p class="an-foot">{{ __('Not a member yet?') }} <a href="{{ route('site.member') }}">{{ __('To be a member!') }}</a></p>
         @endif
     </main>
 
     <script>
-        // Embedded in the church's site: "Fechar" asks it to close its window.
-        document.addEventListener('click', (event) => { if (event.target.closest('[data-embed-close]')) window.parent.postMessage({ icd: 'close' }, '*'); });
-
         // The form: the chosen category's fields, the NIF checked once per value (not on every key), sending once,
         // and examples by category.
         function announcementForm({ type, details, errors, categories, checkUrl }) {

@@ -20,19 +20,6 @@
     @endif
 </head>
 
-{{-- Embedded in the church's site (?embed=1, kept through the form's sending): only the form, no background or logo;
-     "Fechar" asks the site to close its window. --}}
-@php($embed = request()->boolean('embed') || old('embed'))
-@if ($embed)
-<body class="font-sans text-gray-900 antialiased" style="background: #fff;">
-    <div id="app" class="w-full px-4 py-4">
-        {{ $slot }}
-    </div>
-    <script>
-        document.addEventListener('click', (event) => { if (event.target.closest('[data-embed-close]')) window.parent.postMessage({ icd: 'close' }, '*'); });
-    </script>
-</body>
-@else
 <body
     style="background: url('https://scontent.fopo5-2.fna.fbcdn.net/v/t39.30808-6/436933766_730594475945626_4815031691494786999_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=5f2048&_nc_eui2=AeEcIBqn1Q3-rQ-FFsezF48CdBiEXTW6SZB0GIRdNbpJkNQnseZxcls2C8fKDRUjjoUs12jmxKOOGXrMxJPPGHxn&_nc_ohc=dVa2q8vGG5kQ7kNvgHXTLFJ&_nc_ht=scontent.fopo5-2.fna&oh=00_AYCd1UnjVcUR42MmBznCZXXPNWqk6MpK7cMuxSYUy8b0tQ&oe=6674E2A2'); background-size: cover"
     class="font-sans text-gray-900 antialiased">
@@ -88,6 +75,5 @@
         </style>
     </div>
 </body>
-@endif
 
 </html>

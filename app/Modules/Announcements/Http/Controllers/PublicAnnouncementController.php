@@ -26,7 +26,6 @@ class PublicAnnouncementController extends Controller
         app()->setLocale('pt');
         $announcement = $service->execute($request->validated(), $request->member());
 
-        // Embedded in the church's site, the page stays embedded.
-        return redirect()->route('site.announcement', $request->boolean('embed') ? ['embed' => 1] : [])->with('sent', $announcement->type);
+        return redirect()->route('site.announcement')->with('sent', $announcement->type);
     }
 }
