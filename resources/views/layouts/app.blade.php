@@ -51,7 +51,7 @@
             .app-shell { min-height: 100vh; }
             .app-body { min-height: 100vh; margin-left: var(--sidebar-width); transition: margin-left .2s ease; display: flex; flex-direction: column; }
 
-            .app-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40; width: var(--sidebar-width); display: flex; flex-direction: column; background: var(--bg-fff); border-right: 1px solid var(--bd-e5e7eb); transition: width .2s ease, transform .2s ease; }
+            .app-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40; width: var(--sidebar-width); display: flex; flex-direction: column; background: var(--bg-fff); border-right: 1px solid var(--bd-e5e7eb); transition: width .2s ease, transform .18s cubic-bezier(.2, .8, .2, 1); }
             .app-sidebar-brand { display: flex; align-items: center; justify-content: space-between; gap: .5rem; height: 4rem; padding: 0 .9rem; border-bottom: 1px solid var(--bd-f1f2f4); }
             .app-brand-link { display: flex; align-items: center; gap: .6rem; min-width: 0; color: var(--tx-111827); text-decoration: none; }
             .app-logo { height: 2.25rem; width: auto; flex: none; }
@@ -85,6 +85,8 @@
             .app-install-box li + li { margin-top: .35rem; }
             .app-install-box i { color: var(--brand-hover); }
             .app-install-box button { width: 100%; min-height: 46px; border: 0; border-radius: .7rem; background: var(--brand); color: #fff; font-weight: 700; font-size: 1rem; }
+            /* Taps answer at once (no wait to tell a double tap for zooming) */
+            a, button, [role="button"], label, summary { touch-action: manipulation; }
             .app-sidebar-backdrop { position: fixed; inset: 0; z-index: 35; background: rgba(17, 24, 39, .4); }
 
             /* Folded: only the icons (each one's name in its tooltip) */
@@ -113,7 +115,7 @@
             /* Phones and tablets: the menu is a drawer opened from the top bar */
             @media (max-width: 1023px) {
                 .app-body, html.sidebar-collapsed .app-body { margin-left: 0; }
-                .app-sidebar, html.sidebar-collapsed .app-sidebar { width: 16.5rem; transform: translateX(-100%); box-shadow: none; }
+                .app-sidebar, html.sidebar-collapsed .app-sidebar { width: 16.5rem; transform: translateX(-100%); box-shadow: none; will-change: transform; }
                 .app-sidebar.is-open { transform: none; box-shadow: 0 20px 50px rgba(0, 0, 0, .25); }
                 html.sidebar-collapsed .app-brand-name, html.sidebar-collapsed .app-nav-label, html.sidebar-collapsed .app-nav-title { display: revert; }
                 html.sidebar-collapsed .app-nav-item { justify-content: flex-start; padding-left: .65rem; padding-right: .65rem; }
