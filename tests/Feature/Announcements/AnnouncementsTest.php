@@ -386,6 +386,45 @@ class AnnouncementsTest extends TestCase
         $this->get('/announcement')->assertHeader('Content-Security-Policy', "frame-ancestors 'self' https://igrejaicd.pt https://www.igrejaicd.pt");
     }
 
+    public function test_the_site_announces_with_its_own_form(): void
+    {
+        $member = $this->member();
+        $this->getJson('/api/public/announcement-categories')->assertOk()
+            ->assertJsonPath('data.service.label', 'Serviços')->assertJsonPath('data.service.fields.location.label', 'Localização')
+            ->assertJsonPath('data.sale.photos', 3)->assertJsonPath('data.sale.limit', 3);
+        $this->getJson("/api/public/members/check/{$member->document_number}")->assertJsonPath('exists', true);
+        $this->getJson('/api/public/members/check/000000000')->assertJsonPath('exists', false);
+
+        $this->post('/api/public/announcements', ['member_document' => $member->document_number, 'title' => 'ZZ Teste Do Site', 'description' => 'Roupa', 'contact' => '912345678',
+            'type' => 'donation', 'details' => ['condition' => 'new'], 'photos' => [$this->png()]], ['Accept' => 'application/json'])
+            ->assertCreated()->assertJsonPath('title', 'A sua doação foi recebida!');
+        $announcement = Announcement::where('title', 'ZZ Teste Do Site')->firstOrFail();
+        $this->assertFalse($announcement->is_approved);
+        $this->assertCount(1, $announcement->photos);
+
+        $this->postJson('/api/public/announcements', ['member_document' => '000000000', 'type' => 'service'])->assertUnprocessable()
+            ->assertJsonValidationErrors(['member_document', 'title', 'details.area']);
+    }
+
+    public function test_someone_becomes_a_member_from_the_site(): void
+    {
+        $form = ['full_name' => 'zz teste da silva', 'gender' => 'F', 'birthdate' => '02/03/1990', 'document_number' => '999 888 777', 'marital_status' => 'M',
+            'phone_number' => '912 345 678', 'email' => 'ZZ@Teste.pt', 'zip_code' => '2700-123', 'address' => 'rua das flores', 'address_number' => '5', 'city' => 'amadora'];
+
+        $this->postJson('/api/public/members', $form)->assertCreated();
+        $member = Member::where('document_number', '999888777')->firstOrFail();
+        $this->assertSame(['Zz', 'Teste da', 'Silva'], [$member->first_name, $member->middle_name, $member->last_name]);
+        $this->assertSame(\App\Enums\MembershipStatus::PENDING, $member->membership_status);
+        $this->assertSame('1990-03-02', \Carbon\Carbon::parse($member->date_of_birth)->toDateString());
+        $this->assertSame(['zz@teste.pt', 'Rua das Flores 5', 'Amadora', 'F', 'M'], [$member->email, $member->address, $member->city, $member->gender, $member->marital_status]);
+
+        // The same NIF again, wrong fields, a bot
+        $this->postJson('/api/public/members', $form)->assertJsonValidationErrors(['document_number' => 'Este NIF já está registado: já é membro (ou aguarda a confirmação da equipa).']);
+        $this->postJson('/api/public/members', ['full_name' => 'Só', 'zip_code' => '1234', 'birthdate' => '1990-03-02', 'gender' => 'X'] + $form)
+            ->assertJsonValidationErrors(['full_name', 'zip_code', 'birthdate', 'gender']);
+        $this->postJson('/api/public/members', ['website' => 'http://spam', 'document_number' => '111222333'] + $form)->assertJsonValidationErrors('website');
+    }
+
     private function announcement(array $data = []): Announcement
     {
         return Announcement::create($data + self::SERVICE + [
