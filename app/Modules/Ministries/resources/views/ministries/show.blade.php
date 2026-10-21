@@ -9,7 +9,7 @@
 
     <style>
         .mn-grid { display: grid; gap: 1rem; margin-top: .75rem; max-width: 56rem; }
-        .mn-card { overflow: hidden; }
+        /* No overflow clipping: the member picker's list opens below the card */
         .mn-card > h3 { display: flex; align-items: center; gap: .5rem; margin: 0; padding: .85rem 1rem; border-bottom: 1px solid var(--bd-f1f2f4); font-size: .95rem; font-weight: 800; color: var(--tx-111827); }
         .mn-card > h3 small { margin-left: auto; font-size: .8rem; font-weight: 600; color: var(--tx-6b7280); }
         .mn-row { display: flex; align-items: center; gap: .75rem; padding: .65rem 1rem; border-bottom: 1px solid var(--bd-f1f2f4); }
@@ -20,7 +20,7 @@
         .mn-text { flex: 1; min-width: 0; }
         .mn-text strong { display: block; font-weight: 700; color: var(--tx-111827); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .mn-text small { display: block; font-size: .82rem; color: var(--tx-6b7280); }
-        .mn-add { display: grid; gap: .6rem; padding: 1rem; border-top: 1px solid var(--bd-f1f2f4); background: var(--bg-fafafa); }
+        .mn-add { display: grid; gap: .6rem; padding: 1rem; border-top: 1px solid var(--bd-f1f2f4); border-radius: 0 0 .9rem .9rem; background: var(--bg-fafafa); }
         @media (min-width: 700px) { .mn-add { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; align-items: start; } }
     </style>
 
