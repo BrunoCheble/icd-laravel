@@ -127,6 +127,7 @@
             {{-- Comments --}}
             <section class="m-card m-section" id="comments">
                 <h3 class="m-section-title"><i class="fa-regular fa-comment"></i> {{ __('Comments') }}</h3>
+                @if ($canComment)
                 @can('discipleships.update')
                     <form method="POST" action="{{ route('discipleships.meetings.comments.store', $meeting) }}" class="m-field">
                         @csrf
@@ -135,6 +136,7 @@
                         <div class="mt-2"><button type="submit" class="m-btn"><i class="fa-solid fa-paper-plane"></i> {{ __('Add comment') }}</button></div>
                     </form>
                 @endcan
+                @endif
                 @forelse ($meeting->comments as $comment)
                     <article class="dm-comment">
                         <header>

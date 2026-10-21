@@ -8,9 +8,9 @@ use App\Modules\Discipleship\Models\DiscipleshipMeeting;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Whose discipleships a user handles: administrators, everyone's; the others, only their own as mentor (the member
- * their user is). A user who is no member has none. The history is the member's: a mentor also sees (and comments)
- * the earlier meetings of the disciples they follow now, with their previous mentors.
+ * Everyone with the module sees every discipleship and meeting. What a user changes: administrators, everything; the
+ * others, only their own as mentor (the member their user is; a user who is no member, nothing). The history is the
+ * member's: a mentor also comments the earlier meetings of the disciples they follow now.
  */
 class DiscipleshipAccess
 {
@@ -35,8 +35,8 @@ class DiscipleshipAccess
         return $mentor === null || ($mentor !== 0 && $mentor === $mentorId);
     }
 
-    /** Whether the user may see the meeting: theirs, or of a disciple they follow now. */
-    public static function canView(User $user, DiscipleshipMeeting $meeting): bool
+    /** Whether the user may comment on the meeting: theirs, or of a disciple they follow now. */
+    public static function canComment(User $user, DiscipleshipMeeting $meeting): bool
     {
         if (self::allows($user, $meeting->mentor_id)) {
             return true;
@@ -45,12 +45,6 @@ class DiscipleshipAccess
 
         return $mentor !== 0 && Discipleship::query()->where('mentor_id', $mentor)->where('is_active', true)
             ->whereIn('disciple_id', $meeting->disciples()->select('members.id'))->exists();
-    }
-
-    /** Whether the user may see the history of the discipleship's disciple: its mentor while it goes on. */
-    public static function canViewHistory(User $user, Discipleship $discipleship): bool
-    {
-        return $user->is_admin || ($discipleship->is_active && self::allows($user, $discipleship->mentor_id));
     }
 
     /** Stops the request (403) when the record is not the user's. */

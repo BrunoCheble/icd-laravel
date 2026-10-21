@@ -1515,5 +1515,6 @@
     "No meetings yet.": "Ainda sem encontros.",
     "Choose the new mentor.": "Escolha o novo responsável.",
     "Choose another member as the new mentor.": "Escolha outro membro como novo responsável.",
-    ":disciple is now followed by :mentor.": ":disciple passou a ser acompanhado por :mentor."
+    ":disciple is now followed by :mentor.": ":disciple passou a ser acompanhado por :mentor.",
+    "Only mine": "Só os meus"
 }

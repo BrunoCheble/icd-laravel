@@ -51,7 +51,7 @@
         <div class="m-head">
             <div>
                 <h1>{{ __('Discipleships') }}</h1>
-                <p>{{ $isAdmin ? __('Who follows whom, and their meetings.') : __('The members you follow, and your meetings with them.') }}</p>
+                <p>{{ __('Who follows whom, and their meetings.') }}</p>
             </div>
             @if ($linked)
                 <div class="m-head-actions">
@@ -65,19 +65,23 @@
             @endif
         </div>
 
+        {{-- Without a member, the user sees everyone's but has no disciples of their own --}}
         @unless ($linked)
             <div class="m-card m-section"><p class="m-muted"><i class="fa-solid fa-circle-info"></i> {{ __('Your user is not linked to a member: ask an administrator.') }}</p></div>
-        @else
-            @if ($isAdmin && $mentors->count() > 1)
-                <form method="GET" class="m-toolbar">
-                    <select name="mentor" class="m-input" onchange="this.form.submit()" aria-label="{{ __('Mentor') }}" style="max-width: 22rem;">
-                        <option value="">{{ __('All mentors') }}</option>
-                        @foreach ($mentors as $option)
-                            <option value="{{ $option->id }}" @selected($mentor === $option->id)>{{ $option->full_name }}</option>
-                        @endforeach
-                    </select>
-                </form>
-            @endif
+        @endunless
+            {{-- Everyone's, only one's own, or one mentor's --}}
+            <form method="GET" class="m-toolbar">
+                <select name="mentor" class="m-input" onchange="this.form.submit()" aria-label="{{ __('Mentor') }}" style="max-width: 22rem;">
+                    <option value="">{{ __('All mentors') }}</option>
+                    @if (auth()->user()->member_id)
+                        <option value="me" @selected($filter === 'me')>{{ __('Only mine') }}</option>
+                    @endif
+                    @foreach ($mentors as $option)
+                        @continue($option->id === auth()->user()->member_id)
+                        <option value="{{ $option->id }}" @selected($filter === (string) $option->id)>{{ $option->full_name }}</option>
+                    @endforeach
+                </select>
+            </form>
 
             <div class="dm-grid">
                 <div style="display: grid; gap: 1rem;">
@@ -86,7 +90,7 @@
                         <section class="m-card dm-card is-warning">
                             <h3><i class="fa-solid fa-circle-question" style="color: #d97706;"></i> {{ __('Did they take place?') }} <small>{{ $overdue->count() }}</small></h3>
                             @foreach ($overdue as $meeting)
-                                @include('discipleship::discipleships.partials.meeting-row', ['showMentor' => $isAdmin && ! $mentor])
+                                @include('discipleship::discipleships.partials.meeting-row', ['showMentor' => ! $mentor])
                             @endforeach
                         </section>
                     @endif
@@ -94,7 +98,7 @@
                     <section class="m-card dm-card">
                         <h3><i class="fa-solid fa-calendar-day" style="color: var(--brand-text);"></i> {{ __('Next meetings') }} <small>{{ $upcoming->count() }}</small></h3>
                         @forelse ($upcoming as $meeting)
-                            @include('discipleship::discipleships.partials.meeting-row', ['showMentor' => $isAdmin && ! $mentor])
+                            @include('discipleship::discipleships.partials.meeting-row', ['showMentor' => ! $mentor])
                         @empty
                             <p class="dm-empty">{{ __('No meetings scheduled.') }}</p>
                         @endforelse
@@ -104,7 +108,7 @@
                         <section class="m-card dm-card">
                             <h3><i class="fa-solid fa-clock-rotate-left m-muted"></i> {{ __('Latest meetings') }}</h3>
                             @foreach ($recent as $meeting)
-                                @include('discipleship::discipleships.partials.meeting-row', ['showMentor' => $isAdmin && ! $mentor])
+                                @include('discipleship::discipleships.partials.meeting-row', ['showMentor' => ! $mentor])
                             @endforeach
                         </section>
                     @endif
@@ -114,10 +118,10 @@
                 <section class="m-card dm-card">
                     <h3><i class="fa-solid fa-seedling" style="color: #16a34a;"></i> {{ __('Disciples') }} <small>{{ $groups->sum(fn ($group) => $group['items']->where('is_active', true)->count()) }}</small></h3>
                     @forelse ($groups as $group)
-                        @if ($isAdmin)
+                        @if (! $mentor)
                             <div class="dm-mentor">
                                 <i class="fa-solid fa-user-tie m-muted"></i> {{ $group['mentor']->full_name }}
-                                @unless (in_array($group['mentor']->id, $withUser, true))
+                                @unless (! $isAdmin || in_array($group['mentor']->id, $withUser, true))
                                     <span class="m-tag is-off" title="{{ __('Without a user of the admin: does not receive the reminders.') }}"><i class="fa-regular fa-bell-slash"></i> {{ __('No reminders') }}</span>
                                 @endunless
                             </div>
@@ -131,20 +135,21 @@
                                     <small><i class="fa-solid fa-check"></i> {{ __('Last held') }}: {{ $discipleship->last_held ? $discipleship->last_held->localAt()->format('d/m/Y') : '—' }}@if ($discipleship->held_count) · {{ trans_choice(':count meeting|:count meetings', $discipleship->held_count, ['count' => $discipleship->held_count]) }}@endif</small>
                                 </span>
                                 <span class="dm-actions">
-                                    @if ($discipleship->is_active)
+                                    @php($mine = \App\Modules\Discipleship\Support\DiscipleshipAccess::allows(auth()->user(), $discipleship->mentor_id))
+                                    @if ($discipleship->is_active && $mine)
                                         @can('discipleships.write')
                                             <a href="{{ route('discipleships.meetings.create', ['mentor' => $discipleship->mentor_id, 'disciples' => [$discipleship->disciple_id]]) }}" class="m-btn is-ghost is-icon" title="{{ __('New meeting') }}" aria-label="{{ __('New meeting') }}"><i class="fa-solid fa-calendar-plus"></i></a>
                                         @endcan
                                     @endif
-                                    @if ($discipleship->is_active || $isAdmin)
-                                        <a href="{{ route('discipleships.history', $discipleship) }}" class="m-btn is-ghost is-icon" title="{{ __('History') }}" aria-label="{{ __('History') }}"><i class="fa-solid fa-clock-rotate-left"></i></a>
-                                    @endif
+                                    <a href="{{ route('discipleships.history', $discipleship) }}" class="m-btn is-ghost is-icon" title="{{ __('History') }}" aria-label="{{ __('History') }}"><i class="fa-solid fa-clock-rotate-left"></i></a>
                                     @if ($phone = \App\Helpers\WhatsAppHelper::url($discipleship->disciple->phone_number))
                                         <a href="{{ $phone }}" target="_blank" rel="noopener" class="m-btn is-ghost is-icon" title="WhatsApp" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" style="color: #25d366;"></i></a>
                                     @endif
+                                    @if ($mine)
                                     @can('discipleships.update')
                                         <a href="{{ route('discipleships.edit', $discipleship) }}" class="m-btn is-ghost is-icon" title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}"><i class="fa-solid fa-pen"></i></a>
                                     @endcan
+                                    @endif
                                 </span>
                             </div>
                         @endforeach
@@ -153,6 +158,5 @@
                     @endforelse
                 </section>
             </div>
-        @endunless
     </div>
 </x-app-layout>

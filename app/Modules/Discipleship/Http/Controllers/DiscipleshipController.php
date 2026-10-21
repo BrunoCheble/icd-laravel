@@ -24,15 +24,17 @@ class DiscipleshipController extends Controller
     public function index(Request $request, ListDiscipleshipsService $service): View
     {
         $user = $request->user();
-        $mentor = $user->is_admin ? ($request->integer('mentor') ?: null) : null;
-        $mentors = $user->is_admin
-            ? Member::query()->whereIn('id', Discipleship::query()->select('mentor_id'))->orderBy('first_name')->get(['id', 'first_name', 'last_name'])
-            : collect();
+        // Everyone's (open to the module's users), only one's own ("me") or one mentor's.
+        $own = (int) $user->member_id;
+        $filter = (string) $request->query('mentor', '');
+        $mentor = $filter === 'me' ? ($own ?: -1) : ((int) $filter ?: null);
+        $mentors = Member::query()->whereIn('id', Discipleship::query()->select('mentor_id'))->orderBy('first_name')->get(['id', 'first_name', 'last_name']);
         // The mentors who receive the reminders (they have a user).
         $withUser = User::query()->whereNotNull('member_id')->pluck('member_id')->all();
 
-        return view('discipleship::discipleships.index', $service->execute($user, $mentor) + [
+        return view('discipleship::discipleships.index', $service->execute($mentor) + [
             'mentor' => $mentor,
+            'filter' => $filter,
             'mentors' => $mentors,
             'withUser' => $withUser,
             'linked' => DiscipleshipAccess::mentorOf($user) !== 0,
@@ -69,8 +71,6 @@ class DiscipleshipController extends Controller
     /** The disciple's meetings with every mentor, and who followed them. */
     public function history(Request $request, Discipleship $discipleship, GetDiscipleHistoryService $service): View
     {
-        abort_unless(DiscipleshipAccess::canViewHistory($request->user(), $discipleship), 403, __('You do not have access to this page.'));
-
         return view('discipleship::discipleships.history', $service->execute($discipleship) + ['discipleship' => $discipleship->load('disciple')]);
     }
 

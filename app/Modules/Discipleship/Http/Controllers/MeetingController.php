@@ -37,17 +37,17 @@ class MeetingController extends Controller
     }
 
     /**
-     * The mentor's own meeting, or an earlier one of a disciple they follow now (the member's history: they see it
-     * all and comment; its date and whether it took place stay with whoever held it).
+     * Any meeting (open to the module's users); its date and whether it took place are changed by its mentor, and
+     * comments come from them and from whoever follows one of its disciples now.
      */
     public function show(Request $request, DiscipleshipMeeting $meeting): View
     {
-        abort_unless(DiscipleshipAccess::canView($request->user(), $meeting), 403, __('You do not have access to this page.'));
         $meeting->load(['mentor', 'disciples', 'comments.user']);
 
         return view('discipleship::meetings.show', [
             'meeting' => $meeting,
             'canChange' => DiscipleshipAccess::allows($request->user(), $meeting->mentor_id),
+            'canComment' => DiscipleshipAccess::canComment($request->user(), $meeting),
         ]);
     }
 

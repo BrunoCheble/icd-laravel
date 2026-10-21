@@ -89,25 +89,31 @@ class DiscipleshipTest extends TestCase
         $this->actingAs($ana)->post('/discipleships', ['disciple_id' => $ana->member_id])->assertSessionHasErrors('disciple_id');
     }
 
-    public function test_a_mentor_sees_only_their_own(): void
+    public function test_everyone_with_the_module_sees_all_and_changes_only_their_own(): void
     {
         $ana = $this->mentor('Ana');
         $bruno = $this->mentor('Bruno');
         $joao = $this->member('João');
         $pedro = $this->member('Pedro');
         Discipleship::create(['mentor_id' => $ana->member_id, 'disciple_id' => $joao->id]);
-        Discipleship::create(['mentor_id' => $bruno->member_id, 'disciple_id' => $pedro->id]);
+        $brunos = Discipleship::create(['mentor_id' => $bruno->member_id, 'disciple_id' => $pedro->id]);
         $this->at('2026-10-21 10:00');
-        $brunos = $this->meeting($bruno, [$pedro], '2026-10-22 20:00');
+        $meeting = $this->meeting($bruno, [$pedro], '2026-10-22 20:00');
 
-        $this->actingAs($ana)->get('/discipleships')->assertOk()->assertSee('João ZZ Teste')->assertDontSee('Pedro ZZ Teste');
-        $this->actingAs($ana)->get(route('discipleships.meetings.show', $brunos))->assertForbidden();
-        $this->actingAs($ana)->patch(route('discipleships.meetings.outcome', $brunos), ['status' => 'held'])->assertForbidden();
+        $this->actingAs($ana)->get('/discipleships')->assertOk()->assertSee('João ZZ Teste')->assertSee('Pedro ZZ Teste');
+        // "Only mine".
+        $this->actingAs($ana)->get('/discipleships?mentor=me')->assertOk()->assertSee('João ZZ Teste')->assertDontSee('Pedro ZZ Teste');
+        $this->actingAs($ana)->get(route('discipleships.history', $brunos))->assertOk();
+        $this->actingAs($ana)->get(route('discipleships.meetings.show', $meeting))->assertOk()->assertDontSee(__('Add comment'));
+        // Seeing, not changing.
+        $this->actingAs($ana)->patch(route('discipleships.meetings.outcome', $meeting), ['status' => 'held'])->assertForbidden();
+        $this->actingAs($ana)->get(route('discipleships.edit', $brunos))->assertForbidden();
+        $this->actingAs($ana)->post(route('discipleships.meetings.comments.store', $meeting), ['body' => 'x'])->assertForbidden();
         // Not one's disciple: not in a meeting.
         $this->actingAs($ana)->post('/discipleships/meetings', ['disciples' => [$pedro->id], 'date' => '2026-10-23', 'time' => '20:00'])
             ->assertSessionHasErrors('disciples');
-        // The administrators see everyone's.
-        $this->actingAs(User::factory()->create())->get('/discipleships')->assertOk()->assertSee('João ZZ Teste')->assertSee('Pedro ZZ Teste');
+        // Without the module, nothing.
+        $this->actingAs(User::factory()->withPermissions(['prayers' => ['read']])->create())->get('/discipleships')->assertForbidden();
     }
 
     public function test_a_user_who_is_no_member_has_no_discipleships(): void
@@ -225,9 +231,8 @@ class DiscipleshipTest extends TestCase
         $this->actingAs($bruno)->post(route('discipleships.meetings.comments.store', $old), ['body' => 'Continuamos.'])->assertRedirect();
         $this->assertSame(2, $old->comments()->count());
         $this->actingAs($bruno)->patch(route('discipleships.meetings.outcome', $old), ['status' => 'scheduled'])->assertForbidden();
-        // Ana no longer follows him: his history (and Bruno's meetings) are not hers.
-        $this->actingAs($ana)->get(route('discipleships.history', $first))->assertForbidden();
+        // Ana no longer follows him: Bruno's new meetings she sees, not comments.
         $this->actingAs($bruno)->post('/discipleships/meetings', ['disciples' => [$joao->id], 'date' => '2026-10-15', 'time' => '20:00'])->assertSessionHasNoErrors();
-        $this->actingAs($ana)->get(route('discipleships.meetings.show', DiscipleshipMeeting::query()->latest('id')->first()))->assertForbidden();
+        $this->actingAs($ana)->post(route('discipleships.meetings.comments.store', DiscipleshipMeeting::query()->latest('id')->first()), ['body' => 'x'])->assertForbidden();
     }
 }

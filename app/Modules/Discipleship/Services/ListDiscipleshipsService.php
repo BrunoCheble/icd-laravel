@@ -2,22 +2,20 @@
 
 namespace App\Modules\Discipleship\Services;
 
-use App\Models\User;
 use App\Modules\Discipleship\Models\Discipleship;
 use App\Modules\Discipleship\Models\DiscipleshipMeeting;
-use App\Modules\Discipleship\Support\DiscipleshipAccess;
 use Illuminate\Support\Collection;
 
 class ListDiscipleshipsService
 {
     /**
-     * What the user handles (see DiscipleshipAccess), optionally of one mentor: the meetings to come, the ones
+     * Every discipleship (open to the module's users), optionally of one mentor: the meetings to come, the ones
      * whose time went by without being marked, the latest marked ones, and the disciples by mentor, each with their
      * next meeting and the last one held.
      */
-    public function execute(User $user, ?int $mentor = null): array
+    public function execute(?int $mentor = null): array
     {
-        $meetings = DiscipleshipAccess::scope(DiscipleshipMeeting::query(), $user)
+        $meetings = DiscipleshipMeeting::query()
             ->when($mentor, fn ($query) => $query->where('mentor_id', $mentor))
             ->where('scheduled_at', '>=', now()->subYear())
             ->with(['disciples:id,first_name,last_name', 'mentor:id,first_name,last_name'])
@@ -25,7 +23,7 @@ class ListDiscipleshipsService
             ->orderBy('scheduled_at')
             ->get();
 
-        $discipleships = DiscipleshipAccess::scope(Discipleship::query(), $user)
+        $discipleships = Discipleship::query()
             ->when($mentor, fn ($query) => $query->where('mentor_id', $mentor))
             ->with(['mentor:id,first_name,last_name,phone_number', 'disciple:id,first_name,last_name,phone_number'])
             ->get();
