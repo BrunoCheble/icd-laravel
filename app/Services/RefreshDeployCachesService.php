@@ -59,11 +59,10 @@ class RefreshDeployCachesService
             if ($signature === null || $signature === @file_get_contents($this->marker)) {
                 return;
             }
-            // Right after a pull OPcache may still hold the old files (bootstrap/providers.php…), and the caches
-            // would be built from them: they are read again first.
-            if (function_exists('opcache_reset')) {
-                @opcache_reset();
-            }
+            // Right after a pull OPcache may still hold the old files (bootstrap/providers.php, the routes…), and
+            // the caches would be built from them: they are read again first (opcache_reset() only takes effect
+            // after this request).
+            $this->forgetCompiledCode();
             try {
                 Artisan::call('optimize');
             } catch (Throwable $error) {
@@ -74,6 +73,22 @@ class RefreshDeployCachesService
         } finally {
             flock($lock, LOCK_UN);
             fclose($lock);
+        }
+    }
+
+    /** Drops the app's own PHP files from OPcache, so they are compiled again from what was pulled. */
+    private function forgetCompiledCode(): void
+    {
+        if (! function_exists('opcache_invalidate')) {
+            return;
+        }
+        foreach (['app', 'bootstrap', 'config', 'routes'] as $folder) {
+            $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(base_path($folder), \FilesystemIterator::SKIP_DOTS));
+            foreach ($files as $file) {
+                if ($file->getExtension() === 'php') {
+                    @opcache_invalidate($file->getPathname(), true);
+                }
+            }
         }
     }
 }
