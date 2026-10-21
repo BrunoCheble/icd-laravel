@@ -30,10 +30,11 @@
     <p class="mt-2 text-sm" x-show="message" x-text="message"></p>
 
     {{-- The kinds wanted (on all of this user's devices) --}}
-    <fieldset class="mt-5">
+    <fieldset class="mt-5" @if (! \App\Services\Notifications\SendPushDigestService::allowedKinds(auth()->user())) hidden @endif>
         <legend class="text-sm font-medium text-gray-900">{{ __('What to receive') }}</legend>
         <div class="mt-2 grid gap-2">
-            @foreach (\App\Services\Notifications\SendPushDigestService::KINDS as $kind => $label)
+            {{-- Only the kinds of the modules the user may see --}}
+            @foreach (array_intersect_key(\App\Services\Notifications\SendPushDigestService::KINDS, array_flip(\App\Services\Notifications\SendPushDigestService::allowedKinds(auth()->user()))) as $kind => $label)
                 <label class="inline-flex items-center gap-2 text-sm text-gray-700">
                     <input type="checkbox" value="{{ $kind }}" x-model="kinds" @change="savePreferences()" class="rounded border-gray-300" style="color: var(--brand);">
                     {{ __($label) }}

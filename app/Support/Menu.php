@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -23,17 +24,16 @@ class Menu
         return $this;
     }
 
-    /** Everything waiting in the menu's badges (the number on the installed app's icon). */
-    public function pendingTotal(): int
+    /** Everything waiting in the badges of the user's menu (the number on the installed app's icon). */
+    public function pendingTotal(?User $user = null): int
     {
         return collect($this->sections)->flatMap(fn (array $section) => $section['items'])
-            ->sum(fn (array $item) => ($item['badge'] ?? null) instanceof Closure && Route::has($item['route']) ? (int) $item['badge']() : 0);
+            ->sum(fn (array $item) => ($item['badge'] ?? null) instanceof Closure && Route::has($item['route']) && self::canSee($user, $item['route']) ? (int) $item['badge']() : 0);
     }
 
     /** Whether the user may see the item's page (its module's "read"; the pages of no module: the administrators). */
-    private static function canSee(Request $request, string $route): bool
+    private static function canSee(?User $user, string $route): bool
     {
-        $user = $request->user();
         if (! $user || $user->is_admin) {
             return true;
         }
@@ -50,7 +50,7 @@ class Menu
     {
         $sections = collect($this->sections)->sortBy('order')->map(function (array $section) use ($request) {
             $section['items'] = collect($section['items'])
-                ->filter(fn (array $item) => Route::has($item['route']) && self::canSee($request, $item['route']))
+                ->filter(fn (array $item) => Route::has($item['route']) && self::canSee($request->user(), $item['route']))
                 ->map(function (array $item) use ($request) {
                     $patterns = (array) ($item['active'] ?? preg_replace('/\.[^.]+$/', '.*', $item['route']));
                     $badge = ($item['badge'] ?? null) instanceof Closure ? (int) $item['badge']() : 0;

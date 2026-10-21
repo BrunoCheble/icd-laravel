@@ -12,6 +12,7 @@ use App\Modules\Members\Models\Member;
 use App\Modules\Music\Models\SongSuggestion;
 use App\Modules\Prayers\Models\Prayer;
 use App\Support\Menu;
+use App\Support\Permissions;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -21,7 +22,8 @@ use Illuminate\Support\Facades\Cache;
  * announcements to approve, private comments, chord suggestions, members who registered) right after it comes in
  * (sendNews(), see NotifyNews), and once an hour (execute()) the day's birthdays and wedding anniversaries in the
  * morning and anything new not sent yet. Both go on from where the last one stopped, so nothing is sent twice; what
- * comes at night waits for the morning. Each user gets only the kinds they chose in their profile (all by default).
+ * comes at night waits for the morning. Each user gets only the kinds they chose in their profile (all by default)
+ * of the modules they may see (see Permissions), and the number on the icon counts only what waits in those.
  */
 class SendPushDigestService
 {
@@ -39,6 +41,16 @@ class SendPushDigestService
         'comments' => 'Private comments on announcements',
         'suggestions' => 'Chord suggestions',
         'members' => 'Members who registered',
+    ];
+
+    // The modules a kind needs (seeing any of them).
+    public const KIND_MODULES = [
+        'birthdays' => ['dashboard', 'anniversaries'],
+        'prayers' => ['prayers'],
+        'announcements' => ['announcements'],
+        'comments' => ['announcements'],
+        'suggestions' => ['suggestions'],
+        'members' => ['members'],
     ];
 
     public function __construct(private SendPushService $push, private GetTodayMessagesService $today)
@@ -106,11 +118,12 @@ class SendPushDigestService
                 return [];
             }
 
-            // The number on the installed app's icon: what waits in the menu.
-            $waiting = app(Menu::class)->pendingTotal();
             $sent = [];
             foreach (PushSubscription::query()->with('user')->get()->groupBy('user_id') as $devices) {
-                $kinds = self::kindsOf($devices->first()->user);
+                $user = $devices->first()->user;
+                $kinds = self::kindsOf($user);
+                // The number on the installed app's icon: what waits in the user's menu.
+                $waiting = app(Menu::class)->pendingTotal($user);
                 $notifications = array_filter([
                     $morning && in_array('birthdays', $kinds, true) ? $morning : null,
                     $this->newsNotification($news->whereIn('kind', $kinds)->values()),
@@ -127,10 +140,16 @@ class SendPushDigestService
         }
     }
 
-    /** The kinds a user chose (all until they choose). */
+    /** The kinds a user gets: the ones they chose (all until they choose) of the modules they may see. */
     public static function kindsOf(?User $user): array
     {
-        return $user?->push_kinds ?? array_keys(self::KINDS);
+        return array_values(array_intersect($user?->push_kinds ?? array_keys(self::KINDS), self::allowedKinds($user)));
+    }
+
+    /** The kinds of the modules the user may see (administrators: all). */
+    public static function allowedKinds(?User $user): array
+    {
+        return array_keys(array_filter(self::KIND_MODULES, fn (array $modules) => collect($modules)->contains(fn ($module) => Permissions::allows($user, $module))));
     }
 
     /** The day's birthdays and wedding anniversaries, or null when there are none. */

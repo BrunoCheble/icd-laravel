@@ -30,11 +30,13 @@ class PushSubscriptionController extends Controller
     {
         $data = $request->validate([
             'kinds' => ['present', 'array'],
-            'kinds.*' => ['string', \Illuminate\Validation\Rule::in(array_keys(\App\Services\Notifications\SendPushDigestService::KINDS))],
+            'kinds.*' => ['string', \Illuminate\Validation\Rule::in(\App\Services\Notifications\SendPushDigestService::allowedKinds($request->user()))],
         ]);
-        $request->user()->forceFill(['push_kinds' => array_values(array_unique($data['kinds']))])->save();
+        // The kinds of the modules the user does not see stay on, for when they are given them.
+        $hidden = array_diff(array_keys(\App\Services\Notifications\SendPushDigestService::KINDS), \App\Services\Notifications\SendPushDigestService::allowedKinds($request->user()));
+        $request->user()->forceFill(['push_kinds' => array_values(array_unique([...$data['kinds'], ...$hidden]))])->save();
 
-        return response()->json(['kinds' => $request->user()->push_kinds]);
+        return response()->json(['kinds' => \App\Services\Notifications\SendPushDigestService::kindsOf($request->user())]);
     }
 
     public function destroy(Request $request): JsonResponse

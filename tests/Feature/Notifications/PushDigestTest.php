@@ -48,9 +48,11 @@ class PushDigestTest extends TestCase
         $this->travelTo(Carbon::parse($lisbon, SendPushDigestService::TIMEZONE));
     }
 
-    private function device(?array $kinds = null): PushSubscription
+    private function device(?array $kinds = null, ?array $permissions = null): PushSubscription
     {
-        return PushSubscription::create(['user_id' => User::factory()->create(['push_kinds' => $kinds])->id, 'endpoint' => 'https://push.example/' . uniqid(),
+        $factory = $permissions === null ? User::factory() : User::factory()->withPermissions($permissions);
+
+        return PushSubscription::create(['user_id' => $factory->create(['push_kinds' => $kinds])->id, 'endpoint' => 'https://push.example/' . uniqid(),
             'endpoint_hash' => hash('sha256', uniqid()), 'public_key' => 'k', 'auth_token' => 'a']);
     }
 
@@ -197,5 +199,35 @@ class PushDigestTest extends TestCase
         $this->actingAs($user)->patchJson('/push/preferences', ['kinds' => []])->assertOk();
         $this->assertSame([], $user->fresh()->push_kinds);
         $this->actingAs($user)->patchJson('/push/preferences', ['kinds' => ['nope']])->assertJsonValidationErrors('kinds.0');
+    }
+
+    public function test_a_user_gets_only_the_kinds_and_the_waiting_of_the_modules_they_may_see(): void
+    {
+        $prayersOnly = $this->device(null, ['prayers' => ['read']]);
+        $this->at('2026-10-21 08:05');
+        $this->member(['first_name' => 'Maria', 'last_name' => 'ZZ Teste', 'date_of_birth' => '1990-10-21']);
+        Prayer::create(['name' => 'ZZ Teste', 'request' => 'Paz']);
+        $this->member(['membership_status' => MembershipStatus::PENDING]);
+        Announcement::create(['title' => 'ZZ Teste', 'description' => 'x', 'type' => 'service', 'is_approved' => false, 'member_id' => $this->member()->id, 'contact' => '910000000']);
+
+        app(SendPushDigestService::class)->execute();
+
+        $this->assertCount(1, $this->sent);
+        $this->assertSame('1 novo pedido de oração', $this->sent[0]['body']);
+        // The announcement waiting is not in their menu: the icon shows nothing.
+        $this->assertSame(0, $this->sent[0]['badge']);
+        $this->assertSame([$prayersOnly->user_id], $this->to[0]);
+    }
+
+    public function test_the_profile_offers_only_the_kinds_of_the_modules_given_and_keeps_the_others_on(): void
+    {
+        $user = User::factory()->withPermissions(['prayers' => ['read'], 'members' => ['read']])->create();
+        $this->assertSame(['prayers', 'members'], SendPushDigestService::kindsOf($user));
+
+        $this->actingAs($user)->patchJson('/push/preferences', ['kinds' => ['suggestions']])->assertJsonValidationErrors('kinds.0');
+        $this->actingAs($user)->patchJson('/push/preferences', ['kinds' => ['prayers']])->assertOk()->assertJson(['kinds' => ['prayers']]);
+        // Given the suggestions later, they come.
+        $user->forceFill(['permissions' => ['prayers' => ['read'], 'suggestions' => ['read']]])->save();
+        $this->assertSame(['prayers', 'suggestions'], SendPushDigestService::kindsOf($user->fresh()));
     }
 }
