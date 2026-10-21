@@ -7,6 +7,29 @@
     <script src="{{ asset('js/chord-lines.js') }}?v={{ filemtime(public_path('js/chord-lines.js')) }}"></script>
 
     <style>
+        /* Importing a score: the preview of its blocks */
+        .score-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1rem; }
+        .score-modal-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, .55); }
+        .score-modal-box { position: relative; display: flex; flex-direction: column; width: min(52rem, 100%); max-height: calc(100vh - 2rem); border-radius: 1rem; background: var(--bg-fff); box-shadow: 0 30px 80px rgba(0, 0, 0, .35); overflow: hidden; }
+        .score-modal-head, .score-modal-foot { display: flex; align-items: center; gap: .75rem; padding: .9rem 1.1rem; border-bottom: 1px solid var(--bd-e5e7eb); }
+        .score-modal-head > div { flex: 1; min-width: 0; }
+        .score-modal-head h2 { margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--tx-111827); }
+        .score-modal-head p { margin: .1rem 0 0; font-size: .85rem; color: var(--tx-6b7280); }
+        .score-modal-foot { border-top: 1px solid var(--bd-e5e7eb); border-bottom: 0; justify-content: flex-end; flex-wrap: wrap; }
+        .score-modal-body { flex: 1; overflow-y: auto; padding: 1rem 1.1rem; }
+        .score-warning { margin: 0 0 .75rem; padding: .6rem .8rem; border-radius: .6rem; background: var(--bg-fef3c7); color: var(--tx-92400e); font-size: .85rem; }
+        .score-check { display: inline-flex; align-items: center; gap: .45rem; margin-bottom: .75rem; font-size: .9rem; color: var(--tx-374151); }
+        .score-blocks { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+        .score-blocks li { padding: .6rem .75rem; border: 1px solid var(--bd-e5e7eb); border-radius: .7rem; }
+        .score-blocks li.is-joined { margin-top: -.45rem; border-top-style: dashed; border-top-left-radius: 0; border-top-right-radius: 0; opacity: .8; }
+        .score-block-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+        .score-name { width: 12rem; min-height: 34px; padding: 0 .6rem; border: 1px solid var(--bd-d1d5db); border-radius: .5rem; background: var(--bg-fff); font-weight: 700; color: var(--tx-111827); }
+        .score-tag { padding: .1rem .45rem; border-radius: 999px; background: var(--bg-dcfce7); color: var(--tx-166534); font-size: .72rem; font-weight: 700; }
+        .score-meta { font-size: .8rem; color: var(--tx-6b7280); }
+        .score-join { margin-left: auto; display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; color: var(--tx-4b5563); }
+        .score-chords { margin-top: .4rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem; color: var(--tx-111827); overflow-wrap: anywhere; }
+        .score-lyrics { margin-top: .2rem; font-size: .82rem; color: var(--tx-6b7280); font-style: italic; }
+        .score-error { margin-right: auto; color: #dc2626; font-size: .85rem; }
         .bars-page { --type-intro: #0369a1; --type-verse: #047857; --type-prechorus: #b45309; --type-chorus: #be123c; --type-bridge: #6d28d9; --type-instrumental: #4338ca; --type-ending: #475569; --type-other: #111827; }
         /* Chord suggestions for some bars (local only) */
         .helper-panel { margin: .5rem 0; padding: .75rem; border: 1px solid var(--brand-200); border-radius: .75rem; background: var(--brand-soft); }
@@ -887,6 +910,64 @@
                             <p class="ws-panel-help mt-2">{{ __('One line per bar: the block that starts in it and the chord of each beat ("/" or empty: the chord goes on; "G D": G on the beat and D on the "and"). Importing needs the same number of bars and is not saved until you save; in a version only the chords are imported.') }}</p>
                             <p class="ws-panel-help mt-2" x-show="csvMessage" x-text="csvMessage" :style="csvError ? 'color: #dc2626' : ''"></p>
                         </div>
+                        {{-- A MusicXML score (.mxl) made into the grid: previewed, the blocks renamed or joined, then saved like the grid --}}
+                        <div class="ws-panel-section" x-show="!versionId" x-data="scoreImporter(@js([
+                                'readUrl' => route('songs.score.read', $song),
+                                'saveUrl' => route('songs.bars.update', $song),
+                                'firstStart' => collect($blocks)->first(fn ($block) => is_array($block) && ($block['jump'] ?? null) !== 'start')['start'] ?? null,
+                                'hasGrid' => $song->hasBars(),
+                            ]))">
+                            <div class="ws-panel-label"><i class="fa-solid fa-music"></i> {{ __('Score (MusicXML)') }}</div>
+                            <div class="ws-panel-row">
+                                <button type="button" class="ws-btn" @click="$refs.scoreFile.click()" :disabled="scoreBusy"><i class="fa-solid" :class="scoreBusy ? 'fa-spinner fa-spin' : 'fa-file-import'"></i> {{ __('Import score (.mxl)') }}</button>
+                                <input type="file" x-ref="scoreFile" accept=".mxl,.musicxml,.xml" hidden @change="scoreRead($event.target.files[0]); $event.target.value = ''">
+                            </div>
+                            <p class="ws-panel-help mt-2">{{ __('A score with chord symbols (MuseScore, Sibelius…): the bars, each chord\'s beats, the repeats, the tempo and the blocks come from it. You see it first and can rename or join blocks; the grid before stays in the history.') }}</p>
+                            <p class="ws-panel-help mt-2" x-show="scoreError" x-text="scoreError" style="color: #dc2626"></p>
+
+                            <template x-teleport="body">
+                                <div class="score-modal" x-show="scorePreview" x-cloak @keydown.escape.window="scorePreview = null">
+                                    <div class="score-modal-overlay" @click="scorePreview = null"></div>
+                                    <div class="score-modal-box" role="dialog" aria-modal="true" :aria-label="@js(__('Import score'))">
+                                        <header class="score-modal-head">
+                                            <div>
+                                                <h2 x-text="(scorePreview?.title || @js(__('Score'))) "></h2>
+                                                <p x-text="scoreSummary()"></p>
+                                            </div>
+                                            <button type="button" class="ws-btn" @click="scorePreview = null" aria-label="{{ __('Close') }}"><i class="fa-solid fa-xmark"></i></button>
+                                        </header>
+                                        <div class="score-modal-body">
+                                            <p class="score-warning" x-show="scoreHasGrid"><i class="fa-solid fa-triangle-exclamation"></i> {{ __('Importing replaces this song\'s grid (the one before stays in the history). Changes not saved on this page are lost.') }}</p>
+                                            <label class="score-check" x-show="scorePreview?.bpm">
+                                                <input type="checkbox" x-model="scoreUseBpm"> <span x-text="@js(__('Use the score\'s tempo')) + ' (' + scorePreview?.bpm + ' BPM)'"></span>
+                                            </label>
+                                            <datalist id="score-sections">
+                                                <template x-for="name in scoreNames()" :key="name"><option :value="name"></option></template>
+                                            </datalist>
+                                            <ol class="score-blocks">
+                                                <template x-for="(block, i) in scoreBlocks" :key="i">
+                                                    <li :class="{ 'is-joined': block.join }">
+                                                        <div class="score-block-head">
+                                                            <input type="text" class="score-name" x-model="block.section" list="score-sections" maxlength="100" :disabled="block.join" :aria-label="@js(__('Block name'))">
+                                                            <span class="score-tag" x-show="block.known">{{ __('lyrics of the song') }}</span>
+                                                            <span class="score-meta" x-text="block.bars + ' ' + @js(__('bars')) + ' · ' + @js(__('score')) + ' ' + block.measures"></span>
+                                                            <label class="score-join" x-show="i > 0"><input type="checkbox" x-model="block.join"> {{ __('join to the block before') }}</label>
+                                                        </div>
+                                                        <div class="score-chords" x-text="scoreBars(block)"></div>
+                                                        <div class="score-lyrics" x-show="block.lyrics" x-text="(block.lyrics || '').split('\n')[0]"></div>
+                                                    </li>
+                                                </template>
+                                            </ol>
+                                        </div>
+                                        <footer class="score-modal-foot">
+                                            <span class="score-error" x-show="scoreError" x-text="scoreError"></span>
+                                            <button type="button" class="ws-btn" @click="scorePreview = null">{{ __('Cancel') }}</button>
+                                            <button type="button" class="ws-btn is-primary" @click="scoreImport()" :disabled="scoreBusy"><i class="fa-solid" :class="scoreBusy ? 'fa-spinner fa-spin' : 'fa-check'"></i> {{ __('Import to the grid') }}</button>
+                                        </footer>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
                         {{-- Every chord twice as long (fast songs, a chord over two bars) or half as long (two bars become one) --}}
                         <div class="ws-panel-section" x-show="!versionId">
                             <div class="ws-panel-label"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> {{ __('Double or halve the bars') }}</div>
@@ -925,6 +1006,93 @@
         // Grid of bars of a chord map with durations (from the study app or created on the layout page).
         // The whole song is a list of ticks (two per beat: on the beat and halfway, "and"), each with its chord;
         // blocks start at a tick. Saving turns the ticks of each block back into chords and durations in beats.
+        // Importing a MusicXML score into the grid (inside songBars: it reads updatedAt, key, bpm, dirty, commonNames):
+        // the score is read on the server, its blocks shown to rename or join, then saved like the grid.
+        function scoreImporter({ readUrl, saveUrl, firstStart, hasGrid }) {
+            const csrf = () => document.querySelector('meta[name="csrf-token"]').content;
+            return {
+                scorePreview: null,
+                scoreBlocks: [],
+                scoreBusy: false,
+                scoreError: '',
+                scoreUseBpm: true,
+                scoreHasGrid: hasGrid,
+                async scoreRead(file) {
+                    if (!file) return;
+                    this.scoreBusy = true;
+                    this.scoreError = '';
+                    try {
+                        const body = new FormData();
+                        body.append('score', file);
+                        const response = await fetch(readUrl, { method: 'POST', headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf() }, body });
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(Object.values(result.errors || {})[0]?.[0] || result.message || @js(__('Something went wrong')));
+                        this.scorePreview = result;
+                        this.scoreBlocks = result.blocks.map(block => ({ ...block, join: false }));
+                        this.scoreUseBpm = !!result.bpm;
+                    } catch (error) {
+                        this.scoreError = error.message;
+                    } finally {
+                        this.scoreBusy = false;
+                    }
+                },
+                scoreSummary() {
+                    const p = this.scorePreview;
+                    return p ? [p.bars + ' ' + @js(__('bars')), p.meter, p.bpm ? p.bpm + ' BPM' : null, this.scoreBlocks.length + ' ' + @js(__('blocks'))].filter(Boolean).join(' · ') : '';
+                },
+                scoreNames() {
+                    return [...new Set([...this.scoreBlocks.map(block => block.section), ...(this.commonNames || [])].filter(Boolean))];
+                },
+                // The block's chords bar by bar: "E E4 | E | C#m7 | C#m7 | A2 …" (the first 12 bars).
+                scoreBars(block) {
+                    const slots = [];
+                    let d = 0;
+                    block.chords.filter(chord => chord !== '|').forEach(chord => {
+                        for (let i = 0; i < Math.round(block.durations[d] * 2); i++) slots.push(chord);
+                        d++;
+                    });
+                    const perBar = block.beats_per_bar * 2;
+                    const bars = [];
+                    for (let i = 0; i < slots.length; i += perBar) bars.push([...new Set(slots.slice(i, i + perBar))].join(' '));
+                    const text = bars.slice(0, 12).join(' | ');
+                    return bars.length > 12 ? text + ' | …' : text;
+                },
+                async scoreImport() {
+                    if (this.dirty && !confirm(@js(__('This page has changes not saved; importing loses them. Import anyway?')))) return;
+                    const blocks = [];
+                    for (const block of this.scoreBlocks) {
+                        const data = { section: (block.section || '').trim() || '?', chords: [...block.chords], durations: [...block.durations], beats_per_bar: block.beats_per_bar, lyrics: block.lyrics || null, anchor: block.anchor || null };
+                        const before = blocks[blocks.length - 1];
+                        if (block.join && before) {
+                            before.chords.push('|', ...data.chords);
+                            before.durations.push(...data.durations);
+                            if (data.lyrics && data.lyrics !== before.lyrics) before.lyrics = [before.lyrics, data.lyrics].filter(Boolean).join('\n');
+                        } else {
+                            blocks.push(data);
+                        }
+                    }
+                    // Where bar 1 was marked in the recording stays.
+                    if (firstStart !== null && blocks[0]) blocks[0].start = firstStart;
+                    this.scoreBusy = true;
+                    this.scoreError = '';
+                    try {
+                        const response = await fetch(saveUrl, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf() },
+                            body: JSON.stringify({ blocks, updated_at: this.updatedAt, bpm: this.scoreUseBpm && this.scorePreview.bpm ? this.scorePreview.bpm : this.bpm, musical_key: this.key }),
+                        });
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(Object.values(result.errors || {})[0]?.[0] || result.message || @js(__('Something went wrong')));
+                        this.dirty = false;
+                        location.reload();
+                    } catch (error) {
+                        this.scoreError = error.message;
+                        this.scoreBusy = false;
+                    }
+                },
+            };
+        }
+
         function songBars(config) {
             const audio = config.audioUrl ? new Audio(config.audioUrl) : null;
             if (audio) audio.preload = 'auto';

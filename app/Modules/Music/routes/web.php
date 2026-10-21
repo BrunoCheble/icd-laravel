@@ -9,6 +9,7 @@ use App\Modules\Music\Http\Controllers\SongChordSheetController;
 use App\Modules\Music\Http\Controllers\SongController;
 use App\Modules\Music\Http\Controllers\SongHistoryController;
 use App\Modules\Music\Http\Controllers\SongLayoutController;
+use App\Modules\Music\Http\Controllers\SongScoreController;
 use App\Modules\Music\Http\Controllers\SongLessonController;
 use App\Modules\Music\Http\Controllers\SongPracticeController;
 use App\Modules\Music\Http\Controllers\SongSheetController;
@@ -52,6 +53,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/songs/{song}/versions/{version}', [SongVersionController::class, 'update'])->name('songs.versions.update');
     Route::delete('/songs/{song}/versions/{version}', [SongVersionController::class, 'destroy'])->name('songs.versions.destroy');
     Route::post('/songs/{song}/bars', [SongLayoutController::class, 'createBars'])->name('songs.bars.create');
+    // A MusicXML score read as the grid of bars (a preview; the grid page saves it).
+    Route::post('/songs/{song}/score', [SongScoreController::class, 'read'])->name('songs.score.read');
     Route::post('/songs/{song}/bars/clear', [SongLayoutController::class, 'clearChords'])->name('songs.bars.clear');
     Route::get('/songs/{song}/practice', [SongPracticeController::class, 'show'])->name('songs.practice');
     Route::get('/songs/{song}/lessons', [SongLessonController::class, 'index'])->name('songs.lessons.index');

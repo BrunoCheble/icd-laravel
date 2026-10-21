@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <work><work-title>ZZ Teste Partitura</work-title></work>
+  <part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+      <direction><direction-type><rehearsal>Intro</rehearsal></direction-type><sound tempo="80"/></direction>
+      <harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>
+      <note><pitch><step>C</step><octave>4</octave></pitch><duration>2</duration><voice>1</voice></note>
+      <harmony><root><root-step>G</root-step></root><kind text="sus4">suspended-fourth</kind></harmony>
+      <note><pitch><step>D</step><octave>4</octave></pitch><duration>2</duration><voice>1</voice></note>
+    </measure>
+    <measure number="2">
+      <harmony><root><root-step>A</root-step></root><kind text="m7">minor-seventh</kind></harmony>
+      <note><rest/><duration>2</duration><voice>1</voice></note>
+      <note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><lyric number="1"><syllabic>begin</syllabic><text>Can</text></lyric></note>
+      <note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><lyric number="1"><syllabic>middle</syllabic><text>te</text></lyric></note>
+      <barline location="right"><bar-style>light-light</bar-style></barline>
+    </measure>
+    <measure number="3">
+      <barline location="left"><bar-style>heavy-light</bar-style><repeat direction="forward"/></barline>
+      <harmony><root><root-step>F</root-step></root><kind>major</kind></harmony>
+      <note><pitch><step>F</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><lyric number="1"><syllabic>end</syllabic><text>mos</text></lyric></note>
+      <note><pitch><step>F</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><lyric number="1"><syllabic>single</syllabic><text>a</text></lyric></note>
+      <note><pitch><step>G</step><octave>4</octave></pitch><duration>2</duration><voice>1</voice><lyric number="1"><syllabic>single</syllabic><text>Deus</text></lyric></note>
+    </measure>
+    <measure number="4">
+      <harmony><root><root-step>G</root-step></root><kind>dominant</kind></harmony>
+      <note><pitch><step>G</step><octave>4</octave></pitch><duration>4</duration><voice>1</voice><lyric number="1"><syllabic>single</syllabic><text>Aleluia</text></lyric></note>
+      <barline location="right"><bar-style>light-heavy</bar-style><repeat direction="backward"/></barline>
+    </measure>
+    <measure number="5">
+      <harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>
+      <note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration><voice>1</voice></note>
+      <barline location="right"><bar-style>light-heavy</bar-style></barline>
+    </measure>
+  </part>
+</score-partwise>

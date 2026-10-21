@@ -50,6 +50,7 @@ class Permissions
         'songs.sheet.*' => 'update',
         'songs.sheet-section.*' => 'update',
         'songs.layout.*' => 'update',
+        'songs.score.*' => 'update',
         'songs.lessons.*' => 'update',
         'songs.versions.*' => 'update',
         'songs.history.restore' => 'update',

@@ -1571,5 +1571,22 @@
     "Is active": "Ativo",
     "Biography layout": "Organização",
     "E.g. Pastor Presidente, Vocal": "Ex.: Pastor Presidente, Vocal",
-    "Role (optional)": "Cargo (opcional)"
+    "Role (optional)": "Cargo (opcional)",
+    "A score with chord symbols (MuseScore, Sibelius…): the bars, each chord's beats, the repeats, the tempo and the blocks come from it. You see it first and can rename or join blocks; the grid before stays in the history.": "Uma partitura com cifras (MuseScore, Sibelius…): os compassos, os tempos de cada acorde, as repetições, o andamento e os blocos vêm dela. Vê primeiro e pode mudar o nome ou juntar blocos; a grelha anterior fica no histórico.",
+    "Choose a MusicXML score (.mxl, .musicxml or .xml).": "Escolha uma partitura MusicXML (.mxl, .musicxml ou .xml).",
+    "Import score": "Importar partitura",
+    "Import score (.mxl)": "Importar partitura (.mxl)",
+    "Import to the grid": "Importar para a grelha",
+    "Importing replaces this song's grid (the one before stays in the history). Changes not saved on this page are lost.": "Importar substitui a grelha desta música (a anterior fica no histórico). As alterações não guardadas nesta página perdem-se.",
+    "Score": "Partitura",
+    "Score (MusicXML)": "Partitura (MusicXML)",
+    "The .mxl file could not be read.": "Não foi possível ler o ficheiro .mxl.",
+    "The score could not be read: :error": "Não foi possível ler a partitura: :error",
+    "The score has no chord symbols (only notes): there is nothing to make the bars from.": "A partitura não tem cifras (só notas): não há de onde fazer os compassos.",
+    "This is not a MusicXML score (score-partwise).": "Isto não é uma partitura MusicXML (score-partwise).",
+    "This page has changes not saved; importing loses them. Import anyway?": "Esta página tem alterações por guardar; ao importar perdem-se. Importar mesmo assim?",
+    "Use the score's tempo": "Usar o andamento da partitura",
+    "join to the block before": "juntar ao bloco anterior",
+    "lyrics of the song": "letra da música",
+    "score": "partitura"
 }
