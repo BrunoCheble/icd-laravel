@@ -154,6 +154,19 @@
                 </dl>
             </section>
 
+            <section class="m-card m-section">
+                <h3 class="m-section-title"><i class="fa-solid fa-people-group"></i> {{ __('Ministries') }}</h3>
+                @forelse ($ministries as $membership)
+                    <div style="display: flex; align-items: center; gap: .5rem; padding: .35rem 0; {{ $membership->active ? '' : 'opacity: .55;' }}">
+                        <a href="{{ route('ministries.show', $membership->ministry) }}" style="font-weight: 700; color: var(--tx-111827); text-decoration: none;">{{ $membership->ministry->name }}</a>
+                        @if ($membership->roleName())<span class="m-tag is-media">{{ $membership->roleName() }}</span>@endif
+                        @unless ($membership->active)<span class="m-tag is-off">{{ __('Not active') }}</span>@endunless
+                    </div>
+                @empty
+                    <p class="m-muted">{{ __('Not in any ministry.') }}</p>
+                @endforelse
+            </section>
+
             @if ($member->notes)
                 <section class="m-card m-section is-wide">
                     <h3 class="m-section-title"><i class="fa-solid fa-note-sticky"></i> {{ __('Notes') }}</h3>

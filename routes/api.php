@@ -5,6 +5,7 @@ use App\Modules\Announcements\Http\Controllers\PublicAnnouncementApiController;
 use App\Modules\Announcements\Http\Controllers\PublicCommentController;
 use App\Modules\Announcements\Http\Controllers\PublicRatingController;
 use App\Modules\Members\Http\Controllers\PublicMemberController;
+use App\Modules\Ministries\Http\Controllers\PublicPastorController;
 use App\Modules\Prayers\Http\Controllers\PublicPrayerApiController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +23,8 @@ Route::prefix('public')->group(function () {
     Route::post('/announcements', [PublicAnnouncementApiController::class, 'store'])->middleware('throttle:5,1,announce-site')->name('api.announcements.store');
     Route::get('/members/check/{document}', [PublicMemberController::class, 'check'])->middleware('throttle:10,1,nif-check-site')->name('api.members.check');
     Route::post('/members', [PublicMemberController::class, 'store'])->middleware('throttle:5,1,member-register')->name('api.members.store');
+    // The site's "Pastores": the pastoral ministry's members, with role, photo and biography.
+    Route::get('/pastors', [PublicPastorController::class, 'index'])->middleware('throttle:60,1,pastors-site')->name('api.pastors.index');
     // A prayer request from the church's site (anyone).
     Route::post('/prayers', [PublicPrayerApiController::class, 'store'])->middleware('throttle:5,1,prayer-site')->name('api.prayers.store');
 });

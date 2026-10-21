@@ -1,7 +1,5 @@
 <?php
 
-use App\Http\Controllers\MinistryController;
-use App\Http\Controllers\MinistryMemberController;
 use App\Http\Controllers\LockController;
 use App\Http\Controllers\PasskeyController;
 use App\Http\Controllers\ProfileController;
@@ -39,12 +37,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/report/families', [ReportController::class, 'families'])->name('report.families.index');
-
-    Route::resource('ministries', MinistryController::class);
-
-    Route::get('/ministries-members/manage/{ministryId}', [MinistryMemberController::class, 'manage'])->name('ministries-members.manage');
-    Route::post('/ministries-members/{ministryId}', [MinistryMemberController::class, 'store'])->name('ministries-members.store');
-    Route::delete('/ministries-members/{id}', [MinistryMemberController::class, 'destroy'])->name('ministries-members.destroy');
 
 });
 

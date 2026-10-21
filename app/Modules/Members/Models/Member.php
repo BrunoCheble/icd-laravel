@@ -6,7 +6,7 @@ use App\Enums\Gender;
 use App\Enums\MemberOptions;
 use App\Enums\MaritalStatus;
 use App\Enums\MembershipStatus;
-use App\Models\Ministry;
+use App\Modules\Ministries\Models\MinistryMember;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -232,9 +232,9 @@ class Member extends Model
         return \Carbon\Carbon::parse($this->date_of_birth)->format('d/m/Y');
     }
 
-    // Ministries the member serves in (many-to-many)
-    public function ministries()
+    // The ministries the member is in, each with their role, order and whether they are active
+    public function ministryMemberships()
     {
-        return $this->belongsToMany(Ministry::class);
+        return $this->hasMany(MinistryMember::class);
     }
 }

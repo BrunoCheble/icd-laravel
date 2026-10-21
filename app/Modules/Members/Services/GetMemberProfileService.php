@@ -12,7 +12,7 @@ class GetMemberProfileService
 
     /**
      * What the member's page shows besides the member: its family (spouse, father, mother and children, members of
-     * the church too) and what it still has to send when pending.
+     * the church too), the ministries it is in (with its role) and what it still has to send when pending.
      */
     public function execute(Member $member): array
     {
@@ -24,6 +24,9 @@ class GetMemberProfileService
                 ->orderBy('date_of_birth')
                 ->get(),
             'pending' => $this->pending->execute($member),
+            'ministries' => $member->ministryMemberships()->with(['ministry', 'ministryRole'])->get()
+                ->filter(fn ($membership) => $membership->ministry)
+                ->sortBy([['active', 'desc'], fn ($a, $b) => strcmp($a->ministry->name, $b->ministry->name)])->values(),
         ];
     }
 }

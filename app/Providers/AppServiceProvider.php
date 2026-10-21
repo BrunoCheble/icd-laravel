@@ -45,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
                 ['label' => 'Members', 'icon' => 'fa-solid fa-users', 'route' => 'members.index'],
                 ['label' => 'Visitors', 'icon' => 'fa-solid fa-hand', 'route' => 'visitors.index'],
                 ['label' => 'Anniversaries', 'icon' => 'fa-solid fa-cake-candles', 'route' => 'report.anniversaries.index', 'active' => 'report.anniversaries.*'],
+                ['label' => 'Ministries', 'icon' => 'fa-solid fa-people-group', 'route' => 'ministries.index', 'active' => ['ministries.*', 'ministries-members.*']],
             ])
             ->section('communication', 'Communication', 20, [
                 // The announcements waiting for approval and the members' comments not read yet.
