@@ -16,6 +16,7 @@ class PublicPrayerApiController extends Controller
     public function store(PublicPrayerRequest $request, RegisterPrayerService $service): JsonResponse
     {
         $service->execute($request->validated());
+        \App\Modules\Prayers\Support\PrayerDailyLimit::hit($request->input('device'), $request->ip());
 
         return response()->json([
             'title' => __('We received your request.'),

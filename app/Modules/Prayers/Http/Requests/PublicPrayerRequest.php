@@ -28,7 +28,19 @@ class PublicPrayerRequest extends FormRequest
             'name' => NameHelper::normalizeName((string) $this->input('name')),
             'request' => trim((string) $this->input('request')) ?: null,
             'phone_number' => $phone ?: null,
+            // The random code this browser keeps (see PrayerDailyLimit).
+            'device' => substr(preg_replace('/[^A-Za-z0-9-]/', '', (string) $this->input('device')), 0, 64) ?: null,
         ]);
+    }
+
+    /** Up to 3 requests a day from the same person (see PrayerDailyLimit). */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if (! \App\Modules\Prayers\Support\PrayerDailyLimit::allows($this->input('device'), $this->input('phone_number'), $this->ip())) {
+                $validator->errors()->add('request', __('You already sent 3 prayer requests today. You can send another tomorrow. God bless you!'));
+            }
+        });
     }
 
     public function rules(): array

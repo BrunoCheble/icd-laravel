@@ -118,4 +118,36 @@ class PrayersTest extends TestCase
         $prayer->forceFill(['created_at' => $at])->save();
         return $prayer;
     }
+
+    public function test_the_same_person_sends_up_to_three_requests_a_day(): void
+    {
+        // More than the per-minute limit, which is not what this is about
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+        $send = fn (array $data) => $this->postJson('/api/public/prayers', $data + ['name' => 'ZZ Teste Limite', 'request' => 'Paz']);
+
+        foreach ([1, 2, 3] as $n) {
+            $send(['device' => 'aparelho-a'])->assertCreated();
+        }
+        $send(['device' => 'aparelho-a'])->assertUnprocessable()
+            ->assertJsonValidationErrors(['request' => 'Já enviou 3 pedidos de oração hoje. Pode enviar outro amanhã. Deus o abençoe!']);
+        // Another device is another person
+        $send(['device' => 'aparelho-b'])->assertCreated();
+
+        // The same mobile number on other devices counts too
+        foreach (['c', 'd', 'e'] as $device) {
+            $send(['device' => "aparelho-{$device}", 'phone_number' => '912 000 111'])->assertCreated();
+        }
+        $send(['device' => 'aparelho-f', 'phone_number' => '+351912000111'])->assertUnprocessable();
+
+        // The same connection: up to 15 (at the church many share it)
+        foreach (range(1, 8) as $n) {
+            $send(['device' => "outro-{$n}"])->assertCreated();
+        }
+        $send(['device' => 'outro-99'])->assertUnprocessable();
+        $this->assertSame(15, Prayer::where('name', 'Zz Teste Limite')->count());
+
+        // A day later, again
+        $this->travel(25)->hours();
+        $send(['device' => 'aparelho-a'])->assertCreated();
+    }
 }

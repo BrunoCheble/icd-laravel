@@ -31,6 +31,7 @@ class PublicPrayerController extends Controller
     public function store(PublicPrayerRequest $request, RegisterPrayerService $service): RedirectResponse
     {
         $service->execute($request->validated());
+        \App\Modules\Prayers\Support\PrayerDailyLimit::hit($request->input('device'), $request->ip());
 
         $locale = self::locale($request);
         return redirect()->route('site.prayer', $locale === 'pt' ? [] : ['lang' => $locale])->with('sent', true);

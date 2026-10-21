@@ -85,11 +85,13 @@
                 <a href="{{ route('site.prayer', $lang === 'pt' ? [] : ['lang' => $lang]) }}" class="pr-btn is-light"><i class="fa-solid fa-plus"></i> {{ __('Send another request') }}</a>
             </div>
         @else
-            <form method="POST" action="{{ route('prayer.register') }}" class="pr-card" x-data="prayerForm(@js(['request' => old('request', '')]))" x-init="restore()" @submit="send()">
+            <form method="POST" action="{{ route('prayer.register') }}" class="pr-card" x-data="prayerForm(@js(['request' => old('request', '')]))" x-init="restore(); $refs.device.value = prayerDevice()" @submit="send()">
                 @csrf
                 <input type="hidden" name="lang" value="{{ $lang }}">
                 {{-- Left empty by people: a filled one is a bot --}}
                 <div class="pr-hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
+                {{-- This browser's random code (counts the requests of the day, see PrayerDailyLimit) --}}
+                <input type="hidden" name="device" x-ref="device">
 
                 <div class="pr-field">
                     <label for="name">{{ __('Name') }}</label>
@@ -131,6 +133,15 @@
     <script>
         // The form: topics written at the start of the request, a characters count, sending once, and the name and
         // number remembered on this device when asked (only here, in the browser).
+        // A random code kept in this browser: the requests of the day are counted by it (no personal data).
+        function prayerDevice() {
+            try {
+                let id = localStorage.getItem('icd-device');
+                if (!id) { id = crypto.randomUUID(); localStorage.setItem('icd-device', id); }
+                return id;
+            } catch (e) { return ''; }
+        }
+
         function prayerForm({ request }) {
             const KEY = 'icd-prayer-person';
             return {
