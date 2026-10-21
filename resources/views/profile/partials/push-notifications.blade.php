@@ -40,7 +40,10 @@
                     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) { this.state = 'unsupported'; return; }
                     if (Notification.permission === 'denied') { this.state = 'denied'; return; }
                     const registration = await navigator.serviceWorker.ready;
-                    this.state = (await registration.pushManager.getSubscription()) ? 'on' : 'off';
+                    const subscription = await registration.pushManager.getSubscription();
+                    this.state = subscription ? 'on' : 'off';
+                    // On this device: told to the system again (it may not have it, e.g. after a failed saving).
+                    if (subscription) call(subscribe, 'POST', subscription.toJSON()).catch(() => {});
                 },
                 async turnOn() {
                     this.busy = true; this.message = '';
