@@ -1,0 +1,15 @@
+name: Hourly notifications
+
+# Every hour, a visit to the system's health check: the visit lets it send the app's notifications (see
+# SendPushDigestService: the day's birthdays in the morning, then only what is new; nothing at night).
+on:
+  schedule:
+    - cron: '5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Visit the system
+        run: curl -sS -o /dev/null -w "%{http_code}\n" https://admin.igrejaicd.pt/up

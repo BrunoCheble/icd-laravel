@@ -30,6 +30,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/lock/password', [LockController::class, 'password'])->middleware('throttle:5,1,lock-password')->name('lock.password');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    // The app's notifications on this device (Web Push): on, off, a test.
+    Route::post('/push/subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->middleware('throttle:10,1,push-subscribe')->name('push.subscribe');
+    Route::delete('/push/subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
+    Route::post('/push/test', [\App\Http\Controllers\PushSubscriptionController::class, 'test'])->middleware('throttle:5,1,push-test')->name('push.test');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
