@@ -56,6 +56,7 @@ class Permissions
         'songs.chord-sheet.import' => 'update',
         'setlists.import' => 'write',
         'discipleships.meetings.outcome' => 'update',
+        'discipleships.transfer' => 'update',
         'discipleships.meetings.comments.*' => 'update',
     ];
 

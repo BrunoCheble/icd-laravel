@@ -5,11 +5,14 @@ namespace App\Modules\Discipleship\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Discipleship\Http\Requests\SaveDiscipleshipRequest;
+use App\Modules\Discipleship\Http\Requests\TransferDiscipleshipRequest;
 use App\Modules\Discipleship\Models\Discipleship;
+use App\Modules\Discipleship\Services\GetDiscipleHistoryService;
 use App\Modules\Discipleship\Services\GetDiscipleshipFormOptionsService;
 use App\Modules\Discipleship\Services\ListDiscipleshipsService;
 use App\Modules\Discipleship\Services\RemoveDiscipleshipService;
 use App\Modules\Discipleship\Services\SaveDiscipleshipService;
+use App\Modules\Discipleship\Services\TransferDiscipleshipService;
 use App\Modules\Discipleship\Support\DiscipleshipAccess;
 use App\Modules\Members\Models\Member;
 use Illuminate\Http\RedirectResponse;
@@ -61,6 +64,26 @@ class DiscipleshipController extends Controller
         $service->execute($request->validated(), $discipleship);
 
         return redirect()->route('discipleships.index')->with('success', __('Discipleship saved.'));
+    }
+
+    /** The disciple's meetings with every mentor, and who followed them. */
+    public function history(Request $request, Discipleship $discipleship, GetDiscipleHistoryService $service): View
+    {
+        abort_unless(DiscipleshipAccess::canViewHistory($request->user(), $discipleship), 403, __('You do not have access to this page.'));
+
+        return view('discipleship::discipleships.history', $service->execute($discipleship) + ['discipleship' => $discipleship->load('disciple')]);
+    }
+
+    /** Another mentor goes on with the disciple (the administrators, or the mentor now). */
+    public function transfer(TransferDiscipleshipRequest $request, Discipleship $discipleship, TransferDiscipleshipService $service): RedirectResponse
+    {
+        DiscipleshipAccess::authorize($request->user(), $discipleship->mentor_id);
+        abort_unless($discipleship->is_active, 403);
+        $next = $service->execute($discipleship, (int) $request->validated('mentor_id'));
+
+        return redirect()->route('discipleships.index')->with('success', __(':disciple is now followed by :mentor.', [
+            'disciple' => $next->disciple->full_name, 'mentor' => $next->mentor->full_name,
+        ]));
     }
 
     public function destroy(Request $request, Discipleship $discipleship, RemoveDiscipleshipService $service): RedirectResponse

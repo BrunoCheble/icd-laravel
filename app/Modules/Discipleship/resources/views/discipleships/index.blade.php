@@ -136,6 +136,9 @@
                                             <a href="{{ route('discipleships.meetings.create', ['mentor' => $discipleship->mentor_id, 'disciples' => [$discipleship->disciple_id]]) }}" class="m-btn is-ghost is-icon" title="{{ __('New meeting') }}" aria-label="{{ __('New meeting') }}"><i class="fa-solid fa-calendar-plus"></i></a>
                                         @endcan
                                     @endif
+                                    @if ($discipleship->is_active || $isAdmin)
+                                        <a href="{{ route('discipleships.history', $discipleship) }}" class="m-btn is-ghost is-icon" title="{{ __('History') }}" aria-label="{{ __('History') }}"><i class="fa-solid fa-clock-rotate-left"></i></a>
+                                    @endif
                                     @if ($phone = \App\Helpers\WhatsAppHelper::url($discipleship->disciple->phone_number))
                                         <a href="{{ $phone }}" target="_blank" rel="noopener" class="m-btn is-ghost is-icon" title="WhatsApp" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" style="color: #25d366;"></i></a>
                                     @endif

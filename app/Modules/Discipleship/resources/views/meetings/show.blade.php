@@ -35,7 +35,7 @@
     @endphp
 
     <div class="m-page">
-        <a href="{{ route('discipleships.index') }}" class="m-back"><i class="fa-solid fa-arrow-left"></i> {{ __('Discipleships') }}</a>
+        <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('discipleships.index') }}" class="m-back"><i class="fa-solid fa-arrow-left"></i> {{ __('Back') }}</a>
         @include('layouts.alert')
 
         <div class="dm-show">
@@ -55,16 +55,19 @@
                         </span>
                     @endforeach
                 </div>
+                @if ($canChange)
                 @can('discipleships.update')
                     <div class="mt-4" style="display: flex; gap: .5rem; flex-wrap: wrap;">
                         <a href="{{ route('discipleships.meetings.edit', $meeting) }}" class="m-btn"><i class="fa-solid fa-pen"></i> {{ __('Change date, time or people') }}</a>
                     </div>
                 @endcan
+                @endif
             </section>
 
             {{-- Did it take place? --}}
             <section class="m-card m-section">
                 <h3 class="m-section-title"><i class="fa-solid fa-clipboard-check"></i> {{ __('Did it take place?') }}</h3>
+                @if ($canChange)
                 <form method="POST" action="{{ route('discipleships.meetings.outcome', $meeting) }}" class="dm-outcome"
                     x-data="{ status: @js(old('status', $meeting->status)) }">
                     @csrf
@@ -107,6 +110,18 @@
                         <div><button type="submit" class="m-btn is-primary"><i class="fa-solid fa-check"></i> {{ __('Save') }}</button></div>
                     @endcan
                 </form>
+                @else
+                    {{-- An earlier meeting with another mentor: as it was marked --}}
+                    <p class="m-muted">
+                        @if ($meeting->status === 'held')
+                            <i class="fa-solid fa-check" style="color: #16a34a;"></i> {{ __('Held') }}
+                        @elseif ($meeting->status === 'not_held')
+                            <i class="fa-solid fa-xmark" style="color: #dc2626;"></i> {{ __('Did not take place') }}: {{ __($reasons[$meeting->reason] ?? $meeting->reason) }}@if ($meeting->reason_note) — {{ $meeting->reason_note }}@endif
+                        @else
+                            {{ __('Not marked by :name.', ['name' => $meeting->mentor->full_name]) }}
+                        @endif
+                    </p>
+                @endif
             </section>
 
             {{-- Comments --}}
@@ -139,6 +154,7 @@
                 @endforelse
             </section>
 
+            @if ($canChange)
             @can('discipleships.delete')
                 <form method="POST" action="{{ route('discipleships.meetings.destroy', $meeting) }}" x-data @submit="if (!confirm(@js(__('Delete this meeting?')))) $event.preventDefault()">
                     @csrf
@@ -146,6 +162,7 @@
                     <button type="submit" class="m-btn is-danger"><i class="fa-solid fa-trash"></i> {{ __('Delete meeting') }}</button>
                 </form>
             @endcan
+            @endif
         </div>
     </div>
 </x-app-layout>

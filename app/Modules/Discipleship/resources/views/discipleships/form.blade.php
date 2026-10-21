@@ -33,7 +33,15 @@
                 <section class="m-card m-section">
                     <h3 class="m-section-title"><i class="fa-solid fa-seedling"></i> {{ __('Discipleship') }}</h3>
                     <div class="m-grid cols-2">
-                        @if ($isAdmin)
+                        @if ($discipleship->exists)
+                            {{-- Another mentor: "Pass to another mentor" below (the history stays) --}}
+                            <div class="m-field m-span-2">
+                                <span class="m-label">{{ __('Mentor') }}</span>
+                                <p class="m-muted" style="margin: 0;">{{ $discipleship->mentor->full_name }}</p>
+                                <input type="hidden" name="mentor_id" value="{{ $discipleship->mentor_id }}">
+                                <input type="hidden" name="disciple_id" value="{{ $discipleship->disciple_id }}">
+                            </div>
+                        @elseif ($isAdmin)
                             <div class="m-field m-span-2">
                                 <span class="m-label">{{ __('Mentor') }}</span>
                                 @include('members::members.partials.person-picker', ['member' => $discipleship, 'name' => 'mentor_id', 'want' => null])
@@ -42,11 +50,13 @@
                         @else
                             @error('mentor_id')<p class="m-error m-span-2">{{ $message }}</p>@enderror
                         @endif
-                        <div class="m-field m-span-2">
-                            <span class="m-label">{{ __('Disciple') }}</span>
-                            @include('members::members.partials.person-picker', ['member' => $discipleship, 'name' => 'disciple_id', 'want' => null])
-                            @error('disciple_id')<p class="m-error">{{ $message }}</p>@enderror
-                        </div>
+                        @unless ($discipleship->exists)
+                            <div class="m-field m-span-2">
+                                <span class="m-label">{{ __('Disciple') }}</span>
+                                @include('members::members.partials.person-picker', ['member' => $discipleship, 'name' => 'disciple_id', 'want' => null])
+                                @error('disciple_id')<p class="m-error">{{ $message }}</p>@enderror
+                            </div>
+                        @endunless
                         <div class="m-field">
                             <label class="m-label" for="started_at">{{ __('Since') }} <span class="m-optional">({{ __('optional') }})</span></label>
                             <input id="started_at" name="started_at" type="date" class="m-input" value="{{ old('started_at', $discipleship->started_at?->format('Y-m-d')) }}">
@@ -75,6 +85,20 @@
                 </div>
             </div>
         </form>
+
+        @if ($discipleship->exists && $discipleship->is_active)
+            {{-- Another mentor goes on with the disciple: this one ends, the history stays with the member --}}
+            <section class="m-card m-section mt-4">
+                <h3 class="m-section-title"><i class="fa-solid fa-right-left"></i> {{ __('Pass to another mentor') }}</h3>
+                <form method="POST" action="{{ route('discipleships.transfer', $discipleship) }}" class="m-field" x-data @submit="if (!confirm(@js(__('Pass this disciple to the chosen mentor? This discipleship ends; the new mentor sees the whole history.')))) $event.preventDefault()">
+                    @csrf
+                    @include('members::members.partials.person-picker', ['member' => new \App\Modules\Discipleship\Models\Discipleship(), 'name' => 'mentor_id', 'want' => null])
+                    <p class="m-help">{{ __('The new mentor sees all the meetings and comments so far.') }}</p>
+                    @error('mentor_id')<p class="m-error">{{ $message }}</p>@enderror
+                    <div class="mt-2"><button type="submit" class="m-btn"><i class="fa-solid fa-right-left"></i> {{ __('Pass') }}</button></div>
+                </form>
+            </section>
+        @endif
 
         @if ($discipleship->exists)
             @can('discipleships.delete')

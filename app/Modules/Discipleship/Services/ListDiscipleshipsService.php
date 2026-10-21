@@ -28,16 +28,25 @@ class ListDiscipleshipsService
         $discipleships = DiscipleshipAccess::scope(Discipleship::query(), $user)
             ->when($mentor, fn ($query) => $query->where('mentor_id', $mentor))
             ->with(['mentor:id,first_name,last_name,phone_number', 'disciple:id,first_name,last_name,phone_number'])
-            ->get()
-            ->map(function (Discipleship $discipleship) use ($meetings) {
+            ->get();
+        // The meetings held with each disciple, with any mentor (an earlier one too).
+        $held = DiscipleshipMeeting::query()->where('status', DiscipleshipMeeting::HELD)
+            ->whereHas('disciples', fn ($query) => $query->whereIn('members.id', $discipleships->pluck('disciple_id')))
+            ->with('disciples:id')->orderBy('scheduled_at')->get();
+
+        $discipleships = $discipleships
+            ->map(function (Discipleship $discipleship) use ($meetings, $held) {
                 $theirs = $meetings->filter(fn (DiscipleshipMeeting $meeting) => $meeting->mentor_id === $discipleship->mentor_id
                     && $meeting->disciples->contains('id', $discipleship->disciple_id));
                 $discipleship->next_meeting = $theirs->first(fn ($meeting) => $meeting->status === DiscipleshipMeeting::SCHEDULED && $meeting->scheduled_at->isFuture());
                 // The meetings held that the disciple was at (not marked one by one: they were).
-                $held = $theirs->filter(fn ($meeting) => $meeting->status === DiscipleshipMeeting::HELD
-                    && $meeting->disciples->firstWhere('id', $discipleship->disciple_id)?->pivot->attended !== false);
-                $discipleship->last_held = $held->last();
-                $discipleship->held_count = $held->count();
+                $attended = $held->filter(function (DiscipleshipMeeting $meeting) use ($discipleship) {
+                    $disciple = $meeting->disciples->firstWhere('id', $discipleship->disciple_id);
+
+                    return $disciple && $disciple->pivot->attended !== false;
+                });
+                $discipleship->last_held = $attended->last();
+                $discipleship->held_count = $attended->count();
 
                 return $discipleship;
             });

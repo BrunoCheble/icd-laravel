@@ -16,6 +16,8 @@ Route::middleware('auth')->prefix('discipleships')->name('discipleships.')->grou
     Route::patch('meetings/{meeting}/outcome', [MeetingController::class, 'outcome'])->name('meetings.outcome');
     Route::delete('meetings/{meeting}', [MeetingController::class, 'destroy'])->name('meetings.destroy');
     Route::post('meetings/{meeting}/comments', [MeetingCommentController::class, 'store'])->name('meetings.comments.store');
+    Route::get('{discipleship}/history', [DiscipleshipController::class, 'history'])->name('history');
+    Route::post('{discipleship}/transfer', [DiscipleshipController::class, 'transfer'])->name('transfer');
     Route::delete('meeting-comments/{comment}', [MeetingCommentController::class, 'destroy'])->name('meetings.comments.destroy');
 });
 

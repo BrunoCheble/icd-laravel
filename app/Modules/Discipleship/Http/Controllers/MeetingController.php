@@ -36,12 +36,19 @@ class MeetingController extends Controller
         return redirect()->route('discipleships.meetings.show', $meeting)->with('success', __('Meeting scheduled.'));
     }
 
+    /**
+     * The mentor's own meeting, or an earlier one of a disciple they follow now (the member's history: they see it
+     * all and comment; its date and whether it took place stay with whoever held it).
+     */
     public function show(Request $request, DiscipleshipMeeting $meeting): View
     {
-        DiscipleshipAccess::authorize($request->user(), $meeting->mentor_id);
+        abort_unless(DiscipleshipAccess::canView($request->user(), $meeting), 403, __('You do not have access to this page.'));
         $meeting->load(['mentor', 'disciples', 'comments.user']);
 
-        return view('discipleship::meetings.show', ['meeting' => $meeting]);
+        return view('discipleship::meetings.show', [
+            'meeting' => $meeting,
+            'canChange' => DiscipleshipAccess::allows($request->user(), $meeting->mentor_id),
+        ]);
     }
 
     public function edit(Request $request, DiscipleshipMeeting $meeting, GetDiscipleshipFormOptionsService $options): View

@@ -1502,5 +1502,18 @@
     "disciple": "discípulo",
     "mentor": "responsável",
     "place": "local",
-    "time": "hora"
+    "time": "hora",
+    "Not marked by :name.": "Ainda não foi marcado por :name.",
+    "Pass to another mentor": "Passar para outro responsável",
+    "Pass this disciple to the chosen mentor? This discipleship ends; the new mentor sees the whole history.": "Passar este discípulo para o responsável escolhido? Este discipulado termina; o novo responsável vê todo o histórico.",
+    "The new mentor sees all the meetings and comments so far.": "O novo responsável vê todos os encontros e comentários até agora.",
+    "Pass": "Passar",
+    "All the meetings, with every mentor.": "Todos os encontros, com todos os responsáveis.",
+    "Mentors": "Responsáveis",
+    "since :date": "desde :date",
+    "Meetings": "Encontros",
+    "No meetings yet.": "Ainda sem encontros.",
+    "Choose the new mentor.": "Escolha o novo responsável.",
+    "Choose another member as the new mentor.": "Escolha outro membro como novo responsável.",
+    ":disciple is now followed by :mentor.": ":disciple passou a ser acompanhado por :mentor."
 }

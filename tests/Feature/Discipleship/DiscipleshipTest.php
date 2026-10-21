@@ -197,4 +197,37 @@ class DiscipleshipTest extends TestCase
         $this->assertSame(['Encontro de discipulado às 20:00 | João ZZ Teste · Igreja'], $to($ana));
         $this->assertSame([], $to($bruno));
     }
+
+    public function test_a_disciple_passed_to_another_mentor_keeps_their_history_with_the_new_one(): void
+    {
+        $ana = $this->mentor('Ana');
+        $bruno = $this->mentor('Bruno');
+        $joao = $this->member('João');
+        $first = Discipleship::create(['mentor_id' => $ana->member_id, 'disciple_id' => $joao->id, 'started_at' => '2026-01-10']);
+        $this->at('2026-10-10 10:00');
+        $old = $this->meeting($ana, [$joao], '2026-10-12 20:00');
+        $this->actingAs($ana)->patch(route('discipleships.meetings.outcome', $old), ['status' => 'held', 'attended' => [$joao->id]]);
+        $this->actingAs($ana)->post(route('discipleships.meetings.comments.store', $old), ['body' => 'Começou a ler a Bíblia.']);
+
+        $this->actingAs($ana)->get(route('discipleships.edit', $first))->assertOk()->assertSee(__('Pass to another mentor'));
+        // Bruno cannot take him while Ana follows him; Ana passes him on.
+        $this->actingAs($bruno)->post('/discipleships', ['disciple_id' => $joao->id])->assertSessionHasErrors('disciple_id');
+        $this->actingAs($bruno)->post(route('discipleships.transfer', $first), ['mentor_id' => $bruno->member_id])->assertForbidden();
+        $this->actingAs($ana)->post(route('discipleships.transfer', $first), ['mentor_id' => $bruno->member_id])->assertRedirect(route('discipleships.index'));
+        $this->assertFalse($first->fresh()->is_active);
+        $now = Discipleship::query()->where('mentor_id', $bruno->member_id)->where('disciple_id', $joao->id)->firstOrFail();
+        $this->assertTrue($now->is_active);
+
+        // Bruno sees the whole history (Ana's meeting and its comments) and comments on it; its outcome stays Ana's.
+        $this->actingAs($bruno)->get('/discipleships')->assertSee('12/10/2026');
+        $this->actingAs($bruno)->get(route('discipleships.history', $now))->assertOk()->assertSee('Ana ZZ Teste')->assertSee('Bruno ZZ Teste');
+        $this->actingAs($bruno)->get(route('discipleships.meetings.show', $old))->assertOk()->assertSee('Começou a ler a Bíblia.');
+        $this->actingAs($bruno)->post(route('discipleships.meetings.comments.store', $old), ['body' => 'Continuamos.'])->assertRedirect();
+        $this->assertSame(2, $old->comments()->count());
+        $this->actingAs($bruno)->patch(route('discipleships.meetings.outcome', $old), ['status' => 'scheduled'])->assertForbidden();
+        // Ana no longer follows him: his history (and Bruno's meetings) are not hers.
+        $this->actingAs($ana)->get(route('discipleships.history', $first))->assertForbidden();
+        $this->actingAs($bruno)->post('/discipleships/meetings', ['disciples' => [$joao->id], 'date' => '2026-10-15', 'time' => '20:00'])->assertSessionHasNoErrors();
+        $this->actingAs($ana)->get(route('discipleships.meetings.show', DiscipleshipMeeting::query()->latest('id')->first()))->assertForbidden();
+    }
 }
