@@ -191,6 +191,7 @@ class MembersTest extends TestCase
         $this->actingAs($user)->patch("/members/{$member->id}/photo", ['photo' => $this->png('b.png')]);
         $this->assertFileDoesNotExist(public_path("images/{$first}"));
         $this->assertFileExists(public_path('images/' . $member->fresh()->photo));
+        unlink(public_path('images/' . $member->fresh()->photo));
     }
 
     /** A 1×1 PNG (the test container has no GD to draw one). */
