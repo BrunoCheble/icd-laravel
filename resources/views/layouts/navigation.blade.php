@@ -39,3 +39,11 @@
     </button>
 </aside>
 <div class="app-sidebar-backdrop" x-show="menuOpen" x-cloak x-transition.opacity @click="menuOpen = false"></div>
+
+{{-- The installed app's icon shows what waits in the menu (where the device lets it: iPhone, computers) --}}
+<script>
+    if ('setAppBadge' in navigator) {
+        const waiting = @js(collect($menu)->flatMap(fn ($section) => $section['items'])->sum('badge'));
+        (waiting ? navigator.setAppBadge(waiting) : navigator.clearAppBadge()).catch(() => {});
+    }
+</script>

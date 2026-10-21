@@ -85,6 +85,8 @@ class PushDigestTest extends TestCase
         $this->assertCount(2, $this->sent);
         $this->assertSame('Novidades no sistema', $this->sent[1]['title']);
         $this->assertSame('2 novos pedidos de oração · 1 anúncio por aprovar · 1 novo registo de membro', $this->sent[1]['body']);
+        // The number on the app's icon: what waits in the menu (the announcement to approve)
+        $this->assertSame(1, $this->sent[1]['badge']);
         $this->assertSame(route('prayers.index'), $this->sent[1]['url']);
 
         $this->at('2026-10-21 11:05');

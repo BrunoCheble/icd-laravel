@@ -20,6 +20,10 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
     let data = {};
     try { data = event.data ? event.data.json() : {}; } catch (error) { data = { body: event.data?.text() }; }
+    // The number on the app's icon (where the device lets it), then the notification.
+    if (Number.isInteger(data.badge) && 'setAppBadge' in self.navigator) {
+        (data.badge ? self.navigator.setAppBadge(data.badge) : self.navigator.clearAppBadge()).catch(() => {});
+    }
     event.waitUntil(self.registration.showNotification(data.title || 'ICD Admin', {
         body: data.body || '',
         icon: '/icons/admin-icon-192.png',

@@ -23,6 +23,13 @@ class Menu
         return $this;
     }
 
+    /** Everything waiting in the menu's badges (the number on the installed app's icon). */
+    public function pendingTotal(): int
+    {
+        return collect($this->sections)->flatMap(fn (array $section) => $section['items'])
+            ->sum(fn (array $item) => ($item['badge'] ?? null) instanceof Closure && Route::has($item['route']) ? (int) $item['badge']() : 0);
+    }
+
     /**
      * The sections in order, each item with its address, whether it is the current page and its badge; items whose
      * route does not exist are left out.

@@ -65,8 +65,10 @@ class SendPushDigestService
         } finally {
             app()->setLocale($locale);
         }
+        // The number on the installed app's icon: what waits in the menu.
+        $waiting = app(\App\Support\Menu::class)->pendingTotal();
         foreach ($notifications as $notification) {
-            $this->push->execute($notification);
+            $this->push->execute($notification + ['badge' => $waiting]);
         }
 
         return $notifications;
