@@ -43,6 +43,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            // The kinds of notification wanted (see SendPushDigestService::KINDS); null: all.
+            'push_kinds' => 'array',
         ];
     }
 

@@ -1351,5 +1351,12 @@
     "This setlist already took place (:date): it can only be viewed. You can still suggest chord corrections.": "Este repertório já foi (:date): só pode ser consultado. Ainda pode sugerir correções de acordes.",
     "This setlist already took place (:date): only to be viewed.": "Este repertório já foi (:date): só para consulta.",
     ":count chord suggestion|:count chord suggestions": ":count sugestão de acordes|:count sugestões de acordes",
-    "Receive on this device, also with the app closed: the birthdays and wedding anniversaries of the day in the morning, and every hour what is new (prayer requests, announcements to approve, comments, chord suggestions, members who registered). Not at night.": "Receba neste dispositivo, mesmo com a app fechada: de manhã, os aniversários e aniversários de casamento do dia; e de hora a hora o que for novo (pedidos de oração, anúncios por aprovar, comentários, sugestões de acordes, novos membros). À noite não."
+    "What to receive": "O que receber",
+    "Birthdays and wedding anniversaries (in the morning)": "Aniversários e aniversários de casamento (de manhã)",
+    "Prayer requests": "Pedidos de oração",
+    "Announcements to approve": "Anúncios por aprovar",
+    "Private comments on announcements": "Comentários privados nos anúncios",
+    "Members who registered": "Novos registos de membros",
+    "Saved.": "Guardado.",
+    "Receive on this device, also with the app closed: the birthdays and wedding anniversaries of the day in the morning, and what is new as soon as it comes in. Not at night: it waits for the morning. Choose below what you want to receive.": "Receba neste dispositivo, mesmo com a app fechada: de manhã, os aniversários e aniversários de casamento do dia; e o que for novo, assim que acontece. À noite não: fica para a manhã. Escolha abaixo o que quer receber."
 }

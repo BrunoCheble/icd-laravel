@@ -25,6 +25,18 @@ class PushSubscriptionController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /** The kinds of notification the user wants (on all their devices). */
+    public function preferences(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'kinds' => ['present', 'array'],
+            'kinds.*' => ['string', \Illuminate\Validation\Rule::in(array_keys(\App\Services\Notifications\SendPushDigestService::KINDS))],
+        ]);
+        $request->user()->forceFill(['push_kinds' => array_values(array_unique($data['kinds']))])->save();
+
+        return response()->json(['kinds' => $request->user()->push_kinds]);
+    }
+
     public function destroy(Request $request): JsonResponse
     {
         PushSubscription::query()->where('user_id', $request->user()->id)

@@ -4,10 +4,12 @@
         'subscribe' => route('push.subscribe'),
         'unsubscribe' => route('push.unsubscribe'),
         'test' => route('push.test'),
+        'preferences' => route('push.preferences'),
+        'kinds' => \App\Services\Notifications\SendPushDigestService::kindsOf(auth()->user()),
     ]))">
     <header>
         <h2 class="text-lg font-medium text-gray-900"><i class="fa-solid fa-bell" style="color: var(--brand);"></i> {{ __('Notifications') }}</h2>
-        <p class="mt-1 text-sm text-gray-600">{{ __('Receive on this device, also with the app closed: the birthdays and wedding anniversaries of the day in the morning, and every hour what is new (prayer requests, announcements to approve, comments, chord suggestions, members who registered). Not at night.') }}</p>
+        <p class="mt-1 text-sm text-gray-600">{{ __('Receive on this device, also with the app closed: the birthdays and wedding anniversaries of the day in the morning, and what is new as soon as it comes in. Not at night: it waits for the morning. Choose below what you want to receive.') }}</p>
     </header>
 
     <div class="mt-4 flex flex-wrap items-center gap-3">
@@ -27,15 +29,37 @@
     </div>
     <p class="mt-2 text-sm" x-show="message" x-text="message"></p>
 
+    {{-- The kinds wanted (on all of this user's devices) --}}
+    <fieldset class="mt-5">
+        <legend class="text-sm font-medium text-gray-900">{{ __('What to receive') }}</legend>
+        <div class="mt-2 grid gap-2">
+            @foreach (\App\Services\Notifications\SendPushDigestService::KINDS as $kind => $label)
+                <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" value="{{ $kind }}" x-model="kinds" @change="savePreferences()" class="rounded border-gray-300" style="color: var(--brand);">
+                    {{ __($label) }}
+                </label>
+            @endforeach
+        </div>
+        <p class="mt-2 text-xs text-gray-500" x-show="savedKinds" x-text="savedKinds"></p>
+    </fieldset>
+
     <script>
-        function pushNotifications({ key, subscribe, unsubscribe, test }) {
+        function pushNotifications({ key, subscribe, unsubscribe, test, preferences, kinds }) {
             const csrf = document.querySelector('meta[name="csrf-token"]').content;
             const call = (url, method, body) => fetch(url, { method, headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf }, body: JSON.stringify(body) });
             // A failed step says which one, so it can be told apart (permission, subscription, saving, test).
             const failed = (step, error) => `${@js(__('It was not possible now. Try again.'))} (${step}: ${error?.message || error?.name || error})`;
             const bytes = (text) => Uint8Array.from(atob((text + '='.repeat((4 - text.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
             return {
-                state: 'off', busy: false, message: '',
+                state: 'off', busy: false, message: '', kinds, savedKinds: '', savedTimer: null,
+                // Saved on each change (a moment later).
+                savePreferences() {
+                    clearTimeout(this.savedTimer);
+                    this.savedTimer = setTimeout(async () => {
+                        const response = await call(preferences, 'PATCH', { kinds: this.kinds }).catch(() => null);
+                        this.savedKinds = response?.ok ? @js(__('Saved.')) : @js(__('It was not possible now. Try again.'));
+                    }, 400);
+                },
                 async init() {
                     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) { this.state = 'unsupported'; return; }
                     if (Notification.permission === 'denied') { this.state = 'denied'; return; }

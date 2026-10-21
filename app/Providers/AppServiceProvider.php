@@ -52,6 +52,13 @@ class AppServiceProvider extends ServiceProvider
                 ['label' => 'Prayer Requests', 'icon' => 'fa-solid fa-hands-praying', 'route' => 'prayers.index'],
             ]);
 
+        // What is new goes to the app's notifications right away (see NotifyNews).
+        \App\Modules\Prayers\Models\Prayer::created(fn () => \App\Services\Notifications\NotifyNews::soon());
+        \App\Modules\Announcements\Models\Announcement::created(fn ($announcement) => $announcement->is_approved || \App\Services\Notifications\NotifyNews::soon());
+        \App\Modules\Announcements\Models\AnnouncementComment::created(fn () => \App\Services\Notifications\NotifyNews::soon());
+        \App\Modules\Music\Models\SongSuggestion::created(fn () => \App\Services\Notifications\NotifyNews::soon());
+        \App\Modules\Members\Models\Member::created(fn ($member) => $member->membership_status !== \App\Enums\MembershipStatus::PENDING || \App\Services\Notifications\NotifyNews::soon());
+
         View::composer('layouts.navigation', fn ($view) => $view->with('menu', $this->app->make(Menu::class)->resolve(request())));
     }
 }

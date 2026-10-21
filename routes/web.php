@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function () {
     // The app's notifications on this device (Web Push): on, off, a test.
     Route::post('/push/subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->middleware('throttle:10,1,push-subscribe')->name('push.subscribe');
     Route::delete('/push/subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
+    Route::patch('/push/preferences', [\App\Http\Controllers\PushSubscriptionController::class, 'preferences'])->middleware('throttle:30,1,push-preferences')->name('push.preferences');
     Route::post('/push/test', [\App\Http\Controllers\PushSubscriptionController::class, 'test'])->middleware('throttle:5,1,push-test')->name('push.test');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

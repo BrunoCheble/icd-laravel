@@ -23,17 +23,23 @@ class PushDigestTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** The notifications "sent" (nothing goes out in the tests). */
+    /** The notifications "sent" (nothing goes out in the tests), and to which users. */
     private array $sent = [];
+    private array $to = [];
 
     protected function setUp(): void
     {
         parent::setUp();
         Cache::forget(SendPushDigestService::LAST_RUN);
         Cache::forget(SendPushDigestService::MORNING_SENT);
-        $this->app->instance(SendPushService::class, new class($this->sent) extends SendPushService {
-            public function __construct(private array &$sent) {}
-            public function execute(array $notification, ?Collection $devices = null): int { $this->sent[] = $notification; return 1; }
+        $this->app->instance(SendPushService::class, new class($this->sent, $this->to) extends SendPushService {
+            public function __construct(private array &$sent, private array &$to) {}
+            public function execute(array $notification, ?Collection $devices = null): int
+            {
+                $this->sent[] = $notification;
+                $this->to[] = $devices?->pluck('user_id')->unique()->values()->all();
+                return 1;
+            }
         });
     }
 
@@ -42,9 +48,9 @@ class PushDigestTest extends TestCase
         $this->travelTo(Carbon::parse($lisbon, SendPushDigestService::TIMEZONE));
     }
 
-    private function device(): PushSubscription
+    private function device(?array $kinds = null): PushSubscription
     {
-        return PushSubscription::create(['user_id' => User::factory()->create()->id, 'endpoint' => 'https://push.example/' . uniqid(),
+        return PushSubscription::create(['user_id' => User::factory()->create(['push_kinds' => $kinds])->id, 'endpoint' => 'https://push.example/' . uniqid(),
             'endpoint_hash' => hash('sha256', uniqid()), 'public_key' => 'k', 'auth_token' => 'a']);
     }
 
@@ -97,6 +103,30 @@ class PushDigestTest extends TestCase
         $this->assertCount(2, $this->sent);
     }
 
+    public function test_what_comes_in_is_sent_right_away_but_not_at_night(): void
+    {
+        $this->device();
+        $this->at('2026-10-21 10:00');
+        Cache::put(SendPushDigestService::LAST_RUN, now()->subMinutes(10)->toIso8601String());
+
+        $this->postJson('/api/public/prayers', ['name' => 'ZZ Teste Agora', 'request' => 'Paz'])->assertCreated();
+        $this->assertCount(1, $this->sent);
+        $this->assertSame('1 novo pedido de oração', $this->sent[0]['body']);
+
+        // The hourly one does not send it again
+        $this->at('2026-10-21 11:05');
+        app(SendPushDigestService::class)->execute();
+        $this->assertNotContains('Novidades no sistema', array_column(array_slice($this->sent, 1), 'title'));
+
+        // At night: kept for the morning
+        $this->at('2026-10-21 23:30');
+        $this->postJson('/api/public/prayers', ['name' => 'ZZ Teste Noite', 'request' => 'Paz'])->assertCreated();
+        $count = count($this->sent);
+        $this->at('2026-10-22 08:05');
+        app(SendPushDigestService::class)->execute();
+        $this->assertSame('1 novo pedido de oração', collect(array_slice($this->sent, $count))->firstWhere('title', 'Novidades no sistema')['body']);
+    }
+
     public function test_nothing_at_night_and_what_came_waits_for_the_morning(): void
     {
         $this->device();
@@ -138,5 +168,34 @@ class PushDigestTest extends TestCase
         $this->actingAs($user)->deleteJson('/push/subscriptions', ['endpoint' => $subscription['endpoint']])->assertOk();
         $this->assertSame(0, PushSubscription::count());
         $this->actingAs($user)->get('/profile')->assertOk()->assertSee('pushNotifications(', false);
+    }
+
+    public function test_each_user_gets_only_the_kinds_they_chose(): void
+    {
+        $onlyPrayers = $this->device(['prayers']);
+        $nothing = $this->device([]);
+        $everything = $this->device();
+        $this->at('2026-10-21 08:05');
+        $this->member(['first_name' => 'Maria', 'last_name' => 'ZZ Teste', 'date_of_birth' => '1990-10-21']);
+        Prayer::create(['name' => 'ZZ Teste', 'request' => 'Paz']);
+        $this->member(['membership_status' => MembershipStatus::PENDING]);
+
+        app(SendPushDigestService::class)->execute();
+        $by = fn ($device) => collect($this->sent)->filter(fn ($n, $i) => in_array($device->user_id, $this->to[$i], true))->pluck('body')->values()->all();
+        $this->assertSame(['1 novo pedido de oração'], $by($onlyPrayers));
+        $this->assertSame([], $by($nothing));
+        $this->assertSame(['🎂 Maria ZZ Teste', '1 novo pedido de oração · 1 novo registo de membro'], $by($everything));
+    }
+
+    public function test_the_kinds_are_chosen_in_the_profile(): void
+    {
+        $user = User::factory()->create();
+        $this->assertSame(array_keys(SendPushDigestService::KINDS), SendPushDigestService::kindsOf($user));
+
+        $this->actingAs($user)->patchJson('/push/preferences', ['kinds' => ['prayers', 'suggestions']])->assertOk();
+        $this->assertSame(['prayers', 'suggestions'], $user->fresh()->push_kinds);
+        $this->actingAs($user)->patchJson('/push/preferences', ['kinds' => []])->assertOk();
+        $this->assertSame([], $user->fresh()->push_kinds);
+        $this->actingAs($user)->patchJson('/push/preferences', ['kinds' => ['nope']])->assertJsonValidationErrors('kinds.0');
     }
 }
