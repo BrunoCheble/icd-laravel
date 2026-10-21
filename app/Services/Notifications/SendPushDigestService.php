@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Announcements\Models\Announcement;
 use App\Modules\Announcements\Models\AnnouncementComment;
 use App\Modules\Dashboard\Services\GetTodayMessagesService;
+use App\Modules\Discipleship\Services\SendMeetingRemindersService;
 use App\Modules\Members\Models\Member;
 use App\Modules\Music\Models\SongSuggestion;
 use App\Modules\Prayers\Models\Prayer;
@@ -21,7 +22,7 @@ use Illuminate\Support\Facades\Cache;
  * The notifications of the installed app (from 8:00 to 22:00, Lisbon time): what is new (prayer requests,
  * announcements to approve, private comments, chord suggestions, members who registered) right after it comes in
  * (sendNews(), see NotifyNews), and once an hour (execute()) the day's birthdays and wedding anniversaries in the
- * morning and anything new not sent yet. Both go on from where the last one stopped, so nothing is sent twice; what
+ * morning and anything new not sent yet, and the mentors' discipleship meetings (on the day and a little before). Both go on from where the last one stopped, so nothing is sent twice; what
  * comes at night waits for the morning. Each user gets only the kinds they chose in their profile (all by default)
  * of the modules they may see (see Permissions), and the number on the icon counts only what waits in those.
  */
@@ -41,6 +42,7 @@ class SendPushDigestService
         'comments' => 'Private comments on announcements',
         'suggestions' => 'Chord suggestions',
         'members' => 'Members who registered',
+        'meetings' => 'Reminders of my discipleship meetings',
     ];
 
     // The modules a kind needs (seeing any of them).
@@ -51,9 +53,10 @@ class SendPushDigestService
         'comments' => ['announcements'],
         'suggestions' => ['suggestions'],
         'members' => ['members'],
+        'meetings' => ['discipleships'],
     ];
 
-    public function __construct(private SendPushService $push, private GetTodayMessagesService $today)
+    public function __construct(private SendPushService $push, private GetTodayMessagesService $today, private SendMeetingRemindersService $reminders)
     {
     }
 
@@ -109,12 +112,15 @@ class SendPushDigestService
         app()->setLocale('pt');
         try {
             $morning = null;
-            if ($withMorning && Cache::get(self::MORNING_SENT) !== $now->toDateString()) {
+            $isMorning = $withMorning && Cache::get(self::MORNING_SENT) !== $now->toDateString();
+            if ($isMorning) {
                 Cache::forever(self::MORNING_SENT, $now->toDateString());
                 $morning = $this->morning($now);
             }
             $news = $this->news($since);
-            if (! $morning && $news->isEmpty()) {
+            // The mentors' meetings: the day's in the morning, each one a little before (by member).
+            $reminders = $this->reminders->due($isMorning);
+            if (! $morning && $news->isEmpty() && ! $reminders) {
                 return [];
             }
 
@@ -127,6 +133,7 @@ class SendPushDigestService
                 $notifications = array_filter([
                     $morning && in_array('birthdays', $kinds, true) ? $morning : null,
                     $this->newsNotification($news->whereIn('kind', $kinds)->values()),
+                    ...(in_array('meetings', $kinds, true) && $user?->member_id ? $reminders[$user->member_id] ?? [] : []),
                 ]);
                 foreach ($notifications as $notification) {
                     $this->push->execute($notification + ['badge' => $waiting], $devices);

@@ -27,6 +27,7 @@ class Permissions
         'songs' => ['Songs', ['songs.*'], ['read', 'write', 'update', 'delete']],
         'setlists' => ['Setlists', ['setlists.*'], ['read', 'write', 'update', 'delete']],
         'suggestions' => ['Suggestions', ['song-suggestions.*'], ['read', 'update']],
+        'discipleships' => ['Discipleships', ['discipleships.*'], ['read', 'write', 'update', 'delete']],
     ];
 
     // Pages every signed-in user reaches (their own account, sign-in and lock).
@@ -54,6 +55,8 @@ class Permissions
         'songs.history.restore' => 'update',
         'songs.chord-sheet.import' => 'update',
         'setlists.import' => 'write',
+        'discipleships.meetings.outcome' => 'update',
+        'discipleships.meetings.comments.*' => 'update',
     ];
 
     /** The module of a route name, or null when it is none of them. */
@@ -131,7 +134,7 @@ class Permissions
     {
         foreach (['dashboard' => 'dashboard', 'members' => 'members.index', 'visitors' => 'visitors.index', 'anniversaries' => 'report.anniversaries.index',
             'announcements' => 'announcements.index', 'prayers' => 'prayers.index', 'songs' => 'songs.index', 'setlists' => 'setlists.index',
-            'suggestions' => 'song-suggestions.index'] as $module => $route) {
+            'suggestions' => 'song-suggestions.index', 'discipleships' => 'discipleships.index'] as $module => $route) {
             if (self::allows($user, $module) && Route::has($route)) {
                 return route($route);
             }
