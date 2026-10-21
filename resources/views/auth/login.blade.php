@@ -81,7 +81,7 @@
                 ]))">
                 <img class="login-logo" src="{{ asset('icons/admin-icon-192.png') }}" alt="">
                 <h2>{{ __('Sign in') }}</h2>
-                <p class="lead">{{ __('Use your email and password, or your fingerprint / Face ID.') }}</p>
+                <p class="lead">{{ __('Use your email or mobile number and password, or your fingerprint / Face ID.') }}</p>
 
                 @if (session('status'))
                     <div class="status">{{ session('status') }}</div>
@@ -90,12 +90,12 @@
                 <form method="POST" action="{{ route('login') }}" @submit="remember()">
                     @csrf
                     <div class="field">
-                        <label for="email">{{ __('Email') }}</label>
+                        <label for="email">{{ __('Email or mobile number') }}</label>
                         <div class="input">
-                            <i class="fa-regular fa-envelope"></i>
-                            <input id="email" type="email" name="email" x-ref="email" value="{{ old('email') }}" required autocomplete="username" inputmode="email" placeholder="nome@exemplo.com">
+                            <i class="fa-regular fa-user"></i>
+                            <input id="email" type="text" name="email" x-ref="email" value="{{ old('email') }}" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="nome@exemplo.com / 912 345 678">
                         </div>
-                        <button type="button" class="not-you" x-show="savedEmail" x-cloak @click="forget()">{{ __('Not you? Use another email') }}</button>
+                        <button type="button" class="not-you" x-show="savedEmail" x-cloak @click="forget()">{{ __('Not you? Use another account') }}</button>
                         @error('email')<p class="error">{{ $message }}</p>@enderror
                     </div>
 

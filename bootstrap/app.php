@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\RunPushDigest::class);
         // The app's lock for passkey users (fingerprint / face to come back after a while away).
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureSessionUnlocked::class);
+        // A temporary password is changed first; then each user reaches only what they may (see Permissions).
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsurePasswordChanged::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsurePermission::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

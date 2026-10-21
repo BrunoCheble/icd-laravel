@@ -67,7 +67,9 @@
                 <p>{{ trans_choice(':count announcement|:count announcements', $announcements->total(), ['count' => $announcements->total()]) }}</p>
             </div>
             <div class="m-head-actions">
-                <a href="{{ route('announcements.create') }}" class="m-btn is-primary"><i class="fa-solid fa-plus"></i> {{ __('Add new') }}</a>
+                @can('announcements.write')
+                    <a href="{{ route('announcements.create') }}" class="m-btn is-primary"><i class="fa-solid fa-plus"></i> {{ __('Add new') }}</a>
+                @endcan
             </div>
         </div>
 

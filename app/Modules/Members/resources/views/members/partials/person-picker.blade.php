@@ -96,6 +96,7 @@
                     this.free = '';
                     this.term = '';
                     this.open = false;
+                    this.$dispatch('person-picked', person);
                 },
                 clear() {
                     this.selected = '';

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -27,7 +28,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            // The email or the mobile number.
+            'email' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string'],
         ];
     }
@@ -41,7 +43,7 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        if (! Auth::attempt($this->credentials(), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -49,7 +51,26 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // A temporary password no longer valid: an administrator makes a new one.
+        if (Auth::user()->temporaryPasswordExpired()) {
+            Auth::guard('web')->logout();
+
+            throw ValidationException::withMessages([
+                'email' => __('The temporary password expired. Ask an administrator for a new one.'),
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
+    }
+
+    /** The email, or else the mobile number (with or without the country code), and the password. */
+    private function credentials(): array
+    {
+        $login = trim((string) $this->input('email'));
+
+        return str_contains($login, '@')
+            ? ['email' => $login, 'password' => $this->input('password')]
+            : ['phone_number' => (string) User::normalizePhone($login), 'password' => $this->input('password')];
     }
 
     /**

@@ -5,6 +5,8 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 
 use App\Support\Menu;
+use App\Support\Permissions;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\View;
 
@@ -58,6 +60,15 @@ class AppServiceProvider extends ServiceProvider
         \App\Modules\Announcements\Models\AnnouncementComment::created(fn () => \App\Services\Notifications\NotifyNews::soon());
         \App\Modules\Music\Models\SongSuggestion::created(fn () => \App\Services\Notifications\NotifyNews::soon());
         \App\Modules\Members\Models\Member::created(fn ($member) => $member->membership_status !== \App\Enums\MembershipStatus::PENDING || \App\Services\Notifications\NotifyNews::soon());
+
+        // "members.update", "songs.delete"…: what the user may do (see Permissions); "admin": the administrators.
+        Gate::before(fn ($user) => $user->is_admin ? true : null);
+        Gate::define('admin', fn ($user) => (bool) $user->is_admin);
+        foreach (Permissions::MODULES as $module => [, , $actions]) {
+            foreach ($actions as $action) {
+                Gate::define("{$module}.{$action}", fn ($user) => Permissions::allows($user, $module, $action));
+            }
+        }
 
         View::composer('layouts.navigation', fn ($view) => $view->with('menu', $this->app->make(Menu::class)->resolve(request())));
     }

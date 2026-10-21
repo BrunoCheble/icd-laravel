@@ -98,7 +98,9 @@
             </div>
             <div class="m-head-actions">
                 <a href="{{ route('songs.bookmarklet') }}" class="m-btn" title="{{ __('Import from a chord site') }}"><i class="fa-solid fa-file-import"></i> <span class="m-hide-sm">{{ __('Import from a chord site') }}</span></a>
-                <a href="{{ route('songs.create') }}" class="m-btn is-primary"><i class="fa-solid fa-plus"></i> {{ __('Add new') }}</a>
+                @can('songs.write')
+                    <a href="{{ route('songs.create') }}" class="m-btn is-primary"><i class="fa-solid fa-plus"></i> {{ __('Add new') }}</a>
+                @endcan
             </div>
         </div>
 

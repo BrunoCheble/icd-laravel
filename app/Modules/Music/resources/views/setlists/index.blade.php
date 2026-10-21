@@ -72,7 +72,9 @@
                     </div>
                     <div class="m-head-actions">
                         <a href="{{ route('setlists.import') }}" class="m-btn" title="{{ __('Import schedule') }}"><i class="fa-solid fa-paste"></i> <span class="m-hide-sm">{{ __('Import schedule') }}</span></a>
-                        <a href="{{ route('setlists.create') }}" class="m-btn is-primary"><i class="fa-solid fa-plus"></i> {{ __('Add new') }}</a>
+                        @can('setlists.write')
+                            <a href="{{ route('setlists.create') }}" class="m-btn is-primary"><i class="fa-solid fa-plus"></i> {{ __('Add new') }}</a>
+                        @endcan
                     </div>
                 </div>
 

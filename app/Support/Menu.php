@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
  * The side menu of the system, made of one section per module: each module adds its own section (with its pages)
  * from its service provider, so the menu follows the modules. Sections show in `order`; an item is
  * ['label', 'icon' (Font Awesome classes), 'route', 'active' (route name patterns, default "<route prefix>.*"),
- * 'badge' (a closure giving a number, shown when above 0)].
+ * 'badge' (a closure giving a number, shown when above 0)]. Each user sees only the pages they may (see Permissions).
  */
 class Menu
 {
@@ -30,6 +30,18 @@ class Menu
             ->sum(fn (array $item) => ($item['badge'] ?? null) instanceof Closure && Route::has($item['route']) ? (int) $item['badge']() : 0);
     }
 
+    /** Whether the user may see the item's page (its module's "read"; the pages of no module: the administrators). */
+    private static function canSee(Request $request, string $route): bool
+    {
+        $user = $request->user();
+        if (! $user || $user->is_admin) {
+            return true;
+        }
+        $module = Permissions::moduleOf($route);
+
+        return $module ? Permissions::allows($user, $module) : Permissions::isFree($route);
+    }
+
     /**
      * The sections in order, each item with its address, whether it is the current page and its badge; items whose
      * route does not exist are left out.
@@ -38,7 +50,7 @@ class Menu
     {
         $sections = collect($this->sections)->sortBy('order')->map(function (array $section) use ($request) {
             $section['items'] = collect($section['items'])
-                ->filter(fn (array $item) => Route::has($item['route']))
+                ->filter(fn (array $item) => Route::has($item['route']) && self::canSee($request, $item['route']))
                 ->map(function (array $item) use ($request) {
                     $patterns = (array) ($item['active'] ?? preg_replace('/\.[^.]+$/', '.*', $item['route']));
                     $badge = ($item['badge'] ?? null) instanceof Closure ? (int) $item['badge']() : 0;
