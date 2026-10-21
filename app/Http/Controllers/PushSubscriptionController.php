@@ -39,6 +39,6 @@ class PushSubscriptionController extends Controller
             ->where('endpoint_hash', hash('sha256', (string) $request->input('endpoint')))->get();
         $sent = $push->execute(['title' => __('Notifications are on'), 'body' => __('This is how the church\'s notices will come to this device.'), 'url' => route('profile.edit'), 'tag' => 'test'], $devices);
 
-        return response()->json(['sent' => $sent], $sent ? 200 : 422);
+        return response()->json(['sent' => $sent, 'error' => $sent ? null : ($push->lastProblem ?? 'no device')], $sent ? 200 : 422);
     }
 }

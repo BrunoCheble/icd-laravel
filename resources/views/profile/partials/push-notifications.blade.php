@@ -31,6 +31,8 @@
         function pushNotifications({ key, subscribe, unsubscribe, test }) {
             const csrf = document.querySelector('meta[name="csrf-token"]').content;
             const call = (url, method, body) => fetch(url, { method, headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf }, body: JSON.stringify(body) });
+            // A failed step says which one, so it can be told apart (permission, subscription, saving, test).
+            const failed = (step, error) => `${@js(__('It was not possible now. Try again.'))} (${step}: ${error?.message || error?.name || error})`;
             const bytes = (text) => Uint8Array.from(atob((text + '='.repeat((4 - text.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
             return {
                 state: 'off', busy: false, message: '',
@@ -42,15 +44,25 @@
                 },
                 async turnOn() {
                     this.busy = true; this.message = '';
+                    let step = 'permissão';
                     try {
                         if (await Notification.requestPermission() !== 'granted') { this.state = Notification.permission === 'denied' ? 'denied' : 'off'; return; }
-                        const registration = await navigator.serviceWorker.ready;
-                        const subscription = (await registration.pushManager.getSubscription())
-                            || await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes(key) });
-                        if (!(await call(subscribe, 'POST', subscription.toJSON())).ok) throw new Error();
+                        step = 'service worker';
+                        const registration = await Promise.race([navigator.serviceWorker.ready, new Promise((resolve, reject) => setTimeout(() => reject(new Error('sem service worker ativo')), 8000))]);
+                        step = 'inscrição';
+                        let subscription = await registration.pushManager.getSubscription();
+                        // One made with another server key is renewed.
+                        if (subscription && subscription.options?.applicationServerKey && btoa(String.fromCharCode(...new Uint8Array(subscription.options.applicationServerKey))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') !== key) {
+                            await subscription.unsubscribe();
+                            subscription = null;
+                        }
+                        subscription = subscription || await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes(key) });
+                        step = 'gravar';
+                        const saved = await call(subscribe, 'POST', subscription.toJSON());
+                        if (!saved.ok) throw new Error('HTTP ' + saved.status);
                         this.state = 'on';
                         await this.test();
-                    } catch (e) { this.message = @js(__('It was not possible now. Try again.')); }
+                    } catch (e) { this.message = failed(step, e); }
                     finally { this.busy = false; }
                 },
                 async turnOff() {
@@ -65,7 +77,8 @@
                 async test() {
                     const subscription = await (await navigator.serviceWorker.ready).pushManager.getSubscription();
                     const response = subscription && await call(test, 'POST', { endpoint: subscription.endpoint });
-                    this.message = response?.ok ? @js(__('Test sent: it should arrive in a few seconds.')) : @js(__('It was not possible now. Try again.'));
+                    const answer = response ? await response.json().catch(() => ({})) : {};
+                    this.message = response?.ok ? @js(__('Test sent: it should arrive in a few seconds.')) : failed('teste', answer.error || ('HTTP ' + (response?.status ?? '-')));
                 },
             };
         }
