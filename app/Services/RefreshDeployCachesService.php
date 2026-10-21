@@ -8,14 +8,26 @@ use Throwable;
 /**
  * Production runs with Laravel's caches (config, routes, events, views), which make every request lighter. The
  * deploy only pulls the code and the server has no terminal, so the app rebuilds them itself: when the deployed
- * commit or the .env file changed since they were built. On a failure the caches are cleared (the app works
- * without them, only slower) and tried again on the next change.
+ * commit or the .env file changed since they were built. Right after a pull OPcache may still hold the old PHP files
+ * for a while (bootstrap/providers.php…), and caches built then would miss what is new: so first they are only
+ * cleared (the app works without them, only slower) and they are built once the change is SETTLE_SECONDS old. On a
+ * failure the caches are cleared and tried again on the next change.
  */
 class RefreshDeployCachesService
 {
-    public function __construct(private ?string $marker = null)
+    public const SETTLE_SECONDS = 90;
+
+    public function __construct(private ?string $marker = null, private int $settleSeconds = self::SETTLE_SECONDS)
     {
         $this->marker ??= storage_path('framework/deploy-caches');
+    }
+
+    /** How long ago the code or the .env changed (the checkout's last write). */
+    public function changedSecondsAgo(): int
+    {
+        $times = array_filter([@filemtime(base_path('.git/index')), @filemtime(base_path('.git/HEAD')), @filemtime(base_path('.env'))]);
+
+        return $times ? max(0, time() - max($times)) : PHP_INT_MAX;
     }
 
     /** What the caches are built from: the commit checked out and the time .env was last changed. */
@@ -59,9 +71,15 @@ class RefreshDeployCachesService
             if ($signature === null || $signature === @file_get_contents($this->marker)) {
                 return;
             }
-            // Right after a pull OPcache may still hold the old files (bootstrap/providers.php, the routes…), and
-            // the caches would be built from them: they are read again first (opcache_reset() only takes effect
-            // after this request).
+            // Too soon after the change: only cleared (once), built on a later request.
+            if ($this->changedSecondsAgo() < $this->settleSeconds) {
+                if (@file_get_contents($this->marker . '.cleared') !== $signature) {
+                    Artisan::call('optimize:clear');
+                    file_put_contents($this->marker . '.cleared', $signature);
+                }
+
+                return;
+            }
             $this->forgetCompiledCode();
             try {
                 Artisan::call('optimize');
