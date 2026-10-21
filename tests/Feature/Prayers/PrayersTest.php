@@ -84,6 +84,17 @@ class PrayersTest extends TestCase
         $this->assertFalse(Prayer::where('name', 'Spam')->exists());
     }
 
+    public function test_anyone_asks_for_prayer_from_the_church_site(): void
+    {
+        $this->postJson('/api/public/prayers', ['name' => 'zz teste visitante', 'request' => 'Saúde: pela minha mãe.', 'phone_number' => '+351 912 345 678'])
+            ->assertCreated()->assertJsonPath('title', 'Recebemos o seu pedido.');
+        $prayer = Prayer::where('name', 'Zz Teste Visitante')->firstOrFail();
+        $this->assertSame(['Saúde: pela minha mãe.', '912345678'], [$prayer->request, $prayer->phone_number]);
+
+        $this->postJson('/api/public/prayers', ['request' => 'Sem nome'])->assertJsonValidationErrors('name');
+        $this->postJson('/api/public/prayers', ['name' => 'Bot', 'website' => 'http://spam'])->assertJsonValidationErrors('website');
+    }
+
     public function test_the_public_page_is_in_portuguese_and_in_english_when_asked(): void
     {
         $this->get('/prayer-request')->assertOk()->assertSee('<html lang="pt">', false)->assertSee('Pedido de oração')->assertSee('Filipenses 4:6');
