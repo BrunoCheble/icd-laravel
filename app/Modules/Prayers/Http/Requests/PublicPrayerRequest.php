@@ -45,6 +45,8 @@ class PublicPrayerRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'name.required' => __('Write your name.'),
+            'request.max' => __('The request can have up to 2000 characters.'),
             'phone_number.regex' => __('Write the mobile number with its 9 digits (or with the country code).'),
         ];
     }

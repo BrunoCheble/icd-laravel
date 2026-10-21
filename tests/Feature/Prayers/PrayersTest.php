@@ -91,7 +91,7 @@ class PrayersTest extends TestCase
         $prayer = Prayer::where('name', 'Zz Teste Visitante')->firstOrFail();
         $this->assertSame(['Saúde: pela minha mãe.', '912345678'], [$prayer->request, $prayer->phone_number]);
 
-        $this->postJson('/api/public/prayers', ['request' => 'Sem nome'])->assertJsonValidationErrors('name');
+        $this->postJson('/api/public/prayers', ['request' => 'Sem nome'])->assertJsonValidationErrors(['name' => 'Escreva o seu nome.']);
         $this->postJson('/api/public/prayers', ['name' => 'Bot', 'website' => 'http://spam'])->assertJsonValidationErrors('website');
     }
 
