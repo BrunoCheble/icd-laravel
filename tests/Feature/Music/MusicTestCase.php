@@ -67,7 +67,8 @@ abstract class MusicTestCase extends TestCase
     {
         return app(SaveSetlistService::class)->execute([
             'title'      => 'Sunday',
-            'event_date' => '2026-10-25',
+            // Still to come: the public page changes it (see EnsureSetlistNotPast)
+            'event_date' => now()->addWeek()->toDateString(),
             'songs'      => array_map(fn (Song $song) => ['song_id' => $song->id, 'musical_key' => 'G'], $songs),
         ]);
     }

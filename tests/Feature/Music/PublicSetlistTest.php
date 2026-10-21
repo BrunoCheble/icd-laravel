@@ -86,4 +86,38 @@ class PublicSetlistTest extends MusicTestCase
         $this->assertSame('A', $pivot->musical_key);
         $this->assertEquals(60, $song->fresh()->bpm);
     }
+
+    public function test_after_its_day_a_setlist_is_only_seen_but_takes_chord_suggestions(): void
+    {
+        $song = $this->song();
+        $other = $this->song('Outra');
+        $setlist = $this->setlist($song);
+        $setlist->update(['event_date' => '2026-10-20']);
+        $base = "/repertoire/{$setlist->id}";
+
+        // The day itself (Lisbon time) still takes changes
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-10-20 23:30', 'Europe/Lisbon'));
+        $this->assertFalse($setlist->fresh()->isPast());
+        $this->patchJson("$base/songs/{$song->id}/bpm", ['bpm' => 70])->assertNoContent();
+
+        // The day after: nothing changes, only to be seen
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-10-21 00:10', 'Europe/Lisbon'));
+        $this->get($base)->assertOk()->assertSee('only to be viewed');
+        $this->assertTrue(app(\App\Modules\Music\Services\GetPublicSetlistService::class)->execute($setlist->fresh())['locked']);
+        foreach ([
+            fn () => $this->postJson("$base/songs", ['song_id' => $other->id]),
+            fn () => $this->deleteJson("$base/songs/{$song->id}"),
+            fn () => $this->patchJson("$base/songs/{$song->id}/key", ['musical_key' => 'A']),
+            fn () => $this->patchJson("$base/songs/{$song->id}/bpm", ['bpm' => 80]),
+            fn () => $this->putJson("$base/order", ['songs' => [$song->id]]),
+            fn () => $this->postJson("$base/songs/{$song->id}/lessons", ['instrument' => 'Bass', 'video_url' => 'https://youtu.be/dQw4w9WgXcQ']),
+        ] as $change) {
+            $change()->assertForbidden()->assertJsonPath('message', 'This setlist already took place: it can only be viewed.');
+        }
+        $this->assertSame(1, $setlist->songs()->count());
+        $this->assertEquals(70, $setlist->songs()->first()->pivot->bpm);
+
+        // Chord suggestions are still taken
+        $this->assertNotSame(403, $this->postJson("$base/songs/{$song->id}/suggestions", ['changes' => [['n' => 0, 'from' => 'G', 'to' => 'A']]])->status());
+    }
 }

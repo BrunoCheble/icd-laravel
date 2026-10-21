@@ -17,6 +17,12 @@ class Setlist extends Model
         'event_date',
     ];
 
+    /** Its day went by (Lisbon time): the public repertoire only shows it (see EnsureSetlistNotPast). */
+    public function isPast(): bool
+    {
+        return $this->event_date !== null && $this->event_date->toDateString() < now('Europe/Lisbon')->toDateString();
+    }
+
     protected function casts(): array
     {
         return [

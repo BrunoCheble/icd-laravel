@@ -15,20 +15,22 @@ use App\Modules\Music\Http\Controllers\SongSheetController;
 use App\Modules\Music\Http\Controllers\SongSuggestionController;
 use App\Modules\Music\Http\Controllers\SongVersionController;
 use App\Modules\Music\Http\Controllers\Site\SetlistController as SiteSetlistController;
+use App\Modules\Music\Http\Middleware\EnsureSetlistNotPast;
 use Illuminate\Support\Facades\Route;
 
+// After a setlist's day, only chord suggestions change anything (EnsureSetlistNotPast on the other changes).
 Route::prefix('repertoire')->name('site.setlist')->controller(SiteSetlistController::class)->group(function () {
     Route::get('/', 'index');
     Route::get('/songs/search', 'searchSongs')->name('.songs.search');
     Route::get('/songs/catalog', 'catalog')->name('.songs.catalog');
     Route::get('/{setlist}', 'show')->whereNumber('setlist')->name('.show');
-    Route::post('/{setlist}/songs', 'addSong')->whereNumber('setlist')->name('.songs.add');
-    Route::delete('/{setlist}/songs/{song}', 'removeSong')->whereNumber(['setlist', 'song'])->name('.songs.remove');
-    Route::patch('/{setlist}/songs/{song}/key', 'updateKey')->whereNumber(['setlist', 'song'])->name('.songs.key');
-    Route::patch('/{setlist}/songs/{song}/bpm', 'updateBpm')->whereNumber(['setlist', 'song'])->name('.songs.bpm');
-    Route::put('/{setlist}/order', 'reorder')->whereNumber('setlist')->name('.order');
-    Route::post('/{setlist}/songs/{song}/lessons/{lesson}/loops', 'contributeLessonLoop')->whereNumber(['setlist', 'song', 'lesson'])->middleware('throttle:20,1,lesson-loops')->name('.songs.lessons.loops');
-    Route::post('/{setlist}/songs/{song}/lessons', 'contributeLesson')->whereNumber(['setlist', 'song'])->middleware('throttle:10,1,lesson-contributions')->name('.songs.lessons');
+    Route::post('/{setlist}/songs', 'addSong')->whereNumber('setlist')->name('.songs.add')->middleware(EnsureSetlistNotPast::class);
+    Route::delete('/{setlist}/songs/{song}', 'removeSong')->whereNumber(['setlist', 'song'])->name('.songs.remove')->middleware(EnsureSetlistNotPast::class);
+    Route::patch('/{setlist}/songs/{song}/key', 'updateKey')->whereNumber(['setlist', 'song'])->name('.songs.key')->middleware(EnsureSetlistNotPast::class);
+    Route::patch('/{setlist}/songs/{song}/bpm', 'updateBpm')->whereNumber(['setlist', 'song'])->name('.songs.bpm')->middleware(EnsureSetlistNotPast::class);
+    Route::put('/{setlist}/order', 'reorder')->whereNumber('setlist')->name('.order')->middleware(EnsureSetlistNotPast::class);
+    Route::post('/{setlist}/songs/{song}/lessons/{lesson}/loops', 'contributeLessonLoop')->whereNumber(['setlist', 'song', 'lesson'])->middleware('throttle:20,1,lesson-loops')->name('.songs.lessons.loops')->middleware(EnsureSetlistNotPast::class);
+    Route::post('/{setlist}/songs/{song}/lessons', 'contributeLesson')->whereNumber(['setlist', 'song'])->middleware('throttle:10,1,lesson-contributions')->name('.songs.lessons')->middleware(EnsureSetlistNotPast::class);
     Route::post('/{setlist}/songs/{song}/suggestions', 'suggest')->whereNumber(['setlist', 'song'])->middleware('throttle:20,1,chord-suggestions')->name('.songs.suggest');
 });
 

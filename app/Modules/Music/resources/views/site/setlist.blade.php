@@ -323,6 +323,10 @@
         .lessons-box-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .6rem; }
         .lessons-filter { margin-bottom: .75rem; }
         .lessons-filter select { width: 100%; max-width: 20rem; }
+        .locked-bar { margin: 0; padding: .35rem 1rem; background: var(--surface-2); color: var(--muted); font-size: .8rem; text-align: center; }
+        .locked-bar i { color: var(--accent); margin-right: .25rem; }
+        .locked-note { display: flex; gap: .5rem; align-items: flex-start; margin: 0 0 .75rem; padding: .6rem .75rem; border-radius: .6rem; background: var(--surface-2); color: var(--muted); font-size: .85rem; line-height: 1.4; }
+        .locked-note i { margin-top: .15rem; color: var(--accent); }
         .lesson-contribute { display: grid; gap: .45rem; margin-top: 1rem; padding-top: .9rem; border-top: 1px solid var(--border); }
         .lesson-contribute-row { display: flex; flex-wrap: wrap; gap: .4rem; }
         .lessons-group h3 { margin: .5rem 0; font-size: .95rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
@@ -429,6 +433,7 @@
             <span class="offline-badge" x-show="!online" x-cloak title="{{ __('No connection: showing the copy saved on this device') }}" aria-label="{{ __('No connection') }}"><i class="fa-solid fa-wifi"></i></span>
             <button type="button" class="btn btn-icon" :class="{ 'is-active': optionsOpen }" @click="optionsOpen = !optionsOpen" :aria-expanded="optionsOpen" aria-label="{{ __('Options') }}" title="{{ __('Options') }}"><i class="fa-solid fa-gear"></i></button>
         </header>
+        <p class="locked-bar" x-show="locked" x-cloak><i class="fa-solid fa-lock"></i> <span x-text="@js(__('This setlist already took place (:date): only to be viewed.')).replace(':date', lockedDate)"></span></p>
 
         @if ($data)
             {{-- Section timer: follows the "start" times of the structure (the recording); tapping a block re-syncs it --}}
@@ -811,15 +816,16 @@
                     <button type="button" class="btn btn-icon" @click="panelOpen = false" aria-label="{{ __('Close') }}"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="panel-body">
+                    <p class="locked-note" x-show="locked" x-cloak><i class="fa-solid fa-lock"></i> <span x-text="@js(__('This setlist already took place (:date): it can only be viewed. You can still suggest chord corrections.')).replace(':date', lockedDate)"></span></p>
                     <ol class="song-list" x-ref="list">
                         <template x-for="(song, index) in songs" :key="song.id">
                             <li class="song-item" :data-id="song.id" :class="{ 'is-current': song.id === currentId, 'is-dragging': song.id === dragId }">
-                                <span class="handle" @pointerdown="startDrag($event, song.id)" aria-hidden="true"><i class="fa-solid fa-grip-vertical"></i></span>
+                                <span class="handle" x-show="!locked" @pointerdown="startDrag($event, song.id)" aria-hidden="true"><i class="fa-solid fa-grip-vertical"></i></span>
                                 <button type="button" class="song-item-main" @click="go(index); panelOpen = false">
                                     <span class="song-item-title" x-text="`${index + 1}. ${song.title}`"></span>
                                     <span class="song-item-meta" x-text="[song.artist, song.setlist_key ?? song.original_key ?? '—', song.minister_name].filter(Boolean).join(' · ')"></span>
                                 </button>
-                                <button type="button" class="btn btn-icon" @click="askRemove(song)" aria-label="{{ __('Remove') }}"><i class="fa-solid fa-xmark"></i></button>
+                                <button type="button" class="btn btn-icon" x-show="!locked" @click="askRemove(song)" aria-label="{{ __('Remove') }}"><i class="fa-solid fa-xmark"></i></button>
                             </li>
                         </template>
                     </ol>
@@ -840,7 +846,7 @@
                         <button type="button" class="btn" @click="install()"><i class="fa-solid fa-mobile-screen-button"></i> {{ __('Install app') }}</button>
                     </div>
 
-                    <div class="search">
+                    <div class="search" x-show="!locked">
                         <button type="button" class="btn btn-accent" x-show="!searchOpen" @click="openSearch()">+ {{ __('Add song') }}</button>
                         <div x-show="searchOpen">
                             <input type="search" class="control" x-ref="search" x-model="term" @input.debounce.300ms="search()"
@@ -884,7 +890,7 @@
                                 <section class="lessons-group">
                                     <h3 x-show="!settings.lessonInstrument" x-text="group.instrument"></h3>
                                     <template x-for="lesson in group.lessons" :key="lesson.id">
-                                        <div style="margin-bottom: .75rem;">@include('music::songs.partials.lesson-card', ['saveUrl' => 'null', 'contributeUrl' => "songUrl(current, '/lessons/' + lesson.id + '/loops')"])</div>
+                                        <div style="margin-bottom: .75rem;">@include('music::songs.partials.lesson-card', ['saveUrl' => 'null', 'contributeUrl' => "(locked ? null : songUrl(current, '/lessons/' + lesson.id + '/loops'))"])</div>
                                     </template>
                                 </section>
                             </template>
@@ -893,7 +899,7 @@
 
                     {{-- A YouTube video for the instrument picked in the filter, sent by a musician: it becomes a lesson for
                          everyone; only the team changes or removes it --}}
-                    <form class="lesson-contribute" @submit.prevent="contributeLesson()">
+                    <form class="lesson-contribute" x-show="!locked" @submit.prevent="contributeLesson()">
                         <strong x-text="settings.lessonInstrument ? @js(__('Add a YouTube video for :instrument')).replace(':instrument', settings.lessonInstrument) : @js(__('Add a YouTube video for your instrument'))"></strong>
                         <p class="hint" style="margin: 0;" x-show="!settings.lessonInstrument">{{ __('Pick your instrument in the filter above to send a video.') }}</p>
                         <div class="lesson-contribute-row" x-show="settings.lessonInstrument">
@@ -1078,6 +1084,10 @@
             const setlist = config.setlist;
 
             return {
+                // Its day went by: only to be seen; the key and the BPM change only on this device, and chord
+                // suggestions are still sent.
+                locked: !!setlist?.locked,
+                lockedDate: setlist?.event_date || '',
                 songs: setlist?.songs ?? [],
                 keyOptions: config.keyOptions,
                 messages: config.messages,
@@ -2027,6 +2037,7 @@
                 },
                 // Saved for the whole band (a moment after the last tap or change); null: back to the song's own BPM.
                 saveSetlistBpm(bpm) {
+                    if (this.locked) return;
                     const song = this.current;
                     if (!song) return;
                     const previous = song.setlist_bpm;
@@ -3070,6 +3081,7 @@
                     const song = this.current;
                     const previous = song.setlist_key;
                     song.setlist_key = key || null;
+                    if (this.locked) return;
                     this.savingKey = true;
                     try {
                         await this.request('PATCH', this.songUrl(song, '/key'), { musical_key: song.setlist_key });

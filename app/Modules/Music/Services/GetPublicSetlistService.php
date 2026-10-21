@@ -20,6 +20,8 @@ class GetPublicSetlistService
             'id'            => $setlist->id,
             'title'         => $setlist->title,
             'event_date'    => $setlist->event_date?->format('d/m/Y'),
+            // Its day went by: only to be seen (chord suggestions still taken).
+            'locked'        => $setlist->isPast(),
             'songs'         => $setlist->songs->map(fn (Song $song) => self::songPayload($song))->all(),
         ];
     }

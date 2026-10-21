@@ -1347,5 +1347,8 @@
     "Notifications are blocked for this site: allow them in the browser's or the phone's settings.": "As notificações estão bloqueadas para este site: permita-as nas definições do browser ou do telemóvel.",
     "This browser does not receive notifications. On an iPhone, add the app to the home screen first (Share → Add to Home Screen) and open it from there.": "Este browser não recebe notificações. No iPhone, adicione primeiro a app ao ecrã principal (Partilhar → Adicionar ao ecrã principal) e abra-a a partir daí.",
     "Test sent: it should arrive in a few seconds.": "Teste enviado: deve chegar em poucos segundos.",
-    "It was not possible now. Try again.": "Não foi possível agora. Tente de novo."
+    "It was not possible now. Try again.": "Não foi possível agora. Tente de novo.",
+    "This setlist already took place: it can only be viewed.": "Este repertório já foi: só pode ser consultado.",
+    "This setlist already took place (:date): it can only be viewed. You can still suggest chord corrections.": "Este repertório já foi (:date): só pode ser consultado. Ainda pode sugerir correções de acordes.",
+    "This setlist already took place (:date): only to be viewed.": "Este repertório já foi (:date): só para consulta."
 }
