@@ -10,9 +10,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @include('layouts.partials.pwa')
+    @include('layouts.partials.theme')
     <style>
         [x-cloak] { display: none !important; }
-        body { margin: 0; background: #f4f5f7; }
+        body { margin: 0; background: var(--bg-f4f5f7); }
         .login { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr); }
         @media (min-width: 900px) { .login { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); } }
 
@@ -29,32 +30,32 @@
         /* The form */
         .login-main { display: flex; align-items: center; justify-content: center; padding: 2rem 1.25rem; }
         .login-card { width: min(24rem, 100%); }
-        .login-logo { display: block; width: 4.5rem; height: 4.5rem; margin: 0 auto 1.25rem; padding: .45rem; border-radius: 1.25rem; background: #fff; box-shadow: 0 6px 20px rgba(0, 0, 0, .08); }
+        .login-logo { display: block; width: 4.5rem; height: 4.5rem; margin: 0 auto 1.25rem; padding: .45rem; border-radius: 1.25rem; background: var(--bg-fff); box-shadow: 0 6px 20px rgba(0, 0, 0, .08); }
         @media (min-width: 900px) { .login-logo { display: none; } }
-        .login-card h2 { margin: 0; font-size: 1.6rem; font-weight: 800; color: #111827; letter-spacing: -.01em; }
-        .login-card .lead { margin: .35rem 0 1.75rem; color: #6b7280; }
+        .login-card h2 { margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--tx-111827); letter-spacing: -.01em; }
+        .login-card .lead { margin: .35rem 0 1.75rem; color: var(--tx-6b7280); }
         .field { margin-bottom: 1rem; }
-        .field label { display: block; margin-bottom: .35rem; font-size: .85rem; font-weight: 700; color: #374151; }
+        .field label { display: block; margin-bottom: .35rem; font-size: .85rem; font-weight: 700; color: var(--tx-374151); }
         .input { position: relative; }
-        .input > i { position: absolute; left: .95rem; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; }
-        .input input { width: 100%; min-height: 50px; padding: 0 2.9rem 0 2.75rem; border: 1px solid #d1d5db; border-radius: .8rem; background-color: #fff; font-size: 16px; color: #111827; }
-        .input input:focus { outline: none; border-color: #f8a925; box-shadow: 0 0 0 4px #fdeccd; }
-        .input .reveal { position: absolute; right: .35rem; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; border-radius: .6rem; background: none; color: #9ca3af; cursor: pointer; }
-        .input .reveal:hover { color: #374151; background: #f3f4f6; }
-        .not-you { margin-top: .35rem; border: 0; background: none; padding: 0; font-size: .8rem; color: #6b7280; text-decoration: underline; cursor: pointer; }
-        .error { margin: .35rem 0 0; font-size: .85rem; font-weight: 600; color: #dc2626; }
-        .status { margin-bottom: 1rem; padding: .7rem .9rem; border-radius: .7rem; background: #dcfce7; color: #166534; font-size: .9rem; }
+        .input > i { position: absolute; left: .95rem; top: 50%; transform: translateY(-50%); color: var(--tx-9ca3af); pointer-events: none; }
+        .input input { width: 100%; min-height: 50px; padding: 0 2.9rem 0 2.75rem; border: 1px solid var(--bd-d1d5db); border-radius: .8rem; background-color: var(--bg-fff); font-size: 16px; color: var(--tx-111827); }
+        .input input:focus { outline: none; border-color: #f8a925; box-shadow: 0 0 0 4px var(--brand-100); }
+        .input .reveal { position: absolute; right: .35rem; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; border-radius: .6rem; background: none; color: var(--tx-9ca3af); cursor: pointer; }
+        .input .reveal:hover { color: var(--tx-374151); background: var(--bg-f3f4f6); }
+        .not-you { margin-top: .35rem; border: 0; background: none; padding: 0; font-size: .8rem; color: var(--tx-6b7280); text-decoration: underline; cursor: pointer; }
+        .error { margin: .35rem 0 0; font-size: .85rem; font-weight: 600; color: var(--tx-dc2626); }
+        .status { margin-bottom: 1rem; padding: .7rem .9rem; border-radius: .7rem; background: var(--bg-dcfce7); color: var(--tx-166534); font-size: .9rem; }
         .row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: .25rem 0 1.25rem; }
-        .remember { display: inline-flex; align-items: center; gap: .5rem; font-size: .9rem; color: #4b5563; cursor: pointer; }
-        .remember input { width: 1.1rem; height: 1.1rem; border-radius: .3rem; border-color: #d1d5db; color: #f8a925; }
+        .remember { display: inline-flex; align-items: center; gap: .5rem; font-size: .9rem; color: var(--tx-4b5563); cursor: pointer; }
+        .remember input { width: 1.1rem; height: 1.1rem; border-radius: .3rem; border-color: var(--bd-d1d5db); color: #f8a925; }
         .btn-primary { display: flex; align-items: center; justify-content: center; gap: .55rem; width: 100%; min-height: 52px; border: 0; border-radius: .9rem; background: #f8a925; color: #fff; font-size: 1.05rem; font-weight: 800; cursor: pointer; box-shadow: 0 8px 20px rgba(248, 169, 37, .3); }
         .btn-primary:hover { background: #d8881c; }
-        .divider { display: flex; align-items: center; gap: .75rem; margin: 1.5rem 0; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #9ca3af; }
-        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+        .divider { display: flex; align-items: center; gap: .75rem; margin: 1.5rem 0; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--tx-9ca3af); }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--bg-e5e7eb); }
         .btn-passkey { display: flex; align-items: center; justify-content: center; gap: .65rem; width: 100%; min-height: 52px; border: 0; border-radius: .9rem; background: #111827; color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; }
         .btn-passkey i { font-size: 1.35rem; color: #fbbf24; }
         .btn-passkey:disabled { opacity: .65; }
-        .hint { margin: .6rem 0 0; text-align: center; font-size: .8rem; color: #9ca3af; }
+        .hint { margin: .6rem 0 0; text-align: center; font-size: .8rem; color: var(--tx-9ca3af); }
     </style>
 </head>
 <body class="font-sans antialiased">

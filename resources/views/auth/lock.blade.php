@@ -8,8 +8,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @include('layouts.partials.pwa')
+    @include('layouts.partials.theme')
 </head>
-<body class="font-sans antialiased" style="min-height: 100vh; display: grid; place-items: center; padding: 1.5rem; background: #f4f5f7;">
+<body class="font-sans antialiased" style="min-height: 100vh; display: grid; place-items: center; padding: 1.5rem; background: var(--bg-f4f5f7);">
     {{-- The lock screen: the page asked for opens again once unlocked --}}
     @include('layouts.partials.lock-panel', ['overlay' => false])
 </body>
