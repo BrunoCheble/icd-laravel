@@ -18,12 +18,12 @@ class ListPastorsService
             return [];
         }
 
-        return $ministry->memberships()->where('active', true)->with(['member', 'ministryRole'])->get()
+        return $ministry->memberships()->where('active', true)->with('member')->get()
             ->filter(fn (MinistryMember $membership) => $membership->member)
             ->map(fn (MinistryMember $membership) => [
                 'id' => $membership->id,
                 'name' => $membership->member->full_name,
-                'role' => $membership->roleName(),
+                'role' => $membership->role ?: null,
                 'photo' => $membership->member->photo && is_file(public_path('images/' . $membership->member->photo))
                     ? asset('images/' . $membership->member->photo) : null,
                 'bio' => $membership->bio ?: null,

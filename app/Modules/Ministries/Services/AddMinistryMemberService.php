@@ -12,7 +12,7 @@ class AddMinistryMemberService
     {
         return $ministry->memberships()->create([
             'member_id' => $data['member_id'],
-            'ministry_role_id' => $data['ministry_role_id'] ?? null,
+            'role' => $data['role'] ?? null,
             'active' => true,
             'sort_order' => (int) $ministry->memberships()->max('sort_order') + 1,
         ]);

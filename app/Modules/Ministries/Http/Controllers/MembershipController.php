@@ -25,7 +25,7 @@ class MembershipController extends Controller
     /** The member's role, order and whether active in the ministry, and their biography. */
     public function edit(MinistryMember $membership): View
     {
-        $membership->load(['ministry.roles', 'member']);
+        $membership->load(['ministry', 'member']);
 
         return view('ministries::memberships.edit', ['membership' => $membership]);
     }

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * The ministries module: each ministry with its roles and members (role, order, active, biography); the pastoral
+ * The ministries module: each ministry with its members (role, order, active, biography); the pastoral
  * one is the site's "Pastores" (public API). Views: "ministries::".
  */
 class MinistriesServiceProvider extends ServiceProvider

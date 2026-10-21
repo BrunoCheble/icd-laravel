@@ -11,9 +11,7 @@ class SaveMembershipService
     public function execute(MinistryMember $membership, array $data): MinistryMember
     {
         $membership->fill([
-            'ministry_role_id' => $data['ministry_role_id'] ?? null,
-            // The text typed before the roles existed goes once a role is chosen.
-            'role' => ($data['ministry_role_id'] ?? null) ? null : $membership->role,
+            'role' => $data['role'] ?? null,
             'active' => (bool) $data['active'],
             'sort_order' => (int) $data['sort_order'],
             'bio' => MinistryBio::clean($data['bio'] ?? null),

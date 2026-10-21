@@ -41,7 +41,7 @@
                         <span class="mn-icon"><i class="fa-solid {{ $ministry->isPastoral() ? 'fa-user-tie' : 'fa-people-group' }}"></i></span>
                         <span>
                             <strong>{{ $ministry->name }}</strong>
-                            <small>{{ trans_choice(':count member|:count members', $ministry->members_count, ['count' => $ministry->members_count]) }} · {{ trans_choice(':count role|:count roles', $ministry->roles_count, ['count' => $ministry->roles_count]) }}</small>
+                            <small>{{ trans_choice(':count member|:count members', $ministry->members_count, ['count' => $ministry->members_count]) }}</small>
                             @if ($ministry->isPastoral())
                                 <span class="m-tags"><span class="m-tag is-ok"><i class="fa-solid fa-globe"></i> {{ __('On the site: Pastors') }}</span></span>
                             @endif

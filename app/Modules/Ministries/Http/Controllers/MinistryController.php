@@ -31,10 +31,10 @@ class MinistryController extends Controller
         return redirect()->route('ministries.show', $ministry)->with('success', __('Ministry saved.'));
     }
 
-    /** Its roles and members (with each one's role, order and biography). */
+    /** Its members (with each one's role, order and biography). */
     public function show(Ministry $ministry, GetMinistryFormOptionsService $options): View
     {
-        $ministry->load(['roles', 'memberships.member', 'memberships.ministryRole']);
+        $ministry->load('memberships.member');
 
         return view('ministries::ministries.show', ['ministry' => $ministry, 'people' => $options->people($ministry)]);
     }

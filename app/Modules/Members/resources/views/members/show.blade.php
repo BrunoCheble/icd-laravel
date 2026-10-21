@@ -159,7 +159,7 @@
                 @forelse ($ministries as $membership)
                     <div style="display: flex; align-items: center; gap: .5rem; padding: .35rem 0; {{ $membership->active ? '' : 'opacity: .55;' }}">
                         <a href="{{ route('ministries.show', $membership->ministry) }}" style="font-weight: 700; color: var(--tx-111827); text-decoration: none;">{{ $membership->ministry->name }}</a>
-                        @if ($membership->roleName())<span class="m-tag is-media">{{ $membership->roleName() }}</span>@endif
+                        @if ($membership->role)<span class="m-tag is-media">{{ $membership->role }}</span>@endif
                         @unless ($membership->active)<span class="m-tag is-off">{{ __('Not active') }}</span>@endunless
                     </div>
                 @empty

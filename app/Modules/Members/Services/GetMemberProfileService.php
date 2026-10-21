@@ -24,7 +24,7 @@ class GetMemberProfileService
                 ->orderBy('date_of_birth')
                 ->get(),
             'pending' => $this->pending->execute($member),
-            'ministries' => $member->ministryMemberships()->with(['ministry', 'ministryRole'])->get()
+            'ministries' => $member->ministryMemberships()->with('ministry')->get()
                 ->filter(fn ($membership) => $membership->ministry)
                 ->sortBy([['active', 'desc'], fn ($a, $b) => strcmp($a->ministry->name, $b->ministry->name)])->values(),
         ];

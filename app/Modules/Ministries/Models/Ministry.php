@@ -8,19 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * A ministry of the church (ICD Music, ICD Kids…), with its roles and members. The one with key PASTORAL is the
- * site's "Pastores".
+ * A ministry of the church (ICD Music, ICD Kids…) and its members. The one with key PASTORAL is the site's
+ * "Pastores".
  */
 class Ministry extends Model
 {
     public const PASTORAL = 'pastoral';
 
     protected $fillable = ['name', 'key'];
-
-    public function roles(): HasMany
-    {
-        return $this->hasMany(MinistryRole::class)->orderBy('sort_order')->orderBy('name');
-    }
 
     /** Who is in it (each with role, order, active and biography). */
     public function memberships(): HasMany

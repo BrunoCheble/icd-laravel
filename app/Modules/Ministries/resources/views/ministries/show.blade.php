@@ -8,8 +8,7 @@
     @include('partials.ui')
 
     <style>
-        .mn-grid { display: grid; gap: 1rem; margin-top: .75rem; }
-        @media (min-width: 1100px) { .mn-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: start; } }
+        .mn-grid { display: grid; gap: 1rem; margin-top: .75rem; max-width: 56rem; }
         .mn-card { overflow: hidden; }
         .mn-card > h3 { display: flex; align-items: center; gap: .5rem; margin: 0; padding: .85rem 1rem; border-bottom: 1px solid var(--bd-f1f2f4); font-size: .95rem; font-weight: 800; color: var(--tx-111827); }
         .mn-card > h3 small { margin-left: auto; font-size: .8rem; font-weight: 600; color: var(--tx-6b7280); }
@@ -23,15 +22,7 @@
         .mn-text small { display: block; font-size: .82rem; color: var(--tx-6b7280); }
         .mn-add { display: grid; gap: .6rem; padding: 1rem; border-top: 1px solid var(--bd-f1f2f4); background: var(--bg-fafafa); }
         @media (min-width: 700px) { .mn-add { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; align-items: start; } }
-        .mn-role { display: flex; align-items: center; gap: .5rem; padding: .5rem 1rem; border-bottom: 1px solid var(--bd-f1f2f4); }
-        .mn-role form.rename { flex: 1; display: flex; gap: .4rem; }
-        .mn-role .m-input { min-height: 36px; }
-        .mn-role-add { display: flex; gap: .4rem; padding: .75rem 1rem; background: var(--bg-fafafa); }
     </style>
-
-    @php
-        $roleOptions = $ministry->roles;
-    @endphp
 
     <div class="m-page">
         <a href="{{ route('ministries.index') }}" class="m-back"><i class="fa-solid fa-arrow-left"></i> {{ __('Ministries') }}</a>
@@ -63,7 +54,7 @@
                         <span class="mn-text">
                             <strong><a href="{{ route('members.show', $membership->member) }}" style="color: inherit; text-decoration: none;">{{ $membership->member->full_name }}</a></strong>
                             <small>
-                                {{ $membership->roleName() ?? __('No role') }}
+                                {{ $membership->role ?: __('No role') }}
                                 @unless ($membership->active) · {{ __('Not active') }}@endunless
                                 @if ($membership->bio) · <i class="fa-regular fa-file-lines"></i> {{ __('Biography') }}@endif
                             </small>
@@ -83,49 +74,9 @@
                             @include('members::members.partials.person-picker', ['member' => new \App\Modules\Ministries\Models\MinistryMember(), 'name' => 'member_id', 'want' => null])
                             @error('member_id')<p class="m-error">{{ $message }}</p>@enderror
                         </div>
-                        <select name="ministry_role_id" class="m-input" aria-label="{{ __('Ministry role') }}">
-                            <option value="">{{ __('No role') }}</option>
-                            @foreach ($roleOptions as $role)
-                                <option value="{{ $role->id }}" @selected((string) old('ministry_role_id') === (string) $role->id)>{{ $role->name }}</option>
-                            @endforeach
-                        </select>
+                        <input name="role" type="text" class="m-input" value="{{ old('role') }}" maxlength="80" placeholder="{{ __('Role (optional)') }}" aria-label="{{ __('Ministry role') }}">
                         <button type="submit" class="m-btn is-primary"><i class="fa-solid fa-user-plus"></i> {{ __('Add') }}</button>
                     </form>
-                @endcan
-            </section>
-
-            {{-- The ministry's roles --}}
-            <section class="m-card mn-card" id="roles">
-                <h3><i class="fa-solid fa-id-badge m-muted"></i> {{ __('Roles') }} <small>{{ $roleOptions->count() }}</small></h3>
-                @forelse ($roleOptions as $role)
-                    <div class="mn-role">
-                        @can('members.update')
-                            <form method="POST" action="{{ route('ministries.roles.update', $role) }}" class="rename">
-                                @csrf
-                                @method('PUT')
-                                <input name="sort_order" type="number" min="0" max="999" class="m-input" value="{{ $role->sort_order }}" style="width: 4.2rem;" aria-label="{{ __('Order') }}">
-                                <input name="name" type="text" class="m-input" value="{{ $role->name }}" required maxlength="80" aria-label="{{ __('Ministry role') }}">
-                                <button type="submit" class="m-btn is-ghost is-icon" title="{{ __('Save') }}" aria-label="{{ __('Save') }}"><i class="fa-solid fa-check"></i></button>
-                            </form>
-                            <form method="POST" action="{{ route('ministries.roles.destroy', $role) }}" x-data @submit="if (!confirm(@js(__('Delete this role? Who has it stays in the ministry, without a role.')))) $event.preventDefault()">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="m-btn is-ghost is-icon" title="{{ __('Delete') }}" aria-label="{{ __('Delete') }}"><i class="fa-solid fa-trash"></i></button>
-                            </form>
-                        @else
-                            <span>{{ $role->name }}</span>
-                        @endcan
-                    </div>
-                @empty
-                    <p class="m-muted" style="padding: 1rem; margin: 0;">{{ __('No roles yet (e.g. Pastor Presidente, Vocal).') }}</p>
-                @endforelse
-                @can('members.update')
-                    <form method="POST" action="{{ route('ministries.roles.store', $ministry) }}" class="mn-role-add">
-                        @csrf
-                        <input name="name" type="text" class="m-input" required maxlength="80" placeholder="{{ __('New role') }}" aria-label="{{ __('New role') }}">
-                        <button type="submit" class="m-btn"><i class="fa-solid fa-plus"></i> {{ __('Add') }}</button>
-                    </form>
-                    @error('name')<p class="m-error" style="padding: 0 1rem .75rem;">{{ $message }}</p>@enderror
                 @endcan
             </section>
         </div>

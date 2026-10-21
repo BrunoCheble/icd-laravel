@@ -14,7 +14,7 @@ class AddMinistryMemberRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge(['ministry_role_id' => $this->input('ministry_role_id') ?: null]);
+        $this->merge(['role' => trim((string) $this->input('role')) ?: null]);
     }
 
     public function rules(): array
@@ -23,7 +23,7 @@ class AddMinistryMemberRequest extends FormRequest
 
         return [
             'member_id' => ['required', 'integer', 'exists:members,id', Rule::unique('ministry_members', 'member_id')->where('ministry_id', $ministry->id)],
-            'ministry_role_id' => ['nullable', 'integer', Rule::exists('ministry_roles', 'id')->where('ministry_id', $ministry->id)],
+            'role' => ['nullable', 'string', 'max:80'],
         ];
     }
 

@@ -46,14 +46,9 @@
                     <h3 class="m-section-title"><i class="fa-solid fa-id-badge"></i> {{ __('In the ministry') }}</h3>
                     <div class="m-grid cols-2">
                         <div class="m-field">
-                            <label class="m-label" for="ministry_role_id">{{ __('Ministry role') }} <span class="m-optional">({{ __('optional') }})</span></label>
-                            <select id="ministry_role_id" name="ministry_role_id" class="m-input">
-                                <option value="">{{ $membership->role ? __('No role') . ' (' . $membership->role . ')' : __('No role') }}</option>
-                                @foreach ($ministry->roles as $role)
-                                    <option value="{{ $role->id }}" @selected((string) old('ministry_role_id', $membership->ministry_role_id) === (string) $role->id)>{{ $role->name }}</option>
-                                @endforeach
-                            </select>
-                            <p class="m-help">{{ __('The roles are made on the ministry\'s page.') }}</p>
+                            <label class="m-label" for="role">{{ __('Ministry role') }} <span class="m-optional">({{ __('optional') }})</span></label>
+                            <input id="role" name="role" type="text" class="m-input" value="{{ old('role', $membership->role) }}" maxlength="80" placeholder="{{ __('E.g. Pastor Presidente, Vocal') }}">
+                            @error('role')<p class="m-error">{{ $message }}</p>@enderror
                         </div>
                         <div class="m-field">
                             <label class="m-label" for="sort_order">{{ __('Order') }}</label>

@@ -12,7 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Ministries with their roles and members (role, order, biography), the member's page, and the site's "Pastores"
+ * Ministries and their members (role, order, biography), the member's page, and the site's "Pastores"
  * (test database icd_test, emptied on every run).
  */
 class MinistriesTest extends TestCase
@@ -27,23 +27,20 @@ class MinistriesTest extends TestCase
             'gender' => 'M', 'marital_status' => 'S', 'membership_status' => MembershipStatus::ACTIVED]);
     }
 
-    public function test_a_ministry_gets_roles_and_members_in_order_and_the_member_page_lists_them(): void
+    public function test_a_ministry_gets_members_with_a_role_in_order_and_the_member_page_lists_them(): void
     {
         $this->actingAs(User::factory()->create());
         $this->post('/ministries', ['name' => 'ZZ Teste Pastoral', 'is_pastoral' => '1'])->assertRedirect();
         $ministry = Ministry::query()->where('name', 'ZZ Teste Pastoral')->firstOrFail();
         $this->assertTrue($ministry->isPastoral());
 
-        $this->post(route('ministries.roles.store', $ministry), ['name' => 'Pastor Presidente'])->assertRedirect();
-        $this->post(route('ministries.roles.store', $ministry), ['name' => 'Pastor Presidente'])->assertSessionHasErrors('name');
-        $role = $ministry->roles()->firstOrFail();
-
         $ana = $this->member('Ana');
         $joao = $this->member('João');
-        $this->post(route('ministries-members.store', $ministry), ['member_id' => $joao->id, 'ministry_role_id' => $role->id])->assertRedirect();
+        $this->post(route('ministries-members.store', $ministry), ['member_id' => $joao->id, 'role' => ' Pastor Presidente '])->assertRedirect();
         $this->post(route('ministries-members.store', $ministry), ['member_id' => $ana->id])->assertRedirect();
         $this->post(route('ministries-members.store', $ministry), ['member_id' => $ana->id])->assertSessionHasErrors('member_id');
         $this->assertSame([$joao->id, $ana->id], $ministry->memberships()->pluck('member_id')->all());
+        $this->assertSame(['Pastor Presidente', null], $ministry->memberships()->pluck('role')->all());
 
         $this->get(route('ministries.show', $ministry))->assertOk()->assertSee('Pastor Presidente')->assertSee('Ana ZZ Teste');
         $this->get(route('members.show', $joao))->assertOk()->assertSee('ZZ Teste Pastoral')->assertSee('Pastor Presidente');
@@ -77,18 +74,17 @@ class MinistriesTest extends TestCase
     public function test_the_site_gets_the_active_pastors_in_order_with_role_and_biography(): void
     {
         $pastoral = Ministry::create(['name' => 'ZZ Teste Pastoral', 'key' => Ministry::PASTORAL]);
-        $role = $pastoral->roles()->create(['name' => 'Pastor Presidente']);
         $music = Ministry::create(['name' => 'ZZ Teste Music']);
         $emerson = $this->member('Emerson');
         $ana = $this->member('Ana');
         $rui = $this->member('Rui');
         $pastoral->memberships()->create(['member_id' => $ana->id, 'sort_order' => 2, 'active' => true]);
-        $first = $pastoral->memberships()->create(['member_id' => $emerson->id, 'ministry_role_id' => $role->id, 'sort_order' => 1, 'active' => true]);
+        $first = $pastoral->memberships()->create(['member_id' => $emerson->id, 'role' => 'Pastor', 'sort_order' => 1, 'active' => true]);
         $pastoral->memberships()->create(['member_id' => $rui->id, 'sort_order' => 3, 'active' => false]);
         $music->memberships()->create(['member_id' => $rui->id, 'active' => true]);
 
         $this->actingAs(User::factory()->create())->put(route('ministries-members.update', $first), [
-            'ministry_role_id' => $role->id, 'active' => '1', 'sort_order' => 1,
+            'role' => 'Pastor Presidente', 'active' => '1', 'sort_order' => 1,
             'bio' => json_encode(['layout' => 'simple', 'sections' => [['title' => '', 'blocks' => [['type' => 'text', 'text' => 'Pastor desde 2007.']]]]]),
         ])->assertRedirect();
 
