@@ -1,2 +1,4 @@
+# The system stays out of the search engines: each page says "noindex" (see PreventIndexing),
+# which they read only if they may come in.
 User-agent: *
 Disallow:

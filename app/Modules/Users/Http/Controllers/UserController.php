@@ -80,7 +80,7 @@ class UserController extends Controller
         $message = implode("\n", [
             'A paz, ' . explode(' ', trim($user->name))[0] . '! 🙏',
             '',
-            'Foi criado o seu acesso ao painel da Igreja Cidade de Davi.',
+            'Foi criado o seu acesso ao painel da Igreja Cidade de David.',
             '',
             'Endereço: ' . route('login'),
             'Utilizador: ' . $login,

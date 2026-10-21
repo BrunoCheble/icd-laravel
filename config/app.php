@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Igreja Cidade de Davi'),
+    'name' => env('APP_NAME', 'Igreja Cidade de David'),
 
     /*
     |--------------------------------------------------------------------------

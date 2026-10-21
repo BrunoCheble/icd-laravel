@@ -64,9 +64,9 @@
             <div class="mark"><img src="{{ asset('icons/admin-icon-192.png') }}" alt=""> ICD Admin</div>
             <div>
                 <h1>{{ __('Welcome back.') }}</h1>
-                <p>{{ __('Members, announcements, songs and setlists of the Igreja Cidade de Davi, in one place.') }}</p>
+                <p>{{ __('Members, announcements, songs and setlists of the Igreja Cidade de David, in one place.') }}</p>
             </div>
-            <small>Igreja Cidade de Davi</small>
+            <small>Igreja Cidade de David</small>
         </aside>
 
         <main class="login-main">

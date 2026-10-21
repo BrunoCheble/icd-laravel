@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\RefreshDeployCaches::class);
         // Only the system and the church's site may show its pages inside theirs.
         $middleware->append(\App\Http\Middleware\LimitFraming::class);
+        // Out of the search engines (the church is found by its site).
+        $middleware->append(\App\Http\Middleware\PreventIndexing::class);
         // Production: the app's notifications, once an hour, after a request (see SendPushDigestService).
         $middleware->append(\App\Http\Middleware\RunPushDigest::class);
         // The app's lock for passkey users (fingerprint / face to come back after a while away).

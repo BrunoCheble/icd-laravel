@@ -2,7 +2,7 @@
     "id": "icd-admin",
     "name": "ICD Admin",
     "short_name": "ICD Admin",
-    "description": "Gestão da Igreja Cidade de Davi: membros, avisos, músicas e repertórios.",
+    "description": "Gestão da Igreja Cidade de David: membros, avisos, músicas e repertórios.",
     "lang": "pt",
     "start_url": "dashboard",
     "scope": "./",
