@@ -176,3 +176,6 @@ html[data-theme="dark"] .notice-media .m-tag { background: rgba(17, 19, 24, .85)
 /* The login and the lock screen: their dark buttons (fingerprint, password) stand out on the dark theme too. */
 html[data-theme="dark"] .btn-passkey, html[data-theme="dark"] .lock-password button { background: #f3f4f6; color: #111827; }
 html[data-theme="dark"] .btn-passkey i { color: #d97706; }
+
+/* The lock that covers the admin after a while away: on the dark theme, dark too (as the lock screen). */
+html[data-theme="dark"] .app-lock { background: rgba(17, 19, 24, .97); }
