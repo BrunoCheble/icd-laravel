@@ -14,7 +14,8 @@ class UploadMemberPhotoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'photo' => ['required', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
+            // Up to 10 MB (a phone's picture); it is made light when saved (see UploadMemberPhotoService).
+            'photo' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:10240'],
         ];
     }
 }

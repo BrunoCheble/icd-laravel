@@ -4,6 +4,7 @@ namespace App\Modules\Members\Services;
 
 use App\Modules\Members\Models\Member;
 use Illuminate\Http\UploadedFile;
+use App\Support\ImageResizer;
 use Illuminate\Support\Str;
 
 class UploadMemberPhotoService
@@ -13,8 +14,13 @@ class UploadMemberPhotoService
      */
     public function execute(Member $member, UploadedFile $file): void
     {
-        $filename = time() . '-' . $member->id . '-' . Str::lower(Str::random(6)) . '.' . strtolower($file->getClientOriginalExtension());
-        $file->move(public_path('images'), $filename);
+        $name = time() . '-' . $member->id . '-' . Str::lower(Str::random(6));
+        // Made light (upright, at most 1200 px, JPEG); what the server cannot do keeps the picture as it came.
+        $filename = ImageResizer::resize($file->getRealPath(), public_path('images/' . $name));
+        if (! $filename) {
+            $filename = $name . '.' . strtolower($file->getClientOriginalExtension());
+            $file->move(public_path('images'), $filename);
+        }
 
         $oldImage = $member->photo;
         $member->photo = $filename;
