@@ -171,7 +171,7 @@
                     @error('photos')<p class="an-error">{{ $message }}</p>@enderror
                     @error('photos.*')<p class="an-error">{{ $message }}</p>@enderror
                 </div>
-                <p class="an-tip" x-show="categories[type]?.limit" x-cloak><i class="fa-solid fa-circle-info"></i> {{ __('Each member can have up to 3 sales announced at a time.') }}</p>
+                <p class="an-tip" x-show="type" x-cloak><i class="fa-solid fa-circle-info"></i> {{ __('Each member can have up to 3 announcements of each category at a time.') }}</p>
 
                 {{-- A résumé can go with its PDF --}}
                 <div class="an-field" x-show="categories[type]?.pdf" x-cloak>

@@ -45,7 +45,7 @@ class PublicAnnouncementRequest extends FormRequest
     }
 
     /**
-     * A member may have only so many announcements of some categories at a time (sales: 3, waiting or published).
+     * A member may have only so many announcements of each category at a time (3, waiting or published).
      */
     public function withValidator($validator): void
     {

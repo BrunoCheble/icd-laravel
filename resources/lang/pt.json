@@ -1290,7 +1290,7 @@
     "New": "Novo",
     "Like new": "Como novo",
     "Used, in good condition": "Usado, em bom estado",
-    "You already have :count announcements of this kind. Wait for one to end, or ask the team to remove one, to send another.": "Já tem :count anúncios deste tipo. Espere que um termine, ou peça à equipa para retirar um, para enviar outro.",
+    "You already have :count announcements of this kind. Wait for one to end, or ask the team to remove one, to send another.": "Já tem :count anúncios desta categoria. Espere que um termine, ou peça à equipa para retirar um, para enviar outro.",
     "Only members can rate. If you are one, check the NIF or talk to us.": "Só os membros podem avaliar. Se é membro, confirme o NIF ou fale connosco.",
     "Choose from 1 to 5 stars.": "Escolha de 1 a 5 estrelas.",
     "You cannot rate your own announcement.": "Não pode avaliar o seu próprio anúncio.",
@@ -1311,7 +1311,6 @@
     "Photos": "Fotos",
     "Up to 3 photos in all: remove some first.": "Até 3 fotos no total: remova algumas primeiro.",
     "Choose up to 3 photos.": "Escolha até 3 fotos.",
-    "Each member can have up to 3 sales announced at a time.": "Cada membro pode ter até 3 vendas anunciadas ao mesmo tempo.",
     "Your sale was received!": "A sua venda foi recebida!",
     "Members of the church can announce their services, lessons, their résumé, a job offer, a donation or something for sale. It shows on the site once approved by the team.": "Os membros da igreja podem anunciar os seus serviços, aulas, o seu currículo, uma oferta de emprego, uma doação ou algo para venda. O anúncio aparece no site depois de aprovado pela equipa.",
     "Up to 3 photos (JPG, PNG or WebP, up to 5 MB each). They show in a gallery on the announcement; the card keeps the category's picture.": "Até 3 fotos (JPG, PNG ou WebP, até 5 MB cada). Aparecem numa galeria no anúncio; o cartão mantém a imagem da categoria.",
@@ -1358,5 +1357,6 @@
     "Private comments on announcements": "Comentários privados nos anúncios",
     "Members who registered": "Novos registos de membros",
     "Saved.": "Guardado.",
-    "Receive on this device, also with the app closed: the birthdays and wedding anniversaries of the day in the morning, and what is new as soon as it comes in. Not at night: it waits for the morning. Choose below what you want to receive.": "Receba neste dispositivo, mesmo com a app fechada: de manhã, os aniversários e aniversários de casamento do dia; e o que for novo, assim que acontece. À noite não: fica para a manhã. Escolha abaixo o que quer receber."
+    "Receive on this device, also with the app closed: the birthdays and wedding anniversaries of the day in the morning, and what is new as soon as it comes in. Not at night: it waits for the morning. Choose below what you want to receive.": "Receba neste dispositivo, mesmo com a app fechada: de manhã, os aniversários e aniversários de casamento do dia; e o que for novo, assim que acontece. À noite não: fica para a manhã. Escolha abaixo o que quer receber.",
+    "Each member can have up to 3 announcements of each category at a time.": "Cada membro pode ter até 3 anúncios de cada categoria ao mesmo tempo."
 }

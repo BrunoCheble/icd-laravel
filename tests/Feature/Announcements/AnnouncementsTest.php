@@ -381,6 +381,24 @@ class AnnouncementsTest extends TestCase
         $this->post('/new-announcement', $form + ['title' => 'ZZ Teste Venda 5'])->assertSessionHasNoErrors();
     }
 
+    public function test_every_category_takes_up_to_three_at_a_time_per_member(): void
+    {
+        // More sendings than the per-minute limit, which is not what this is about
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+        $member = $this->member();
+        $form = ['member_document' => $member->document_number, 'description' => 'X', 'contact' => '912345678'] + self::SERVICE;
+        foreach ([1, 2, 3] as $n) {
+            $this->postJson('/api/public/announcements', $form + ['title' => "ZZ Teste Serviço {$n}"])->assertCreated();
+        }
+        $this->postJson('/api/public/announcements', $form + ['title' => 'ZZ Teste Serviço 4'])->assertJsonValidationErrors('type');
+        // Another category is counted apart; another member too
+        $this->postJson('/api/public/announcements', ['type' => 'lessons', 'details' => ['subject' => 'Inglês', 'level' => 'adults', 'mode' => 'online'], 'title' => 'ZZ Teste Aulas'] + $form)->assertCreated();
+        $this->postJson('/api/public/announcements', ['member_document' => $this->member()->document_number, 'title' => 'ZZ Teste Outro'] + $form)->assertCreated();
+        // The team may still add more in the admin
+        $this->actingAs(\App\Models\User::factory()->create())->post('/announcements', ['member_id' => $member->id, 'title' => 'ZZ Teste Admin', 'description' => 'X', 'contact' => '912345678'] + self::SERVICE)->assertRedirect('/announcements');
+        $this->assertSame(4, Announcement::where('member_id', $member->id)->where('type', 'service')->count());
+    }
+
     public function test_only_the_church_site_may_show_the_pages_inside_its_own(): void
     {
         $this->get('/announcement')->assertHeader('Content-Security-Policy', "frame-ancestors 'self' https://igrejaicd.pt https://www.igrejaicd.pt");

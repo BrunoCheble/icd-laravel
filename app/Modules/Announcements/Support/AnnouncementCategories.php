@@ -7,8 +7,8 @@ namespace App\Modules\Announcements\Support;
  * photos of donations and sales), how long it lasts by default and its own fields, kept in the announcement's
  * "details" (JSON). The forms, the validation and the site's labels all come from here.
  *
- * Category: label, icon, months, fields, and optionally pdf (takes a PDF: a résumé), photos (how many: donations,
- * sales) and limit (how many a member may have at a time, waiting or published).
+ * Category: label, icon, months, fields, and optionally pdf (takes a PDF: a résumé) and photos (how many: donations,
+ * sales). A member may have up to LIMIT announcements of each category at a time (waiting or published).
  * Field: label, type (select | text | yesno), options (select: key => label), required, max (text length).
  * The keys are stored; the labels are translated when shown.
  */
@@ -20,6 +20,9 @@ class AnnouncementCategories
     public const JOB = 'job';
     public const DONATION = 'donation';
     public const SALE = 'sale';
+
+    // How many announcements of the same category a member may have at a time (waiting or published).
+    public const LIMIT = 3;
 
     /** The categories, in their order on the forms and the site. */
     public static function all(): array
@@ -140,7 +143,6 @@ class AnnouncementCategories
                 'icon' => 'fa-tag',
                 'months' => 2,
                 'photos' => 3,
-                'limit' => 3,
                 'fields' => [
                     'price' => ['label' => 'Price', 'type' => 'text', 'required' => true, 'max' => 30, 'placeholder' => 'E.g. 25 €'],
                     'condition' => ['label' => 'Condition', 'type' => 'select', 'required' => true, 'options' => $conditions],
@@ -187,7 +189,7 @@ class AnnouncementCategories
     /** How many announcements of the category a member may have at a time (waiting or published), or null. */
     public static function limit(?string $category): ?int
     {
-        return self::all()[$category]['limit'] ?? null;
+        return self::has($category) ? self::LIMIT : null;
     }
 
     /** The end of an announcement of the category sent today. */
@@ -288,7 +290,7 @@ class AnnouncementCategories
             'months' => $category['months'],
             'pdf' => (bool) ($category['pdf'] ?? false),
             'photos' => (int) ($category['photos'] ?? 0),
-            'limit' => $category['limit'] ?? null,
+            'limit' => self::LIMIT,
             'fields' => collect($category['fields'])->map(fn ($field) => [
                 'label' => __($field['label']),
                 'type' => $field['type'],
