@@ -59,6 +59,11 @@ class RefreshDeployCachesService
             if ($signature === null || $signature === @file_get_contents($this->marker)) {
                 return;
             }
+            // Right after a pull OPcache may still hold the old files (bootstrap/providers.php…), and the caches
+            // would be built from them: they are read again first.
+            if (function_exists('opcache_reset')) {
+                @opcache_reset();
+            }
             try {
                 Artisan::call('optimize');
             } catch (Throwable $error) {
