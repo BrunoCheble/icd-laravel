@@ -7,7 +7,7 @@
     ]))">
     <header>
         <h2 class="text-lg font-medium text-gray-900"><i class="fa-solid fa-bell" style="color: var(--brand);"></i> {{ __('Notifications') }}</h2>
-        <p class="mt-1 text-sm text-gray-600">{{ __('Receive on this device, also with the app closed: the birthdays and wedding anniversaries of the day in the morning, and every hour what is new (prayer requests, announcements to approve, comments, members who registered). Not at night.') }}</p>
+        <p class="mt-1 text-sm text-gray-600">{{ __('Receive on this device, also with the app closed: the birthdays and wedding anniversaries of the day in the morning, and every hour what is new (prayer requests, announcements to approve, comments, chord suggestions, members who registered). Not at night.') }}</p>
     </header>
 
     <div class="mt-4 flex flex-wrap items-center gap-3">

@@ -80,13 +80,16 @@ class PushDigestTest extends TestCase
         Prayer::create(['name' => 'ZZ Teste Dois', 'request' => 'Paz']);
         Announcement::create(['member_id' => $this->member()->id, 'type' => 'service', 'title' => 'ZZ Teste', 'description' => 'X', 'contact' => '9', 'is_approved' => false]);
         $this->member(['membership_status' => MembershipStatus::PENDING]);
+        $song = app(\App\Modules\Music\Services\SaveSongService::class)->execute(['title' => 'ZZ Teste', 'artist' => 'A', 'bpm' => 60, 'musical_key' => 'G',
+            'structure' => json_encode([['section' => 'INTRO', 'chords' => ['G'], 'durations' => [4], 'beats_per_bar' => 4]])]);
+        \Illuminate\Support\Facades\DB::table('song_suggestions')->insert(['song_id' => $song->id, 'changes' => '[]', 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()]);
         $this->at('2026-10-21 10:05');
         $digest->execute();
         $this->assertCount(2, $this->sent);
         $this->assertSame('Novidades no sistema', $this->sent[1]['title']);
-        $this->assertSame('2 novos pedidos de oração · 1 anúncio por aprovar · 1 novo registo de membro', $this->sent[1]['body']);
-        // The number on the app's icon: what waits in the menu (the announcement to approve)
-        $this->assertSame(1, $this->sent[1]['badge']);
+        $this->assertSame('2 novos pedidos de oração · 1 anúncio por aprovar · 1 sugestão de acordes · 1 novo registo de membro', $this->sent[1]['body']);
+        // The number on the app's icon: what waits in the menu (the announcement to approve, the chord suggestion)
+        $this->assertSame(2, $this->sent[1]['badge']);
         $this->assertSame(route('prayers.index'), $this->sent[1]['url']);
 
         $this->at('2026-10-21 11:05');

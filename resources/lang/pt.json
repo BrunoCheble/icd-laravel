@@ -1338,7 +1338,6 @@
     "Notifications are on": "As notificações estão ligadas",
     "This is how the church's notices will come to this device.": "É assim que os avisos da igreja vão chegar a este dispositivo.",
     "Notifications": "Notificações",
-    "Receive on this device, also with the app closed: the birthdays and wedding anniversaries of the day in the morning, and every hour what is new (prayer requests, announcements to approve, comments, members who registered). Not at night.": "Receba neste dispositivo, mesmo com a app fechada: de manhã, os aniversários e aniversários de casamento do dia; e de hora a hora o que for novo (pedidos de oração, anúncios por aprovar, comentários, novos membros). À noite não.",
     "Turn on on this device": "Ativar neste dispositivo",
     "Turn off": "Desativar",
     "Send a test": "Enviar um teste",
@@ -1350,5 +1349,7 @@
     "It was not possible now. Try again.": "Não foi possível agora. Tente de novo.",
     "This setlist already took place: it can only be viewed.": "Este repertório já foi: só pode ser consultado.",
     "This setlist already took place (:date): it can only be viewed. You can still suggest chord corrections.": "Este repertório já foi (:date): só pode ser consultado. Ainda pode sugerir correções de acordes.",
-    "This setlist already took place (:date): only to be viewed.": "Este repertório já foi (:date): só para consulta."
+    "This setlist already took place (:date): only to be viewed.": "Este repertório já foi (:date): só para consulta.",
+    ":count chord suggestion|:count chord suggestions": ":count sugestão de acordes|:count sugestões de acordes",
+    "Receive on this device, also with the app closed: the birthdays and wedding anniversaries of the day in the morning, and every hour what is new (prayer requests, announcements to approve, comments, chord suggestions, members who registered). Not at night.": "Receba neste dispositivo, mesmo com a app fechada: de manhã, os aniversários e aniversários de casamento do dia; e de hora a hora o que for novo (pedidos de oração, anúncios por aprovar, comentários, sugestões de acordes, novos membros). À noite não."
 }

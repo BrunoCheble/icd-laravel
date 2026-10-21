@@ -8,6 +8,7 @@ use App\Modules\Announcements\Models\Announcement;
 use App\Modules\Announcements\Models\AnnouncementComment;
 use App\Modules\Dashboard\Services\GetTodayMessagesService;
 use App\Modules\Members\Models\Member;
+use App\Modules\Music\Models\SongSuggestion;
 use App\Modules\Prayers\Models\Prayer;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Cache;
 /**
  * The notifications of the installed app, once an hour (from 8:00 to 22:00, Lisbon time): in the first hour of the day
  * the day's birthdays and wedding anniversaries, and every hour only what is new since the last time (prayer
- * requests, announcements to approve, private comments, members who registered). Nothing is sent twice; what comes
+ * requests, announcements to approve, private comments, chord suggestions, members who registered). Nothing is sent twice; what comes
  * at night waits for the morning.
  */
 class SendPushDigestService
@@ -93,6 +94,7 @@ class SendPushDigestService
             [Prayer::query()->where('created_at', '>', $since)->count(), ':count new prayer request|:count new prayer requests', route('prayers.index')],
             [Announcement::query()->where('is_approved', false)->where('created_at', '>', $since)->count(), ':count announcement to approve|:count announcements to approve', route('announcements.index', ['status' => 'pending'])],
             [AnnouncementComment::query()->where('created_at', '>', $since)->count(), ':count private comment|:count private comments', route('announcements.index', ['status' => 'comments'])],
+            [SongSuggestion::query()->where('status', 'pending')->where('created_at', '>', $since)->count(), ':count chord suggestion|:count chord suggestions', route('song-suggestions.index')],
             [Member::query()->where('membership_status', MembershipStatus::PENDING)->where('created_at', '>', $since)->count(), ':count member registered|:count members registered', route('members.index', ['membership_status' => MembershipStatus::PENDING])],
         ])->filter(fn ($kind) => $kind[0] > 0)->values();
 
