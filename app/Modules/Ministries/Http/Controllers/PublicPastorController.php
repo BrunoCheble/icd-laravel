@@ -8,9 +8,9 @@ use Illuminate\Http\JsonResponse;
 
 class PublicPastorController extends Controller
 {
-    /** The site's "Pastores" (see ListPastorsService), cached in the browser for a few minutes. */
+    /** The site's "Pastores" (see ListPastorsService); the site always asks again (a change shows at once). */
     public function index(ListPastorsService $service): JsonResponse
     {
-        return response()->json(['data' => $service->execute()])->header('Cache-Control', 'public, max-age=300');
+        return response()->json(['data' => $service->execute()])->header('Cache-Control', 'public, max-age=60');
     }
 }
