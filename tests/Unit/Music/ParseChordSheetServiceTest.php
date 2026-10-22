@@ -319,4 +319,16 @@ class ParseChordSheetServiceTest extends TestCase
         // A dash in the lyrics is no chord.
         $this->assertStringNotContainsString('[-]', $lines);
     }
+
+    public function test_invisible_characters_copied_from_chord_sites_do_not_break_the_sheet(): void
+    {
+        $z = "\u{200B}";
+        $sheet = "{$z}[Intro] G#m  A  G#m\n{$z} A  G#  A  B\n\n{$z}[Primeira Parte]\n{$z}B                    B4\n{$z}Tu és um Deus que quebra cadeias";
+
+        $sections = (new ParseChordSheetService())->execute($sheet)['sections'];
+
+        $this->assertSame(['INTRO', 'VERSE_1'], array_column($sections, 'section'));
+        $this->assertSame(['[G#m] [A] [G#m]', '[A] [G#] [A] [B]'], $sections[0]['lines']);
+        $this->assertStringNotContainsString($z, json_encode($sections, JSON_UNESCAPED_UNICODE));
+    }
 }

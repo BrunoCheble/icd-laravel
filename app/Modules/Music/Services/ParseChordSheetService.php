@@ -53,6 +53,9 @@ class ParseChordSheetService
 
     public function execute(string $input): array
     {
+        // Without the invisible characters chord sites put in what is copied (zero-width spaces…); a non-breaking
+        // space is a space.
+        $input = str_replace(["\u{00A0}", '&nbsp;'], ' ', preg_replace('/[\x{200B}-\x{200D}\x{2060}\x{FEFF}]|&#8203;|&#x200b;|&ZeroWidthSpace;/iu', '', $input));
         $text = str_contains($input, '<') ? $this->htmlToMarkedText($input) : $this->plainToMarkedText($input);
         $lines = explode("\n", str_replace(["\r\n", "\r"], "\n", $text));
 

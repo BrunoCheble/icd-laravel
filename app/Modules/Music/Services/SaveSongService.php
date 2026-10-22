@@ -48,7 +48,7 @@ class SaveSongService
             if (is_array($section['lines'] ?? null)) {
                 $sheet['sections'][$index]['lines'] = array_map(
                     fn ($line) => is_string($line) && ! str_starts_with(ltrim($line), '{') ? NormalizeChordSpellingService::line($line) : $line,
-                    $section['lines'],
+                    SaveSongChordSheetService::cleanLines($section['lines']),
                 );
             }
         }
