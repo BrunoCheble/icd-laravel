@@ -172,6 +172,7 @@
         </div>
     </div>
 
+    <script src="{{ asset('js/chord-transposer.js') }}?v={{ filemtime(public_path('js/chord-transposer.js')) }}"></script>
     <script src="{{ asset('js/chord-lines.js') }}?v={{ filemtime(public_path('js/chord-lines.js')) }}"></script>
     <script>
         function songSheet(config) {
@@ -308,10 +309,11 @@
                 },
                 applyPop() {
                     const pop = this.pop;
-                    const name = this.$refs.popInput.value.trim().replace(/\s+/g, '');
+                    // "nc", "silêncio", "-"… are silence: N.C.
+                    const name = ChordTransposer.noChord(this.$refs.popInput.value) ?? this.$refs.popInput.value.trim().replace(/\s+/g, '');
                     this.pop = null;
                     if (!pop || !name) return;
-                    if (name !== '?' && !/^[A-G]/.test(name)) { this.say(@js(__('This is not a chord name.')), true); return; }
+                    if (name !== '?' && name !== ChordTransposer.NO_CHORD && !/^[A-G]/.test(name)) { this.say(@js(__('This is not a chord name.')), true); return; }
                     const line = this.findLine(pop.block, pop.line);
                     if (!line) return;
                     this.remember();

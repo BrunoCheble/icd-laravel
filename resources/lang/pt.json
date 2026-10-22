@@ -1588,5 +1588,6 @@
     "Use the score's tempo": "Usar o andamento da partitura",
     "join to the block before": "juntar ao bloco anterior",
     "lyrics of the song": "letra da música",
-    "score": "partitura"
+    "score": "partitura",
+    "Use a chord name, e.g. G, Am7, C/E, D4 (N.C. for silence).": "Use o nome de um acorde, ex.: G, Am7, C/E, D4 (N.C. para silêncio)."
 }

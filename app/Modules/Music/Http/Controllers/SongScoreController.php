@@ -7,6 +7,7 @@ use App\Modules\Music\Http\Requests\ReadScoreRequest;
 use App\Modules\Music\Models\Song;
 use App\Modules\Music\Services\ReadScoreService;
 use App\Modules\Music\Support\MusicXmlScore;
+use App\Modules\Music\Support\NoChord;
 use Illuminate\Http\JsonResponse;
 use Throwable;
 
@@ -26,7 +27,7 @@ class SongScoreController extends Controller
 
             return response()->json(['message' => __('The score could not be read: :error', ['error' => $error->getMessage()])], 422);
         }
-        if (! collect($preview['blocks'])->contains(fn ($block) => collect($block['chords'])->contains(fn ($chord) => $chord !== '|' && $chord !== '?'))) {
+        if (! collect($preview['blocks'])->contains(fn ($block) => collect($block['chords'])->contains(fn ($chord) => ! in_array($chord, ['|', '?', NoChord::NAME], true)))) {
             return response()->json(['message' => __('The score has no chord symbols (only notes): there is nothing to make the bars from.')], 422);
         }
 

@@ -77,6 +77,20 @@ class ScoreImportTest extends MusicTestCase
         $this->assertSame(['C', 'G4', 'Am7'], $response->json('blocks.0.chords'));
     }
 
+    public function test_bars_before_the_first_chord_and_a_no_chord_symbol_are_silence(): void
+    {
+        // Bar 1 without its chords; bar 2 written "no chord" in MusicXML.
+        $xml = preg_replace('#<harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>\s*(<note><pitch><step>C</step><octave>4</octave></pitch><duration>2)#', '$1', $this->fixture(), 1);
+        $xml = preg_replace('#<harmony><root><root-step>G</root-step></root><kind text="sus4">suspended-fourth</kind></harmony>#', '', $xml, 1);
+        $xml = str_replace('<harmony><root><root-step>A</root-step></root><kind text="m7">minor-seventh</kind></harmony>', '<harmony><root><root-step>C</root-step></root><kind text="N.C.">none</kind></harmony>', $xml);
+
+        $response = $this->read($this->song(), $xml)->assertOk();
+
+        $this->assertSame(['N.C.'], $response->json('blocks.0.chords'));
+        $this->assertSame([8], $response->json('blocks.0.durations'));
+        $this->assertSame(['[N.C.]'], $response->json('blocks.0.sheet'));
+    }
+
     public function test_the_blocks_take_the_name_and_lyrics_of_the_songs_blocks(): void
     {
         $song = $this->song();

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Music\Services;
 
+use App\Modules\Music\Support\NoChord;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
@@ -457,7 +458,7 @@ class ParseChordSheetService
 
         $content = trim($element->textContent);
 
-        return in_array(strtolower($element->tagName), ['b', 'strong'], true) && $this->isChord($content) ? $content : null;
+        return in_array(strtolower($element->tagName), ['b', 'strong'], true) && $this->isChord($content) ? (self::noChord($content) ?? $content) : null;
     }
 
     /**
@@ -487,12 +488,18 @@ class ParseChordSheetService
             return $line;
         }
 
-        return preg_replace_callback('/\S+/', fn (array $m) => $this->isChord($m[0]) ? self::OPEN . $m[0] . self::CLOSE : $m[0], $line);
+        return preg_replace_callback('/\S+/', fn (array $m) => $this->isChord($m[0]) ? self::OPEN . (self::noChord($m[0]) ?? $m[0]) . self::CLOSE : $m[0], $line);
     }
 
     private function isChord(string $token): bool
     {
-        return $token !== '' && preg_match(self::CHORD_PATTERN, $token) === 1;
+        return $token !== '' && (preg_match(self::CHORD_PATTERN, $token) === 1 || self::noChord($token) !== null);
+    }
+
+    /** Silence as chord sites write it ("N.C.", "N/C", "NC"; not "-" or words, which lyrics have too). */
+    private static function noChord(string $token): ?string
+    {
+        return in_array(strtoupper(trim($token, '()[]')), ['N.C.', 'N.C', 'N/C', 'NC'], true) ? NoChord::NAME : null;
     }
 
     /**

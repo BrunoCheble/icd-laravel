@@ -300,4 +300,23 @@ class ParseChordSheetServiceTest extends TestCase
     {
         return array_column((new ParseChordSheetService())->execute($sheet)['sections'], 'section');
     }
+
+    public function test_no_chord_is_silence_written_n_c(): void
+    {
+        $sheet = <<<'TXT'
+        [Intro] G D N/C
+
+        [Primeira Parte]
+        G          N.C.
+        Digno é o Cordeiro - que foi morto
+        TXT;
+
+        $sections = (new ParseChordSheetService())->execute($sheet)['sections'];
+        $lines = implode("\n", array_merge(...array_column($sections, 'lines')));
+
+        $this->assertStringContainsString('[N.C.]', $lines);
+        $this->assertStringNotContainsString('[N/C]', $lines);
+        // A dash in the lyrics is no chord.
+        $this->assertStringNotContainsString('[-]', $lines);
+    }
 }

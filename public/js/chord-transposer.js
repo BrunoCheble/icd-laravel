@@ -125,7 +125,13 @@
         return (chords ?? []).map(chord => transposeChord(chord, fromKey, toKey));
     }
 
-    const api = { parseKey, transposeChord, transposeChords, chordFamily };
+    // Silence where a chord would be: "N.C." (also typed "NC", "N/C", "silêncio" or "-"); never transposed.
+    const NO_CHORD = 'N.C.';
+    function noChord(text) {
+        return ['n.c.', 'n.c', 'nc', 'n/c', 'silêncio', 'silencio', '-', '—'].includes(String(text ?? '').trim().toLowerCase()) ? NO_CHORD : null;
+    }
+
+    const api = { parseKey, transposeChord, transposeChords, chordFamily, NO_CHORD, noChord };
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;

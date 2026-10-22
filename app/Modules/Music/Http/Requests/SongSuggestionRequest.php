@@ -23,7 +23,7 @@ class SongSuggestionRequest extends FormRequest
             'changes.*.n'      => ['required', 'integer', 'min:0'],
             'changes.*.offset' => ['required_if:changes.*.type,insert', 'nullable', 'integer', 'min:1', 'max:4096'],
             'changes.*.from' => ['required', 'string', 'max:30'],
-            'changes.*.to'     => ['required_if:changes.*.type,insert', 'nullable', 'string', 'max:30', 'regex:/^[A-G][#b]?[^\s\[\]|]*$/'],
+            'changes.*.to'     => ['required_if:changes.*.type,insert', 'nullable', 'string', 'max:30', 'regex:/^([A-G][#b]?[^\s\[\]|]*|N\.C\.)$/'],
             'author'         => ['nullable', 'string', 'max:60'],
             'note'           => ['nullable', 'string', 'max:500'],
         ];

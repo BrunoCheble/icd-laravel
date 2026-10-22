@@ -1735,8 +1735,9 @@
                     const edit = this.suggestEdit;
                     if (!edit) return;
                     if (to !== null) {
-                        to = chordCase(to.trim());
-                        if (!/^[A-G][#b]?[^\s\[\]|]*$/.test(to)) { edit.error = this.messages.invalidChord; return; }
+                        // Silence ("nc", "silêncio", "-"…) is N.C.
+                        to = ChordTransposer.noChord(to) ?? chordCase(to.trim());
+                        if (to !== ChordTransposer.NO_CHORD && !/^[A-G][#b]?[^\s\[\]|]*$/.test(to)) { edit.error = this.messages.invalidChord; return; }
                         to = ChordTransposer.transposeChord(to, this.selectedKey, this.current.original_key);
                     }
                     const changes = { ...this.songSuggestions };

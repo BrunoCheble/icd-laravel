@@ -7,6 +7,8 @@
     <script src="{{ asset('js/chord-lines.js') }}?v={{ filemtime(public_path('js/chord-lines.js')) }}"></script>
 
     <style>
+        /* Silence (N.C.): no chord in the bar */
+        .bars-page .chord.is-silent { color: var(--tx-9ca3af); font-style: italic; font-weight: 600; }
         /* Importing a score: the preview of its blocks */
         .score-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1rem; }
         .score-modal-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, .55); }
@@ -517,9 +519,9 @@
                                                             @blur="commitInline(true)">
                                                     </template>
                                                     <span class="halves" x-show="!(inline && Math.floor(inline.tick / 2) === b * perBar + i)">
-                                                        <span class="chord" :class="{ 'is-repeat': beat.repeat, 'is-long': !beat.repeat && beat.chord.length > 4, 'is-passing': !beat.repeat && passingTicks.has((b * perBar + i) * 2), 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2) }" x-text="beat.repeat ? '/' : (beat.chord || '–')"
+                                                        <span class="chord" :class="{ 'is-repeat': beat.repeat, 'is-silent': !beat.repeat && beat.chord === ChordTransposer.NO_CHORD, 'is-long': !beat.repeat && beat.chord.length > 4, 'is-passing': !beat.repeat && passingTicks.has((b * perBar + i) * 2), 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2) }" x-text="beat.repeat ? '/' : (beat.chord || '–')"
                                                             @pointerdown="startDrag($event, b, i, 0)"></span>
-                                                        <template x-if="beat.and !== null"><span class="chord is-and" :class="{ 'is-long': beat.and.length > 4, 'is-passing': passingTicks.has((b * perBar + i) * 2 + 1), 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2 + 1) }" x-text="beat.and || '–'"
+                                                        <template x-if="beat.and !== null"><span class="chord is-and" :class="{ 'is-silent': beat.and === ChordTransposer.NO_CHORD, 'is-long': beat.and.length > 4, 'is-passing': passingTicks.has((b * perBar + i) * 2 + 1), 'can-drag': mode === 'edit' && canDragAt((b * perBar + i) * 2 + 1) }" x-text="beat.and || '–'"
                                                             @pointerdown="startDrag($event, b, i, 1)"></span></template>
                                                     </span>
                                                     <span class="count" x-text="i + 1"></span>
@@ -2622,7 +2624,7 @@
                         const size = this.perBar * 2;
                         const bars = Math.ceil(this.ticks.length / size);
                         if (rows.length !== bars) throw new Error(@js(__('The file has :rows bars; this map has :bars. Import needs the same number of bars.')).replace(':rows', rows.length).replace(':bars', bars));
-                        const isChord = (name) => /^[A-G][#b]?[^\s\[\]|]*$/.test(name);
+                        const isChord = (name) => name === ChordTransposer.NO_CHORD || /^[A-G][#b]?[^\s\[\]|]*$/.test(name);
                         // Typed in the key on screen; stored in the song's key.
                         const stored = (name) => (this.key && this.savedKey && this.key !== this.savedKey ? ChordTransposer.transposeChord(name, this.key, this.savedKey) : name);
                         const ticks = [];
@@ -2630,7 +2632,7 @@
                         rows.forEach((cells, r) => {
                             for (let i = 0; i < this.perBar; i++) {
                                 if (r * size + i * 2 >= this.ticks.length) break;
-                                const parts = String(cells[2 + i] ?? '').trim().split(/\s+/).filter(Boolean);
+                                const parts = String(cells[2 + i] ?? '').trim().split(/\s+/).filter(Boolean).map(part => ChordTransposer.noChord(part) ?? part);
                                 if (parts.length > 2) throw new Error(@js(__('Bar :bar, beat :beat: at most two chords per beat (on the beat and on the "and").')).replace(':bar', r + 1).replace(':beat', i + 1));
                                 const on = parts[0] && parts[0] !== '/' ? parts[0] : last;
                                 const and = parts[1] && parts[1] !== '/' ? parts[1] : on;
@@ -3063,7 +3065,7 @@
                     }
                     const size = this.perBar * 2;
                     const bars = Array.from({ length: Math.min(to - from + 1, 32) }, (_, i) => from + i);
-                    const vocabulary = [...new Set(this.ticks.filter(chord => chord && chord !== '?'))];
+                    const vocabulary = [...new Set(this.ticks.filter(chord => chord && chord !== '?' && chord !== ChordTransposer.NO_CHORD))];
                     this.barMenu = null;
                     this.helper = { ...this.helper, loading: true, error: '', bars: null, label: this.barsLabel(from, bars.at(-1)) };
                     try {
@@ -3100,8 +3102,8 @@
                 applyAllSuggestions() {
                     for (const item of [...(this.helper.bars || [])]) this.applySuggestion(item.bar, item.beats.map(beat => beat.options[0]?.chord));
                 },
-                // A chord name, or "?" (a chord not known yet).
-                isChordName(typed) { return typed === '?' || /^[A-G][#b]?[^\s\[\]|]*$/.test(typed); },
+                // A chord name, "?" (a chord not known yet) or "N.C." (silence).
+                isChordName(typed) { return typed === '?' || typed === ChordTransposer.NO_CHORD || /^[A-G][#b]?[^\s\[\]|]*$/.test(typed); },
                 // A chord typed at `tick` (in the key on screen; stored in the song's key); the equal blocks are offered.
                 typeChordAt(tick, typed) {
                     if (tick < this.leadTicks) { this.notice = @js(__('Before the first chord: drag the first chord to move where it starts.')); return; }
@@ -3207,9 +3209,10 @@
                 canRemoveChange() { return !!this.editor && this.isChangeAt(this.editorTick()); },
                 // As typed in the cell: a chord that starts there is renamed, otherwise a new one starts.
                 applyChord() {
-                    const typed = this.ref('editorChord').value.trim();
+                    // "nc", "silêncio", "-"… are silence: N.C.
+                    const typed = ChordTransposer.noChord(this.ref('editorChord').value) ?? this.ref('editorChord').value.trim();
                     if (!this.isChordName(typed)) {
-                        this.editorError = @js(__('Use a chord name, e.g. G, Am7, C/E, D4.'));
+                        this.editorError = @js(__('Use a chord name, e.g. G, Am7, C/E, D4 (N.C. for silence).'));
                         return;
                     }
                     const tick = this.editorTick();
@@ -3240,7 +3243,7 @@
                 commitInline(leaving = false) {
                     const inline = this.inline;
                     if (!inline) return;
-                    const typed = inline.text.trim();
+                    const typed = ChordTransposer.noChord(inline.text) ?? inline.text.trim();
                     if (typed === inline.original && inline.existing) { this.inline = null; return; }
                     if (typed === '') {
                         this.inline = null;

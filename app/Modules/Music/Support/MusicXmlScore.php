@@ -144,6 +144,10 @@ class MusicXmlScore
     /** "E4", "A2", "C#m7(9)", "E/G#"… */
     private static function chordName(SimpleXMLElement $harmony): string
     {
+        // "No chord" in MusicXML.
+        if ((string) ($harmony->kind ?? '') === 'none') {
+            return NoChord::NAME;
+        }
         $name = (string) $harmony->root->{'root-step'} . (self::ALTER[(string) ($harmony->root->{'root-alter'} ?? '')] ?? '');
         $kind = (string) ($harmony->kind ?? 'major');
         $symbol = self::KINDS[$kind] ?? null;

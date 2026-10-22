@@ -4,6 +4,7 @@ namespace App\Modules\Music\Services;
 
 use App\Modules\Music\Models\Song;
 use App\Modules\Music\Support\MusicXmlScore;
+use App\Modules\Music\Support\NoChord;
 use Illuminate\Support\Str;
 
 /**
@@ -282,8 +283,8 @@ class ReadScoreService
             $bar = $bars[$this->order[$p]];
             $marks = array_map(fn ($chord) => [round($chord[0] / self::STEP) * self::STEP, $chord[1]], $bar['chords']);
             if (! $marks || $marks[0][0] > 0) {
-                // The chord before goes on (a "?" when there is none yet).
-                array_unshift($marks, [0, $last ?? '?']);
+                // The chord before goes on (silence, N.C., before the first one).
+                array_unshift($marks, [0, $last ?? NoChord::NAME]);
             }
             foreach ($marks as $c => [$beat, $name]) {
                 $end = $marks[$c + 1][0] ?? $bar['beats'];
