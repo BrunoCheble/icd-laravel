@@ -458,7 +458,10 @@ class ReadScoreService
         $lastFound = $found ? max(array_keys($found)) : -1;
         $leftover = array_slice($syllables, $lastFound + 1);
         if ($more && strlen(self::letters(implode('', array_column($leftover, 'text')))) >= 12) {
+            // Sung again: the lines of the text most like it (the song's lyrics, not the score's typing); else the
+            // score's own lyrics.
             $extra = $this->scoreLines(['syllables' => $leftover, 'rests' => $timeline['rests']]);
+            $extra = $this->again($text, $extra) ?? $extra;
 
             return $this->place(rtrim($text) . "\n" . $extra, $syllables, $changes, $timeline, false);
         }
@@ -558,6 +561,32 @@ class ReadScoreService
         }
 
         return array_values(array_filter($lines, fn ($line) => trim($line) !== ''));
+    }
+
+    /**
+     * The lines of $text (one after another, from any line) most like $sung, when they are alike enough (a part sung
+     * once more than the song's lyrics write it); null otherwise.
+     */
+    private function again(string $text, string $sung): ?string
+    {
+        $lines = array_values(array_filter(explode("\n", $text), fn ($line) => trim($line) !== ''));
+        $want = strlen(self::letters($sung));
+        $grams = self::grams($sung);
+        $best = [0.0, null];
+        foreach ($lines as $from => $line) {
+            $take = [];
+            $length = 0;
+            for ($to = $from; $to < count($lines) && $length < $want * 1.1; $to++) {
+                $take[] = $lines[$to];
+                $length += strlen(self::letters($lines[$to]));
+                $score = self::similarity($grams, self::grams(implode(' ', $take)));
+                if ($score > $best[0]) {
+                    $best = [$score, implode("\n", $take)];
+                }
+            }
+        }
+
+        return $best[0] >= 0.45 ? $best[1] : null;
     }
 
     /** Chords with no lyrics, BARS_PER_LINE bars a line: "[E] [E4] [E] [C#m7]". */
