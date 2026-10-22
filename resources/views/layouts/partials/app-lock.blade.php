@@ -1,7 +1,7 @@
 {{-- The app's lock over the page (only for users with a passkey, see SessionLock): after a while without use, or when
      coming back to the app after a while away, the page is covered until unlocked; it stays as it was underneath. While
      in use, the page tells the server now and then, so a page being worked on does not lock. --}}
-<div class="app-lock" x-data="appLock(@js(['ping' => route('lock.ping'), 'idleMinutes' => \App\Services\Passkeys\SessionLock::IDLE_MINUTES]))"
+<div class="app-lock" x-data="appLock(@js(['ping' => route('lock.ping'), 'idleMinutes' => \App\Services\Passkeys\SessionLock::idleMinutes(request())]))"
     x-show="locked" x-cloak @app-unlocked.window="unlocked()" role="dialog" aria-modal="true" aria-label="{{ __('ICD Admin locked') }}">
     @include('layouts.partials.lock-panel', ['overlay' => true])
 </div>

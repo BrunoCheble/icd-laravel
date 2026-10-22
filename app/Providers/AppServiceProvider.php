@@ -37,6 +37,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // The session lasts at least as long as the app's lock on a computer (12 hours, see SessionLock): before it,
+        // an expired session would come back through "keep me signed in" already locked.
+        config(['session.lifetime' => max((int) config('session.lifetime'), \App\Services\Passkeys\SessionLock::DESKTOP_MINUTES)]);
+
         $this->app->make(Menu::class)
             ->section('home', null, 0, [
                 ['label' => 'Dashboard', 'icon' => 'fa-solid fa-house', 'route' => 'dashboard', 'active' => 'dashboard'],

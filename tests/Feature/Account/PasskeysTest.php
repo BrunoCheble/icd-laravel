@@ -73,10 +73,15 @@ class PasskeysTest extends TestCase
     public function test_the_app_locks_after_a_while_away_and_unlocks_with_the_password(): void
     {
         [$user] = $this->userWithPasskey();
-        $away = ['lock.last_activity' => time() - 16 * 60];
+        $phone = ['User-Agent' => 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/130.0 Mobile Safari/537.36'];
+        $computer = ['User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15'];
 
-        $this->actingAs($user)->withSession($away)->get('/dashboard')->assertRedirect('/lock');
-        $this->actingAs($user)->withSession($away)->getJson('/setlists/songs/search')->assertStatus(423);
+        // A phone locks after 30 minutes away; a computer after 12 hours.
+        $this->actingAs($user)->withSession(['lock.last_activity' => time() - 29 * 60])->withHeaders($phone)->get('/dashboard')->assertOk();
+        $this->actingAs($user)->withSession(['lock.last_activity' => time() - 11 * 3600])->withHeaders($computer)->get('/dashboard')->assertOk();
+        $this->actingAs($user)->withSession(['lock.last_activity' => time() - 13 * 3600])->withHeaders($computer)->get('/dashboard')->assertRedirect('/lock');
+        $this->actingAs($user)->withSession(['lock.last_activity' => time() - 31 * 60])->withHeaders($phone)->get('/dashboard')->assertRedirect('/lock');
+        $this->actingAs($user)->withSession(['lock.last_activity' => time() - 31 * 60])->withHeaders($phone)->getJson('/setlists/songs/search')->assertStatus(423);
         $this->actingAs($user)->withSession(['lock.locked' => true])->get('/lock')->assertOk()->assertSee(__('ICD Admin locked'));
 
         $this->actingAs($user)->withSession(['lock.locked' => true])->postJson('/lock/password', ['password' => 'wrong'])->assertStatus(422);

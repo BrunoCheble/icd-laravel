@@ -7,13 +7,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * The app locks itself, like a bank app, for users who sign in with a passkey: after IDLE_MINUTES without use (or when
- * the session was restored by "remember me" after a long time away) it asks for the fingerprint / face (or the
- * password) again, without signing out. The session keeps the time of the last use and whether it is locked.
+ * The app locks itself, like a bank app, for users who sign in with a passkey: after a while without use (on a
+ * computer DESKTOP_MINUTES, on phones and tablets IDLE_MINUTES), or when the session was restored by "remember me"
+ * after a long time away, it asks for the fingerprint / face (or the password) again, without signing out. The
+ * session keeps the time of the last use and whether it is locked.
  */
 class SessionLock
 {
-    public const IDLE_MINUTES = 15;
+    public const IDLE_MINUTES = 30;
+
+    public const DESKTOP_MINUTES = 12 * 60;
 
     private const LAST = 'lock.last_activity';
 
@@ -52,13 +55,27 @@ class SessionLock
 
             return false;
         }
-        if (time() - (int) $last > self::IDLE_MINUTES * 60) {
+        if (time() - (int) $last > self::idleMinutes($request) * 60) {
             $this->lock($request);
 
             return true;
         }
 
         return false;
+    }
+
+    /** How long the app may go unused before it locks, on this device. */
+    public static function idleMinutes(Request $request): int
+    {
+        return self::isDesktop($request) ? self::DESKTOP_MINUTES : self::IDLE_MINUTES;
+    }
+
+    /** A computer (not a phone or a tablet), by what its browser says it is. */
+    public static function isDesktop(Request $request): bool
+    {
+        $agent = (string) $request->userAgent();
+
+        return $agent !== '' && ! preg_match('/Mobi|Android|iPhone|iPad|iPod|Tablet|Silk|Kindle|Opera Mini/i', $agent);
     }
 
     public function touch(Request $request): void
