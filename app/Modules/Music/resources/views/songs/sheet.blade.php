@@ -128,7 +128,8 @@
                                                 <div class="sl" :data-line="line.id">
                                                     <button type="button" class="sl-split" x-show="l > 0" @click="split(block, l)" title="{{ __('Split the block here') }}"><i class="fa-solid fa-scissors"></i></button>
                                                     <div class="sl-chords">
-                                                        <template x-for="item in placed(line)" :key="item.chord.id">
+                                                        {{-- Silence (N.C.) stays in the sheet (the map has it) but is neither shown nor edited here --}}
+                                                        <template x-for="item in placed(line).filter(item => item.chord.name !== ChordTransposer.NO_CHORD)" :key="item.chord.id">
                                                             <span class="sl-chord" :class="{ 'is-unknown': item.chord.name === '?', 'is-selected': selected?.chord === item.chord.id, 'is-dragging': chordDrag?.chord === item.chord.id && chordDrag.moved }"
                                                                 :style="`left: ${item.x}ch`" x-text="item.chord.name"
                                                                 @pointerdown="startChordDrag($event, block, line, item.chord)" @dblclick="selected = { block: block.id, line: line.id, chord: item.chord.id }; $nextTick(() => renameSelected())"></span>
@@ -309,11 +310,11 @@
                 },
                 applyPop() {
                     const pop = this.pop;
-                    // "nc", "silêncio", "-"… are silence: N.C.
-                    const name = ChordTransposer.noChord(this.$refs.popInput.value) ?? this.$refs.popInput.value.trim().replace(/\s+/g, '');
+                    const name = this.$refs.popInput.value.trim().replace(/\s+/g, '');
                     this.pop = null;
                     if (!pop || !name) return;
-                    if (name !== '?' && name !== ChordTransposer.NO_CHORD && !/^[A-G]/.test(name)) { this.say(@js(__('This is not a chord name.')), true); return; }
+                    // Silence (N.C.) is written on the grid of bars, not here (it is not shown on the chord sheet).
+                    if (name !== '?' && !/^[A-G]/.test(name)) { this.say(@js(__('This is not a chord name.')), true); return; }
                     const line = this.findLine(pop.block, pop.line);
                     if (!line) return;
                     this.remember();

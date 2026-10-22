@@ -720,12 +720,12 @@
                                     </div>
                                     <div class="sheet-lines">
                                         <template x-for="(line, lineIndex) in (section.lines || [])" :key="lineIndex">
-                                            <div x-data="{ parsed: sheetLine(line) }"
+                                            <div x-data="{ parsed: sheetLine(line) }" x-show="parsed.type === 'comment' || parsed.hasChords || parsed.hasText"
                                                 :class="parsed.type === 'comment' ? 'sheet-comment' : { 'sheet-line': true, 'no-chords': !parsed.hasChords, 'only-chords': !parsed.hasText }">
                                                 <span x-show="parsed.type === 'comment'" x-text="parsed.text"></span>
                                                 <template x-for="(unit, unitIndex) in (parsed.units || [])" :key="unitIndex">
                                                     <span class="seg" :class="{ 'is-wide': unit.wide }"><span class="seg-chord" :class="{ 'is-passing': unit.chord && sheetChordPassing(index, lineIndex, unit.ordinal), 'is-playing': unit.chord && playingChord >= 0 && sheetChordNumber(index, lineIndex, unit.ordinal) === playingChord, ...suggestClasses(unit.chord ? [sheetChordNumber(index, lineIndex, unit.ordinal)] : []) }" :data-chord="unit.chord ? sheetChordNumber(index, lineIndex, unit.ordinal) : null"
-                                                        @click="unit.chord && suggestClick([sheetChordNumber(index, lineIndex, unit.ordinal)], $event)"><span x-text="unit.chord ? suggestedName([sheetChordNumber(index, lineIndex, unit.ordinal)], chordFor(unit.chord)) : ''"></span></span><span class="seg-text" x-text="unit.text"></span></span>
+                                                        @click="unit.chord && !unit.silent && suggestClick([sheetChordNumber(index, lineIndex, unit.ordinal)], $event)"><span x-text="unit.chord && !unit.silent ? suggestedName([sheetChordNumber(index, lineIndex, unit.ordinal)], chordFor(unit.chord)) : ''"></span></span><span class="seg-text" x-text="unit.text"></span></span>
                                                 </template>
                                             </div>
                                         </template>
@@ -2615,8 +2615,10 @@
                     cleaned.forEach(unit => { if (unit.chord !== null) unit.ordinal = ordinal++; });
                     // A chord needs its own width only when the text up to the next chord is too short for its name
                     // (bold chord letters are wider than lyric letters, hence the margin).
+                    // Silence (N.C.) keeps its place among the chords (numbering), but shows nothing.
+                    cleaned.forEach(unit => { unit.silent = unit.chord === ChordTransposer.NO_CHORD; });
                     cleaned.forEach((unit, index) => {
-                        if (unit.chord === null) return;
+                        if (unit.chord === null || unit.silent) return;
                         let distance = 0;
                         for (let next = index; next < cleaned.length; next++) {
                             if (next > index && cleaned[next].chord !== null) {
@@ -2631,7 +2633,7 @@
                     return {
                         type: 'line',
                         units: cleaned,
-                        hasChords: cleaned.some(unit => unit.chord !== null),
+                        hasChords: cleaned.some(unit => unit.chord !== null && !unit.silent),
                         hasText: cleaned.some(unit => unit.text.trim() !== '' && !/^[()|\s]+$/.test(unit.text)),
                     };
                 },

@@ -277,7 +277,7 @@
                                 <template x-if="view === 'sheet'">
                                     <div>
                                         <template x-for="(line, l) in section.lines" :key="l">
-                                            <div :class="line.comment !== undefined ? 'sheet-comment' : ('sheet-line' + (line.onlyChords ? ' only-chords' : ''))">
+                                            <div x-show="!line.empty" :class="line.comment !== undefined ? 'sheet-comment' : ('sheet-line' + (line.onlyChords ? ' only-chords' : ''))">
                                                 <span x-show="line.comment !== undefined" x-text="line.comment"></span>
                                                 <template x-for="(unit, u) in (line.units || [])" :key="u">
                                                     <span class="seg">
@@ -413,7 +413,9 @@
                     }
                     units.push({ chord, text: text.slice(last) });
                     units.forEach(unit => unit.g = unit.chord === null ? null : number++);
-                    return { units, onlyChords: units.every(unit => unit.text.trim() === '') };
+                    // A line with only silence (N.C.) and no lyrics is not shown.
+                    const empty = units.every(unit => unit.text.trim() === '' && (unit.chord === null || unit.chord === ChordTransposer.NO_CHORD));
+                    return { units, empty, onlyChords: units.every(unit => unit.text.trim() === '') };
                 }),
             }));
         }
@@ -569,12 +571,14 @@
                 get sections() { return this.view === 'sheet' ? sheet : map; },
                 isPassing(g) { return (this.view === 'sheet' ? sheetPassing : mapPassing).has(g); },
                 get hasPassing() { return mapPassing.size > 0; },
-                // Passing chords left out of the view (settings: show / hide).
-                hidesPassing(g) { return this.settings.passing === 'hide' && this.isPassing(g); },
-                // Chords that can be hidden ("?") and tested: all, or all but the passing ones when those are left out.
+                // Passing chords left out of the view (settings: show / hide); silence (N.C.) never shows on the chord sheet.
+                hidesPassing(g) { return (this.settings.passing === 'hide' && this.isPassing(g)) || (this.view === 'sheet' && this.isSilent(g)); },
+                isSilent(g) { return this.chordAt(g) === ChordTransposer.NO_CHORD; },
+                // Chords that can be hidden ("?") and tested: all, or all but the passing ones when those are left out;
+                // never silence.
                 get eligible() {
                     const count = this.view === 'sheet' ? countSheet : countMap;
-                    return Array.from({ length: count }, (_, g) => g).filter(g => !this.hidesPassing(g));
+                    return Array.from({ length: count }, (_, g) => g).filter(g => !this.hidesPassing(g) && !this.isSilent(g));
                 },
                 get total() { return this.eligible.length; },
                 get hiddenCount() { return Object.keys(this.hidden).length; },
@@ -627,7 +631,7 @@
                 // The right chord and 3 others: chords of this song first, then usual chords of the key.
                 ask(g) {
                     const correct = this.chordName(this.chordAt(g));
-                    const fromSong = [...new Set((this.view === 'sheet' ? sheetChords : mapChords).map(chord => this.chordName(chord)))];
+                    const fromSong = [...new Set((this.view === 'sheet' ? sheetChords : mapChords).filter(chord => chord !== ChordTransposer.NO_CHORD).map(chord => this.chordName(chord)))];
                     const minor = !!ChordTransposer.parseKey(this.key)?.minor;
                     const fromKey = (minor ? ['Am', 'C', 'Dm', 'Em', 'F', 'G', 'E'] : ['C', 'Dm', 'Em', 'F', 'G', 'Am', 'D'])
                         .map(chord => ChordTransposer.transposeChord(chord, minor ? 'Am' : 'C', this.key));

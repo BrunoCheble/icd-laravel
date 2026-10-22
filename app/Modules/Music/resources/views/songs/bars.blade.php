@@ -589,8 +589,8 @@
                                                 <template x-if="line.comment !== undefined"><div class="sheet-comment" x-text="line.comment"></div></template>
                                                 <template x-if="line.comment === undefined">
                                                     <div>
-                                                        <div class="sheet-line" :data-sheet-line="`${s}-${l}`"><template x-for="(unit, u) in (chordMove && chordMove.s === s && chordMove.l === l ? chordMove.units : line.units)" :key="`${u}:${unit.chord}:${unit.text}:${unit.added || unit.changed ? 'a' : ''}`"><span class="sheet-seg"><span class="c" :class="{ 'is-playing': unit.n !== undefined && unit.n === playingSheetChord, 'is-moving': chordMove && chordMove.s === s && chordMove.l === l && unit.ordinal === chordMove.k, 'can-move': mode === 'edit' && !versionId && !section.marker && unit.chord && (!dirty || sheetLinked), 'is-added': unit.added || unit.changed }" :data-chord="unit.n"
-                                                            @pointerdown="unit.chord && startSheetDrag($event, s, l, unit.ordinal)"><span x-text="unit.chord ? transposeName(unit.chord) : ''"></span></span><span class="t" :data-from="unit.from" x-text="unit.text"></span></span></template></div>
+                                                        <div class="sheet-line" :data-sheet-line="`${s}-${l}`" x-show="!silentLine(line)"><template x-for="(unit, u) in (chordMove && chordMove.s === s && chordMove.l === l ? chordMove.units : line.units)" :key="`${u}:${unit.chord}:${unit.text}:${unit.added || unit.changed ? 'a' : ''}`"><span class="sheet-seg"><span class="c" :class="{ 'is-playing': unit.n !== undefined && unit.n === playingSheetChord && !isSilent(unit.chord), 'is-moving': chordMove && chordMove.s === s && chordMove.l === l && unit.ordinal === chordMove.k, 'can-move': mode === 'edit' && !versionId && !section.marker && unit.chord && !isSilent(unit.chord) && (!dirty || sheetLinked), 'is-added': unit.added || unit.changed }" :data-chord="unit.n"
+                                                            @pointerdown="unit.chord && !isSilent(unit.chord) && startSheetDrag($event, s, l, unit.ordinal)"><span x-text="unit.chord && !isSilent(unit.chord) ? transposeName(unit.chord) : ''"></span></span><span class="t" :data-from="unit.from" x-text="unit.text"></span></span></template></div>
                                                         <template x-if="chordMove && !chordMove.dragging && chordMove.s === s && chordMove.l === l">
                                                             <div class="chord-move" @click.stop>
                                                                 {{-- Saved in the copies of the section too (same name and lines) --}}
@@ -2307,8 +2307,28 @@
                     // Copies: the other sections with the same name written exactly the same way.
                     const copies = this.sheet.filter((other, i) => i !== s && !other.jump && section.section && other.section === section.section
                         && JSON.stringify(other.lines || []) === lines).length;
-                    this.sheetEdit = { index: s, text: (section.lines || []).join('\n'), error: '', saving: false, copies,
+                    // Silence (N.C.) is not shown nor edited: taken out here (with how many chords come before each one)
+                    // and put back when saving, so the chord sheet keeps the map's chords.
+                    const silent = [];
+                    let seen = 0;
+                    const text = (section.lines || []).join('\n').replace(/\[([^\]]+)\]/g, (mark, chord) => {
+                        if (!this.isSilent(chord)) { seen++; return mark; }
+                        silent.push(seen);
+                        return '';
+                    });
+                    this.sheetEdit = { index: s, text, silent, error: '', saving: false, copies,
                         name: String(section.label || section.section || '').replaceAll('_', ' ') };
+                },
+                // The silence taken out when editing, back before the chord that came after it (or at the end).
+                withSilence(text, silent) {
+                    if (!silent?.length) return text;
+                    const marks = [...text.matchAll(/\[[^\]]+\]/g)];
+                    let out = text;
+                    [...silent].reverse().forEach(before => {
+                        const at = marks[before] ? marks[before].index : out.length;
+                        out = out.slice(0, at) + `[${ChordTransposer.NO_CHORD}]` + out.slice(at);
+                    });
+                    return out;
                 },
                 async saveSheetSection(same = false) {
                     const edit = this.sheetEdit;
@@ -2317,11 +2337,12 @@
                     if (hasChordsOverLyrics(edit.text)) edit.text = chordsOverLyrics(edit.text);
                     edit.saving = true;
                     edit.error = '';
+                    const text = this.withSilence(edit.text, edit.silent);
                     // Chords swapped: the map changed too, the page reads it again.
                     const chordsOf = (text) => [...text.matchAll(/\[([^\]]+)\]/g)].map(match => match[1]).join(' ');
-                    const swapped = chordsOf(edit.text) !== chordsOf((this.sheet[edit.index]?.lines || []).join('\n'));
+                    const swapped = chordsOf(text) !== chordsOf((this.sheet[edit.index]?.lines || []).join('\n'));
                     try {
-                        await this.putSheetSection(edit.index, edit.text.split('\n'), same);
+                        await this.putSheetSection(edit.index, text.split('\n'), same);
                         if (swapped) { this.keepPlace(); return window.location.reload(); }
                         this.sheetEdit = null;
                     } catch (error) {
@@ -3102,6 +3123,9 @@
                 applyAllSuggestions() {
                     for (const item of [...(this.helper.bars || [])]) this.applySuggestion(item.bar, item.beats.map(beat => beat.options[0]?.chord));
                 },
+                // Silence (N.C.): in the map, but shown (and moved) nowhere on the chord sheet.
+                isSilent(chord) { return chord === ChordTransposer.NO_CHORD; },
+                silentLine(line) { return (line.units || []).length > 0 && line.units.every(unit => (unit.chord === null || this.isSilent(unit.chord)) && !String(unit.text || '').trim()); },
                 // A chord name, "?" (a chord not known yet) or "N.C." (silence).
                 isChordName(typed) { return typed === '?' || typed === ChordTransposer.NO_CHORD || /^[A-G][#b]?[^\s\[\]|]*$/.test(typed); },
                 // A chord typed at `tick` (in the key on screen; stored in the song's key); the equal blocks are offered.

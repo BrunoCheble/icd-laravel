@@ -4,6 +4,7 @@ namespace App\Modules\Music\Services;
 
 use App\Modules\Music\Models\Setlist;
 use App\Modules\Music\Models\Song;
+use App\Modules\Music\Support\NoChord;
 
 class GetSongOverviewService
 {
@@ -53,14 +54,14 @@ class GetSongOverviewService
 
     /**
      * Chord sheet sections to show: each line as a note ("{c: 2x}") or as pieces of a chord and the lyrics after it
-     * ("[G]Santo [D]é" -> [G, "Santo "], [D, "é"]).
+     * ("[G]Santo [D]é" -> [G, "Santo "], [D, "é"]). Silence (N.C.) shows no chord; a line with nothing else is left out.
      */
     private static function sheet(array $sections): array
     {
         return array_map(fn (array $section) => [
             'label'  => (string) ($section['label'] ?? str_replace('_', ' ', (string) ($section['section'] ?? ''))),
             'marker' => ($section['jump'] ?? null) === 'start',
-            'lines'  => array_map(function ($line) {
+            'lines'  => array_values(array_filter(array_map(function ($line) {
                 $text = (string) $line;
                 if (preg_match('/^\s*\{\s*(?:c|comment)?\s*:?\s*(.*?)\s*\}\s*$/iu', $text, $note)) {
                     return ['comment' => $note[1]];
@@ -68,11 +69,12 @@ class GetSongOverviewService
                 $parts = preg_split('/\[([^\]]+)\]/u', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
                 $units = $parts[0] !== '' ? [[null, $parts[0]]] : [];
                 for ($i = 1; $i < count($parts); $i += 2) {
-                    $units[] = [$parts[$i], $parts[$i + 1] ?? ''];
+                    $units[] = [NoChord::is($parts[$i]) ? null : $parts[$i], $parts[$i + 1] ?? ''];
                 }
 
                 return ['units' => $units];
-            }, array_values($section['lines'] ?? [])),
+            }, array_values($section['lines'] ?? [])), fn (array $line) => isset($line['comment'])
+                || collect($line['units'])->contains(fn ($unit) => $unit[0] !== null || trim($unit[1]) !== ''))),
         ], $sections);
     }
 }
