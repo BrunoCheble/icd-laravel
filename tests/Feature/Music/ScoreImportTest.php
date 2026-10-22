@@ -3,6 +3,8 @@
 namespace Tests\Feature\Music;
 
 use App\Modules\Music\Models\Song;
+use App\Modules\Music\Services\UpdateChordSheetChordsService;
+use App\Modules\Music\Services\UpdateSongLayoutService;
 use Illuminate\Http\UploadedFile;
 
 /**
@@ -57,6 +59,10 @@ class ScoreImportTest extends MusicTestCase
         // The chord sheet: each chord on the syllable it starts with ("mos", sung on beat 1 of bar 3).
         $this->assertSame(['[C] [G4] [Am7]'], $intro['sheet']);
         $this->assertStringStartsWith('Cante[F]mos a Deus [G7]Aleluia', $part['sheet'][0]);
+        // The grid only takes a chord sheet with exactly the map's chords, in its order.
+        foreach ([$intro, $part] as $block) {
+            $this->assertSame(UpdateSongLayoutService::chordSequence([$block]), UpdateChordSheetChordsService::sheetChords([['lines' => $block['sheet']]]));
+        }
     }
 
     public function test_the_blocks_take_the_name_and_lyrics_of_the_songs_blocks(): void

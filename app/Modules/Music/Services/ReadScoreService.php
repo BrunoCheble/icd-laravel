@@ -262,11 +262,9 @@ class ReadScoreService
                 $rests[] = $j * $beatsPerBar + $rest;
             }
         }
+        $line = 0;
         foreach ($segment as $j => $p) {
             $bar = $bars[$this->order[$p]];
-            if ($j > 0 && $j % self::BARS_PER_LINE === 0) {
-                $chords[] = '|';
-            }
             $marks = array_map(fn ($chord) => [round($chord[0] / self::STEP) * self::STEP, $chord[1]], $bar['chords']);
             if (! $marks || $marks[0][0] > 0) {
                 // The chord before goes on (a "?" when there is none yet).
@@ -276,9 +274,15 @@ class ReadScoreService
                 $end = $marks[$c + 1][0] ?? $bar['beats'];
                 if ($end - $beat > 0) {
                     // The same chord going on (also over the bar line) is one longer chord, as on the grid.
-                    if ($chords && end($chords) === $name) {
+                    $previous = collect($chords)->last(fn ($chord) => $chord !== '|');
+                    if ($previous === $name) {
                         $durations[array_key_last($durations)] += $end - $beat;
                     } else {
+                        // A new line of chords every BARS_PER_LINE bars.
+                        if ($chords && intdiv($j, self::BARS_PER_LINE) > $line) {
+                            $chords[] = '|';
+                            $line = intdiv($j, self::BARS_PER_LINE);
+                        }
                         $chords[] = $name;
                         $durations[] = $end - $beat;
                     }
@@ -396,10 +400,7 @@ class ReadScoreService
             if ($chord === '|') {
                 continue;
             }
-            // The same chord going on is no new chord.
-            if (! $changes || end($changes)['chord'] !== $chord) {
-                $changes[] = ['at' => $at, 'chord' => $chord];
-            }
+            $changes[] = ['at' => $at, 'chord' => $chord];
             $at += $block['durations'][$d++];
         }
         $syllables = $block['timeline']['syllables'];
@@ -415,7 +416,13 @@ class ReadScoreService
             $text = implode("\n", array_fill(0, min($times, 4), trim($text)));
         }
 
-        return $this->place($text, $syllables, $changes, $block['timeline'], true);
+        $lines = $this->place($text, $syllables, $changes, $block['timeline'], true);
+        // The grid refuses a chord sheet without exactly the map's chords: then the chords on lines of their own.
+        if (UpdateChordSheetChordsService::sheetChords([['lines' => $lines]]) !== UpdateSongLayoutService::chordSequence([$block])) {
+            return array_merge($this->chordLines($changes, $block['beats_per_bar']), explode("\n", trim(preg_replace('/\[[^\]]*\]/u', '', $text))));
+        }
+
+        return $lines;
     }
 
     /** The chords placed in the text (see sheet()); the score's lyrics sung after the text ends are added to it. */
@@ -456,10 +463,8 @@ class ReadScoreService
             return $this->place(rtrim($text) . "\n" . $extra, $syllables, $changes, $timeline, false);
         }
 
-        // Chords placed: [place in the text => chords], or after the place of the chord before.
-        $before = [];
-        $after = [];
-        $lead = [];
+        // Where each chord goes: before a syllable, at the end of the line of the chord before, or on a first line.
+        $targets = [];
         $last = null;
         foreach ($changes as $c => $change) {
             $until = $changes[$c + 1]['at'] ?? PHP_INT_MAX;
@@ -470,14 +475,32 @@ class ReadScoreService
                     break;
                 }
             }
+            $targets[$c] = $place !== null ? ['before', $place] : ($last !== null ? ['after', $last] : ['lead', -1]);
             if ($place !== null) {
-                $before[$place][] = $change['chord'];
                 $last = $place;
-            } elseif ($last !== null) {
-                $after[$last][] = $change['chord'];
-            } else {
-                $lead[] = $change['chord'];
             }
+        }
+        // The sheet must have the map's chords in the map's order: a chord that would come out before the one before
+        // it goes right after that one.
+        $lineEnd = [];
+        foreach ($chars as $i => $char) {
+            $lineEnd[$i] = mb_strpos($text . "\n", "\n", $i);
+        }
+        $key = fn (array $target) => match ($target[0]) { 'lead' => -1, 'before' => $target[1], 'after' => $lineEnd[$target[1]] + 0.5 };
+        foreach ($targets as $c => $target) {
+            if ($c > 0 && $key($target) < $key($targets[$c - 1])) {
+                $targets[$c] = $targets[$c - 1];
+            }
+        }
+        $before = [];
+        $after = [];
+        $lead = [];
+        foreach ($targets as $c => [$kind, $place]) {
+            match ($kind) {
+                'before' => $before[$place][] = $changes[$c]['chord'],
+                'after' => $after[$place][] = $changes[$c]['chord'],
+                'lead' => $lead[] = $changes[$c]['chord'],
+            };
         }
 
         // The text with the chords before their syllables, then the trailing chords at the end of their lines.
