@@ -22,6 +22,7 @@ class DeployCachesTest extends TestCase
         @unlink($this->marker);
         @unlink($this->marker . '.lock');
         @unlink($this->marker . '.cleared');
+        @unlink($this->marker . '.status');
         parent::tearDown();
     }
 
@@ -62,6 +63,7 @@ class DeployCachesTest extends TestCase
         $caches->execute();
 
         $this->assertFalse($caches->isStale());
+        $this->assertStringStartsWith('failed:RuntimeException@', $caches->status());
     }
 
     public function test_right_after_a_change_they_are_only_cleared_once(): void

@@ -23,9 +23,9 @@ class RefreshDeployCaches
         // The health check says whether the caches and OPcache are on (yes / no only) and what pictures the server
         // can make light, to check the server from outside.
         if ($request->is('up')) {
-            $response->headers->set('X-App-Cache', sprintf('config=%d; routes=%d; opcache=%d; images=%s',
+            $response->headers->set('X-App-Cache', sprintf('config=%d; routes=%d; opcache=%d; images=%s; build=%s',
                 app()->configurationIsCached(), app()->routesAreCached(), (int) (function_exists('opcache_get_status') && (@opcache_get_status(false)['opcache_enabled'] ?? false)),
-                implode('+', \App\Support\ImageResizer::support()) ?: 'none'));
+                implode('+', \App\Support\ImageResizer::support()) ?: 'none', $this->caches->status()));
         }
 
         return $response;

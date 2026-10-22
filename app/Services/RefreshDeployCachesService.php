@@ -22,6 +22,16 @@ class RefreshDeployCachesService
         $this->marker ??= storage_path('framework/deploy-caches');
     }
 
+    /** The last build: "ok", "failed:<error>@<file>:<line>", or "pending" (a change not built yet). */
+    public function status(): string
+    {
+        if ($this->isStale()) {
+            return 'pending:' . $this->changedSecondsAgo() . 's';
+        }
+
+        return trim((string) @file_get_contents($this->marker . '.status')) ?: 'ok';
+    }
+
     /** How long ago the code or the .env changed (the checkout's last write). */
     public function changedSecondsAgo(): int
     {
@@ -81,13 +91,17 @@ class RefreshDeployCachesService
                 return;
             }
             $this->forgetCompiledCode();
+            $status = 'ok';
             try {
                 Artisan::call('optimize');
             } catch (Throwable $error) {
                 Artisan::call('optimize:clear');
                 report($error);
+                // What failed, for the health check (no message: it may hold paths or values).
+                $status = 'failed:' . class_basename($error) . '@' . basename($error->getFile()) . ':' . $error->getLine();
             }
             file_put_contents($this->marker, $signature);
+            file_put_contents($this->marker . '.status', $status);
         } finally {
             flock($lock, LOCK_UN);
             fclose($lock);
