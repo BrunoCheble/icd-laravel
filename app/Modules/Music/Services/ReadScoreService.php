@@ -27,10 +27,13 @@ class ReadScoreService
     private array $order = [];
     /** The song's blocks with lyrics: [section, lyrics, anchor, trigrams]. */
     private array $known = [];
+    /** Lyrics sung before bar 1 (in a pickup bar left out of the grid). */
+    private array $pickup = [];
 
     public function execute(MusicXmlScore $score, Song $song): array
     {
         $this->score = $score;
+        $this->pickup = [];
         $this->known = $this->knownBlocks($song);
         $this->anacruses();
         $this->order = $this->playbackOrder();
@@ -66,7 +69,7 @@ class ReadScoreService
     /** The lyrics a bar sings, in playing order: what the bar before carried over, then its own. */
     private function sung(int $position): array
     {
-        $carried = $position > 0 ? $this->score->bars[$this->order[$position - 1]]['carry'] : [];
+        $carried = $position > 0 ? $this->score->bars[$this->order[$position - 1]]['carry'] : $this->pickup;
 
         return array_merge($carried, $this->score->bars[$this->order[$position]]['own']);
     }
@@ -98,9 +101,16 @@ class ReadScoreService
     {
         $bars = $this->score->bars;
         $order = [];
-        $start = 0;
+        // A bar before bar 1 with no chords (a pickup, an empty count-in) is no bar of the grid: its lyrics are sung
+        // into bar 1.
+        $first = 0;
+        while (isset($bars[$first]) && $bars[$first]['implicit'] && ! $bars[$first]['chords']) {
+            $this->pickup = array_merge($this->pickup, $bars[$first]['syllables']);
+            $first++;
+        }
+        $start = $first;
         $repeated = [];
-        for ($i = 0, $guard = 0; $i < count($bars) && $guard < 2000; $guard++) {
+        for ($i = $first, $guard = 0; $i < count($bars) && $guard < 2000; $guard++) {
             $marks = $bars[$i]['marks'];
             if (in_array('repeat-forward', $marks, true)) {
                 $start = $i;
@@ -250,6 +260,11 @@ class ReadScoreService
         $rests = [];
         foreach ($segment as $j => $p) {
             $index = $this->order[$p];
+            if ($p === 0) {
+                foreach ($this->pickup as $syllable) {
+                    $syllables[] = ['at' => $syllable['beat'] - $beatsPerBar, 'text' => $syllable['text'], 'syllabic' => $syllable['syllabic']];
+                }
+            }
             if ($p > 0) {
                 foreach ($bars[$this->order[$p - 1]]['carry'] as $syllable) {
                     $syllables[] = ['at' => ($j - 1) * $beatsPerBar + $syllable['beat'], 'text' => $syllable['text'], 'syllabic' => $syllable['syllabic']];

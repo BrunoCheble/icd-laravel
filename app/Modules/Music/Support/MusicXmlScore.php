@@ -65,7 +65,9 @@ class MusicXmlScore
             // A "beat" is the time signature's unit (an eighth in 6/8).
             $perBeat = $divisions * 4 / $this->beatType;
             $position = 0;
-            $bar = ['number' => (string) $measure['number'], 'beats' => (float) $this->beatsPerBar, 'chords' => [], 'syllables' => [], 'rests' => [], 'marks' => [], 'words' => []];
+            $bar = ['number' => (string) $measure['number'], 'beats' => (float) $this->beatsPerBar, 'chords' => [], 'syllables' => [], 'rests' => [], 'marks' => [], 'words' => [],
+                // A bar outside the count (a pickup before bar 1).
+                'implicit' => (string) ($measure['implicit'] ?? '') === 'yes'];
             foreach ($measure->children() as $element) {
                 switch ($element->getName()) {
                     case 'harmony':
@@ -157,7 +159,10 @@ class MusicXmlScore
                 $added[] = (self::ALTER[(string) ($degree->{'degree-alter'} ?? '')] ?? '') . (string) $degree->{'degree-value'};
             }
         }
-        if ($added) {
+        if ($added === ['2'] && in_array($kind, ['major', 'minor'], true)) {
+            // A major or minor chord with the 2nd: "G2", "Am2".
+            $name .= '2';
+        } elseif ($added) {
             $name .= str_contains($name, '(') ? '' : '(' . implode(',', $added) . ')';
         }
         if (isset($harmony->bass)) {

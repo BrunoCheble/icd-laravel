@@ -65,6 +65,18 @@ class ScoreImportTest extends MusicTestCase
         }
     }
 
+    public function test_a_pickup_bar_without_chords_is_no_bar_of_the_grid(): void
+    {
+        $pickup = '<measure number="0" implicit="yes"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>'
+            . '<note><rest/><duration>4</duration><voice>1</voice></note></measure>';
+        $xml = str_replace('<part id="P1">', '<part id="P1">' . $pickup, $this->fixture());
+
+        $response = $this->read($this->song(), $xml)->assertOk();
+
+        $this->assertSame(7, $response->json('bars'));
+        $this->assertSame(['C', 'G4', 'Am7'], $response->json('blocks.0.chords'));
+    }
+
     public function test_the_blocks_take_the_name_and_lyrics_of_the_songs_blocks(): void
     {
         $song = $this->song();
