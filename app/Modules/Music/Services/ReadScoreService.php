@@ -468,12 +468,27 @@ class ReadScoreService
         $last = null;
         foreach ($changes as $c => $change) {
             $until = $changes[$c + 1]['at'] ?? PHP_INT_MAX;
+            // The syllable sung when the chord starts; when the song's lyrics do not have it (the score sings other
+            // words), the next one sung over the chord that they have: at the start of its line when that line has
+            // no chord yet ("[C#m7]Quebrando os vícios" for the score's "que [C#m7]todos vícios").
             $place = null;
+            $first = true;
             foreach ($syllables as $k => $syllable) {
-                if ($syllable['at'] >= $change['at'] - 0.1 && $syllable['at'] < $until) {
-                    $place = $found[$k] ?? null;
+                if ($syllable['at'] < $change['at'] - 0.1 || $syllable['at'] >= $until) {
+                    continue;
+                }
+                if (isset($found[$k])) {
+                    $place = $found[$k];
+                    if (! $first) {
+                        $lineStart = mb_strrpos(mb_substr($text, 0, $place), "\n");
+                        $lineStart = $lineStart === false ? 0 : $lineStart + 1;
+                        if ($last === null || $last < $lineStart) {
+                            $place = $lineStart + (mb_strlen(mb_substr($text, $lineStart)) - mb_strlen(ltrim(mb_substr($text, $lineStart))));
+                        }
+                    }
                     break;
                 }
+                $first = false;
             }
             $targets[$c] = $place !== null ? ['before', $place] : ($last !== null ? ['after', $last] : ['lead', -1]);
             if ($place !== null) {
