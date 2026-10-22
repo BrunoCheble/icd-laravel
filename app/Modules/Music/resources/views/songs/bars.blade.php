@@ -954,7 +954,7 @@
                                                             <label class="score-join" x-show="i > 0"><input type="checkbox" x-model="block.join"> {{ __('join to the block before') }}</label>
                                                         </div>
                                                         <div class="score-chords" x-text="scoreBars(block)"></div>
-                                                        <div class="score-lyrics" x-show="block.lyrics" x-text="(block.lyrics || '').split('\n')[0]"></div>
+                                                        <div class="score-lyrics" x-show="block.sheet?.length" x-text="(block.sheet || []).slice(0, 2).join(' / ')"></div>
                                                     </li>
                                                 </template>
                                             </ol>
@@ -1059,7 +1059,9 @@
                 },
                 async scoreImport() {
                     if (this.dirty && !confirm(@js(__('This page has changes not saved; importing loses them. Import anyway?')))) return;
+                    // The grid's blocks and the chord sheet's sections (lyrics with each chord on its syllable), side by side.
                     const blocks = [];
+                    const sheet = [];
                     for (const block of this.scoreBlocks) {
                         const data = { section: (block.section || '').trim() || '?', chords: [...block.chords], durations: [...block.durations], beats_per_bar: block.beats_per_bar, lyrics: block.lyrics || null, anchor: block.anchor || null };
                         const before = blocks[blocks.length - 1];
@@ -1067,8 +1069,10 @@
                             before.chords.push('|', ...data.chords);
                             before.durations.push(...data.durations);
                             if (data.lyrics && data.lyrics !== before.lyrics) before.lyrics = [before.lyrics, data.lyrics].filter(Boolean).join('\n');
+                            sheet[sheet.length - 1].lines.push(...(block.sheet || []));
                         } else {
                             blocks.push(data);
+                            sheet.push({ section: data.section, lines: [...(block.sheet || [])] });
                         }
                     }
                     // Where bar 1 was marked in the recording stays.
@@ -1079,7 +1083,7 @@
                         const response = await fetch(saveUrl, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf() },
-                            body: JSON.stringify({ blocks, updated_at: this.updatedAt, bpm: this.scoreUseBpm && this.scorePreview.bpm ? this.scorePreview.bpm : this.bpm, musical_key: this.key }),
+                            body: JSON.stringify({ blocks, chord_sheet: sheet, updated_at: this.updatedAt, bpm: this.scoreUseBpm && this.scorePreview.bpm ? this.scorePreview.bpm : this.bpm, musical_key: this.key }),
                         });
                         const result = await response.json().catch(() => ({}));
                         if (!response.ok) throw new Error(Object.values(result.errors || {})[0]?.[0] || result.message || @js(__('Something went wrong')));

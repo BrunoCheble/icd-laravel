@@ -48,6 +48,10 @@ class ReadScoreService
             }
         }
         $this->nameParts($blocks);
+        foreach ($blocks as &$block) {
+            $block['sheet'] = $this->sheet($block);
+        }
+        unset($block);
 
         return [
             'title' => $score->title,
@@ -55,7 +59,7 @@ class ReadScoreService
             'meter' => $score->beatsPerBar . '/' . $score->beatType,
             'beats_per_bar' => $score->beatsPerBar,
             'bars' => count($this->order),
-            'blocks' => array_map(fn ($block) => array_diff_key($block, ['grams' => 1]), $blocks),
+            'blocks' => array_map(fn ($block) => array_diff_key($block, ['grams' => 1, 'timeline' => 1]), $blocks),
         ];
     }
 
@@ -239,6 +243,25 @@ class ReadScoreService
 
         $chords = [];
         $durations = [];
+        $beatsPerBar = $this->score->beatsPerBar;
+        // When each syllable is sung and where the rests are, in beats from the block's start (an anacrusis carried
+        // from the bar before comes just before its bar).
+        $syllables = [];
+        $rests = [];
+        foreach ($segment as $j => $p) {
+            $index = $this->order[$p];
+            if ($p > 0) {
+                foreach ($bars[$this->order[$p - 1]]['carry'] as $syllable) {
+                    $syllables[] = ['at' => ($j - 1) * $beatsPerBar + $syllable['beat'], 'text' => $syllable['text'], 'syllabic' => $syllable['syllabic']];
+                }
+            }
+            foreach ($bars[$index]['own'] as $syllable) {
+                $syllables[] = ['at' => $j * $beatsPerBar + $syllable['beat'], 'text' => $syllable['text'], 'syllabic' => $syllable['syllabic']];
+            }
+            foreach ($bars[$index]['rests'] as $rest) {
+                $rests[] = $j * $beatsPerBar + $rest;
+            }
+        }
         foreach ($segment as $j => $p) {
             $bar = $bars[$this->order[$p]];
             if ($j > 0 && $j % self::BARS_PER_LINE === 0) {
@@ -285,6 +308,7 @@ class ReadScoreService
             'lyrics' => $known['lyrics'] ?? ($text !== '' ? $text : null),
             'anchor' => $known['anchor'] ?? ($text !== '' ? Str::words($text, 6, '') : null),
             'grams' => self::grams($text),
+            'timeline' => ['syllables' => $syllables, 'rests' => $rests],
         ];
     }
 
@@ -331,8 +355,22 @@ class ReadScoreService
 
     private function join(array $a, array $b): array
     {
-        $a['chords'] = array_merge($a['chords'], ['|'], $b['chords']);
-        $a['durations'] = array_merge($a['durations'], $b['durations']);
+        $offset = array_sum($a['durations']);
+        foreach ($b['timeline']['syllables'] as $syllable) {
+            $a['timeline']['syllables'][] = ['at' => $syllable['at'] + $offset] + $syllable;
+        }
+        foreach ($b['timeline']['rests'] as $rest) {
+            $a['timeline']['rests'][] = $rest + $offset;
+        }
+        $chords = $b['chords'];
+        $durations = $b['durations'];
+        // The same chord going on over the join is one longer chord.
+        if ($chords && end($a['chords']) === $chords[0]) {
+            $a['durations'][array_key_last($a['durations'])] += array_shift($durations);
+            array_shift($chords);
+        }
+        $a['chords'] = $chords ? array_merge($a['chords'], ['|'], $chords) : $a['chords'];
+        $a['durations'] = array_merge($a['durations'], $durations);
         $a['bars'] += $b['bars'];
         $a['measures'] .= ', ' . $b['measures'];
         if (! $a['known']) {
@@ -340,6 +378,175 @@ class ReadScoreService
         }
 
         return $a;
+    }
+
+    /**
+     * The block's chord sheet lines ("Jes[E]us, quero d[E4]eclarar…"): the lyrics (the song's, else the score's),
+     * each chord before the syllable the score sings when it starts. The song's lyrics are matched with the score's
+     * syllables in order, letter by letter (spaces and the score's typing slips ignored). A chord that starts with no
+     * syllable of its own goes at the end of the line before, or on a line of chords (intros, interludes).
+     */
+    private function sheet(array $block): array
+    {
+        // Each chord change and when it starts.
+        $changes = [];
+        $at = 0;
+        $d = 0;
+        foreach ($block['chords'] as $chord) {
+            if ($chord === '|') {
+                continue;
+            }
+            // The same chord going on is no new chord.
+            if (! $changes || end($changes)['chord'] !== $chord) {
+                $changes[] = ['at' => $at, 'chord' => $chord];
+            }
+            $at += $block['durations'][$d++];
+        }
+        $syllables = $block['timeline']['syllables'];
+        if (! $syllables) {
+            return $this->chordLines($changes, $block['beats_per_bar']);
+        }
+
+        $text = $block['known'] && $block['lyrics'] ? $block['lyrics'] : $this->scoreLines($block['timeline']);
+        // A repeated part (CHORUS ×2) whose lyrics the song writes once: as many times as the score sings them.
+        $scoreLetters = strlen(self::letters(implode(' ', array_column($syllables, 'text'))));
+        $times = max(1, (int) round($scoreLetters / max(1, strlen(self::letters($text)))));
+        if ($block['known'] && $times > 1) {
+            $text = implode("\n", array_fill(0, min($times, 4), trim($text)));
+        }
+
+        return $this->place($text, $syllables, $changes, $block['timeline'], true);
+    }
+
+    /** The chords placed in the text (see sheet()); the score's lyrics sung after the text ends are added to it. */
+    private function place(string $text, array $syllables, array $changes, array $timeline, bool $more): array
+    {
+        // The text's letters, each with its place in the text (in characters).
+        $chars = mb_str_split($text);
+        $letters = '';
+        $places = [];
+        foreach ($chars as $i => $char) {
+            $plain = strtolower(Str::ascii($char));
+            if (strlen($plain) === 1 && ctype_alpha($plain)) {
+                $letters .= $plain;
+                $places[] = $i;
+            }
+        }
+        // Each syllable found in order, a little ahead of the last one at most.
+        $found = [];
+        $cursor = 0;
+        foreach ($syllables as $k => $syllable) {
+            $needle = self::letters($syllable['text']);
+            if ($needle === '') {
+                continue;
+            }
+            $hit = strpos(substr($letters, $cursor, 40), $needle);
+            if ($hit !== false) {
+                $found[$k] = $places[$cursor + $hit];
+                $cursor += $hit + strlen($needle);
+            }
+        }
+
+        // The score goes on singing after the text: its own lyrics are added for that part.
+        $lastFound = $found ? max(array_keys($found)) : -1;
+        $leftover = array_slice($syllables, $lastFound + 1);
+        if ($more && strlen(self::letters(implode('', array_column($leftover, 'text')))) >= 12) {
+            $extra = $this->scoreLines(['syllables' => $leftover, 'rests' => $timeline['rests']]);
+
+            return $this->place(rtrim($text) . "\n" . $extra, $syllables, $changes, $timeline, false);
+        }
+
+        // Chords placed: [place in the text => chords], or after the place of the chord before.
+        $before = [];
+        $after = [];
+        $lead = [];
+        $last = null;
+        foreach ($changes as $c => $change) {
+            $until = $changes[$c + 1]['at'] ?? PHP_INT_MAX;
+            $place = null;
+            foreach ($syllables as $k => $syllable) {
+                if ($syllable['at'] >= $change['at'] - 0.1 && $syllable['at'] < $until) {
+                    $place = $found[$k] ?? null;
+                    break;
+                }
+            }
+            if ($place !== null) {
+                $before[$place][] = $change['chord'];
+                $last = $place;
+            } elseif ($last !== null) {
+                $after[$last][] = $change['chord'];
+            } else {
+                $lead[] = $change['chord'];
+            }
+        }
+
+        // The text with the chords before their syllables, then the trailing chords at the end of their lines.
+        $out = '';
+        $lineOf = [];
+        $line = 0;
+        foreach ($chars as $i => $char) {
+            if (isset($before[$i])) {
+                $out .= '[' . implode('][', $before[$i]) . ']';
+            }
+            $out .= $char;
+            $lineOf[$i] = $line;
+            if ($char === "\n") {
+                $line++;
+            }
+        }
+        $lines = array_map('rtrim', explode("\n", $out));
+        // A few chords at the end of their line; more (an instrumental passage) on a line of their own after it.
+        $extraLines = [];
+        foreach ($after as $place => $chords) {
+            $tokens = implode(' ', array_map(fn ($chord) => '[' . $chord . ']', $chords));
+            if (count($chords) <= 3) {
+                $lines[$lineOf[$place]] .= ' ' . $tokens;
+            } else {
+                $extraLines[$lineOf[$place]][] = $tokens;
+            }
+        }
+        if ($extraLines) {
+            $with = [];
+            foreach ($lines as $i => $line) {
+                $with[] = $line;
+                foreach ($extraLines[$i] ?? [] as $extra) {
+                    $with[] = $extra;
+                }
+            }
+            $lines = $with;
+        }
+        if ($lead) {
+            array_unshift($lines, implode(' ', array_map(fn ($chord) => '[' . $chord . ']', $lead)));
+        }
+
+        return array_values(array_filter($lines, fn ($line) => trim($line) !== ''));
+    }
+
+    /** Chords with no lyrics, BARS_PER_LINE bars a line: "[E] [E4] [E] [C#m7]". */
+    private function chordLines(array $changes, int $beatsPerBar): array
+    {
+        $lines = [];
+        foreach ($changes as $change) {
+            $lines[(int) floor($change['at'] / ($beatsPerBar * self::BARS_PER_LINE))][] = '[' . $change['chord'] . ']';
+        }
+
+        return array_values(array_map(fn ($line) => implode(' ', $line), $lines));
+    }
+
+    /** The score's lyrics as lines: a new line after a rest. */
+    private function scoreLines(array $timeline): string
+    {
+        $text = '';
+        $previous = null;
+        foreach ($timeline['syllables'] as $syllable) {
+            if ($previous !== null && collect($timeline['rests'])->contains(fn ($rest) => $rest > $previous['at'] && $rest < $syllable['at'])) {
+                $text = rtrim($text) . "\n";
+            }
+            $text .= str_replace("'", ' ', $syllable['text']) . (in_array($syllable['syllabic'], ['begin', 'middle'], true) ? '' : ' ');
+            $previous = $syllable;
+        }
+
+        return trim(preg_replace('/[ \t]+/u', ' ', $text));
     }
 
     private function knownBlocks(Song $song): array

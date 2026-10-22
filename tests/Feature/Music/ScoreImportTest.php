@@ -54,6 +54,9 @@ class ScoreImportTest extends MusicTestCase
         $this->assertSame(['F', 'G7', 'F', 'G7', 'C'], array_values(array_filter($part['chords'], fn ($chord) => $chord !== '|')));
         $this->assertSame(20, array_sum($part['durations']));
         $this->assertStringStartsWith('Cantemos a Deus Aleluia', $part['lyrics']);
+        // The chord sheet: each chord on the syllable it starts with ("mos", sung on beat 1 of bar 3).
+        $this->assertSame(['[C] [G4] [Am7]'], $intro['sheet']);
+        $this->assertStringStartsWith('Cante[F]mos a Deus [G7]Aleluia', $part['sheet'][0]);
     }
 
     public function test_the_blocks_take_the_name_and_lyrics_of_the_songs_blocks(): void
@@ -67,19 +70,21 @@ class ScoreImportTest extends MusicTestCase
         $this->assertSame(['INTRO', 'VERSE_1'], array_column($response->json('blocks'), 'section'));
         $this->assertSame("Cantemos a Deus,\nAleluia!", $response->json('blocks.1.lyrics'));
         $this->assertTrue($response->json('blocks.1.known'));
+        // The song's lyrics (sung twice by the repeat), with the score's chords on their syllables.
+        $this->assertSame(['Cante[F]mos a Deus,', '[G7]Aleluia!', 'Cante[F]mos a Deus,', '[G7]Aleluia! [C]'], $response->json('blocks.1.sheet'));
     }
 
     public function test_the_preview_is_saved_like_the_grid_and_the_map_before_stays_in_the_history(): void
     {
         $song = $this->song();
         $revisions = $song->revisions()->count();
-        $blocks = collect($this->read($song, $this->fixture())->json('blocks'))
-            ->map(fn ($block) => array_intersect_key($block, array_flip(['section', 'chords', 'durations', 'beats_per_bar', 'lyrics', 'anchor'])))
-            ->all();
+        $preview = collect($this->read($song, $this->fixture())->json('blocks'));
+        $blocks = $preview->map(fn ($block) => array_intersect_key($block, array_flip(['section', 'chords', 'durations', 'beats_per_bar', 'lyrics', 'anchor'])))->all();
         $blocks[0]['start'] = '0:02';
+        $sheet = $preview->map(fn ($block) => ['section' => $block['section'], 'lines' => $block['sheet']])->all();
 
         $this->actingAs($this->admin())->putJson(route('songs.bars.update', $song), [
-            'blocks' => $blocks, 'updated_at' => $song->updated_at->toIso8601String(), 'bpm' => 80, 'musical_key' => 'G',
+            'blocks' => $blocks, 'chord_sheet' => $sheet, 'updated_at' => $song->updated_at->toIso8601String(), 'bpm' => 80, 'musical_key' => 'G',
         ])->assertOk();
 
         $song->refresh();
@@ -88,6 +93,8 @@ class ScoreImportTest extends MusicTestCase
         $this->assertSame(['INTRO', 'VERSE_1'], array_column($structure, 'section'));
         $this->assertEquals([2, 2, 4], $structure[0]['durations']);
         $this->assertSame('0:02', $structure[0]['start']);
+        // The chord sheet sent along replaces the one before (no chords swapped in order).
+        $this->assertStringStartsWith('Cante[F]mos a Deus [G7]Aleluia', $song->chord_sheet['sections'][1]['lines'][0]);
         $this->assertSame($revisions + 1, $song->revisions()->count());
     }
 
