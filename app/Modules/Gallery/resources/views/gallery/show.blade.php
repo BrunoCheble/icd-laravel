@@ -13,13 +13,14 @@
         .gl-drop i { font-size: 1.6rem; color: var(--brand-text); }
         .gl-drop strong { color: var(--tx-111827); }
         .gl-drop small { color: var(--tx-6b7280); font-size: .82rem; }
+        .gl-note { margin-top: .75rem; }
         .gl-progress { display: flex; align-items: center; gap: .6rem; margin-top: .75rem; font-size: .9rem; color: var(--tx-374151); }
         .gl-bar { flex: 1; height: 6px; overflow: hidden; border-radius: 6px; background: var(--bg-f3f4f6); }
         .gl-bar b { display: block; height: 100%; background: var(--brand); transition: width .2s; }
         .gl-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(13rem, 100%), 1fr)); gap: .9rem; margin-top: .75rem; }
         .gl-photo { overflow: hidden; }
         .gl-photo.is-hidden .gl-img img { opacity: .35; }
-        .gl-img { position: relative; aspect-ratio: 4 / 5; background: var(--bg-f3f4f6); }
+        .gl-img { position: relative; display: block; aspect-ratio: 4 / 5; background: var(--bg-f3f4f6); }
         .gl-img img { width: 100%; height: 100%; object-fit: cover; }
         .gl-img .m-tag { position: absolute; top: .5rem; left: .5rem; }
         .gl-img .m-tag + .m-tag { top: 2.1rem; }
@@ -65,7 +66,7 @@
                     <span class="gl-bar" x-show="busy"><b :style="'width:' + (total ? done / total * 100 : 0) + '%'"></b></span>
                 </div>
                 <p class="m-error" x-show="failed.length" x-cloak x-text="@js(__('Not sent:')) + ' ' + failed.join(', ') + '. ' + @js(__('Reload the page to see the ones that went.'))"></p>
-                <p class="m-help mt-2"><i class="fa-solid fa-circle-info"></i> {{ __('Only photos the people in them agree to show; avoid close-ups of children.') }}</p>
+                <p class="m-help gl-note"><i class="fa-solid fa-circle-info"></i> {{ __('Only photos the people in them agree to show; avoid close-ups of children.') }}</p>
             </section>
         @endcan
 
