@@ -23,6 +23,7 @@ class Permissions
         'visitors' => ['Visitors', ['visitors.*'], ['read', 'write', 'update', 'delete']],
         'anniversaries' => ['Anniversaries', ['report.anniversaries.*'], ['read']],
         'announcements' => ['Announcements', ['announcements.*'], ['read', 'write', 'update', 'delete']],
+        'gallery' => ['Gallery', ['gallery.*'], ['read', 'write', 'update', 'delete']],
         'prayers' => ['Prayer Requests', ['prayers.*'], ['read', 'delete']],
         'songs' => ['Songs', ['songs.*'], ['read', 'write', 'update', 'delete']],
         'setlists' => ['Setlists', ['setlists.*'], ['read', 'write', 'update', 'delete']],
@@ -135,7 +136,7 @@ class Permissions
     public static function homeFor(User $user): string
     {
         foreach (['dashboard' => 'dashboard', 'members' => 'members.index', 'visitors' => 'visitors.index', 'anniversaries' => 'report.anniversaries.index',
-            'announcements' => 'announcements.index', 'prayers' => 'prayers.index', 'songs' => 'songs.index', 'setlists' => 'setlists.index',
+            'announcements' => 'announcements.index', 'gallery' => 'gallery.index', 'prayers' => 'prayers.index', 'songs' => 'songs.index', 'setlists' => 'setlists.index',
             'suggestions' => 'song-suggestions.index', 'discipleships' => 'discipleships.index'] as $module => $route) {
             if (self::allows($user, $module) && Route::has($route)) {
                 return route($route);

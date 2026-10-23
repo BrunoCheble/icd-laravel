@@ -57,6 +57,7 @@ class AppServiceProvider extends ServiceProvider
                     'badge' => fn () => \App\Modules\Announcements\Models\Announcement::where('is_approved', false)->count()
                         + \App\Modules\Announcements\Models\AnnouncementComment::whereNull('read_at')->count()],
                 ['label' => 'Prayer Requests', 'icon' => 'fa-solid fa-hands-praying', 'route' => 'prayers.index'],
+                ['label' => 'Gallery', 'icon' => 'fa-solid fa-images', 'route' => 'gallery.index'],
             ]);
 
         // What is new goes to the app's notifications right away (see NotifyNews).
