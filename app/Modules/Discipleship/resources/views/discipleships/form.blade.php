@@ -90,7 +90,7 @@
             {{-- Another mentor goes on with the disciple: this one ends, the history stays with the member --}}
             <section class="m-card m-section mt-4">
                 <h3 class="m-section-title"><i class="fa-solid fa-right-left"></i> {{ __('Pass to another mentor') }}</h3>
-                <form method="POST" action="{{ route('discipleships.transfer', $discipleship) }}" class="m-field" x-data @submit="if (!confirm(@js(__('Pass this disciple to the chosen mentor? This discipleship ends; the new mentor sees the whole history.')))) $event.preventDefault()">
+                <form method="POST" action="{{ route('discipleships.transfer', $discipleship) }}" class="m-field" data-confirm="{{ __('Pass this disciple to the chosen mentor? This discipleship ends; the new mentor sees the whole history.') }}">
                     @csrf
                     @include('members::members.partials.person-picker', ['member' => new \App\Modules\Discipleship\Models\Discipleship(), 'name' => 'mentor_id', 'want' => null])
                     <p class="m-help">{{ __('The new mentor sees all the meetings and comments so far.') }}</p>
@@ -102,7 +102,7 @@
 
         @if ($discipleship->exists)
             @can('discipleships.delete')
-                <form method="POST" action="{{ route('discipleships.destroy', $discipleship) }}" class="mt-4" x-data @submit="if (!confirm(@js(__('Delete this discipleship? The meetings stay in the history.')))) $event.preventDefault()">
+                <form method="POST" action="{{ route('discipleships.destroy', $discipleship) }}" class="mt-4" data-confirm="{{ __('Delete this discipleship? The meetings stay in the history.') }}">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="m-btn is-danger"><i class="fa-solid fa-trash"></i> {{ __('Delete') }}</button>

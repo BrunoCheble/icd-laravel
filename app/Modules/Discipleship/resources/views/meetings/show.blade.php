@@ -142,7 +142,7 @@
                         <header>
                             <strong>{{ $comment->user?->name ?? __('Deleted user') }}</strong> · {{ $comment->created_at->timezone('Europe/Lisbon')->format('d/m/Y H:i') }}
                             @if (auth()->user()->is_admin || $comment->user_id === auth()->id())
-                                <form method="POST" action="{{ route('discipleships.meetings.comments.destroy', $comment) }}" x-data @submit="if (!confirm(@js(__('Delete this comment?')))) $event.preventDefault()">
+                                <form method="POST" action="{{ route('discipleships.meetings.comments.destroy', $comment) }}" data-confirm="{{ __('Delete this comment?') }}">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="m-btn is-ghost is-icon" aria-label="{{ __('Delete') }}"><i class="fa-solid fa-trash"></i></button>
@@ -158,7 +158,7 @@
 
             @if ($canChange)
             @can('discipleships.delete')
-                <form method="POST" action="{{ route('discipleships.meetings.destroy', $meeting) }}" x-data @submit="if (!confirm(@js(__('Delete this meeting?')))) $event.preventDefault()">
+                <form method="POST" action="{{ route('discipleships.meetings.destroy', $meeting) }}" data-confirm="{{ __('Delete this meeting?') }}">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="m-btn is-danger"><i class="fa-solid fa-trash"></i> {{ __('Delete meeting') }}</button>

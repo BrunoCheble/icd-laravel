@@ -131,7 +131,7 @@
                 @else
                     {{-- Bars: gives every chord a duration (one bar each) so the map is edited as a grid of bars --}}
                     <form id="create-bars-form" method="POST" action="{{ route('songs.bars.create', $song) }}" hidden
-                        onsubmit="return confirm(@js(__('Create bars for this map? Each chord gets one bar, to be adjusted on the grid. Unsaved changes here are lost.')))">
+                        data-confirm="{{ __('Create bars for this map? Each chord gets one bar, to be adjusted on the grid. Unsaved changes here are lost.') }}">
                         @csrf
                     </form>
                     {{-- A song without bars yet: creating them (one bar per chord, in the time signature chosen) comes first --}}
@@ -1292,7 +1292,7 @@
                 },
 
                 // Removes the block from the map and, when the chord sheet has the same chords, its part of the chord sheet.
-                removeBlock(b) {
+                async removeBlock(b) {
                     const block = this.blocks[b];
                     if (this.isReturn(block)) {
                         this.remember();
@@ -1304,7 +1304,7 @@
                     const question = withSheet
                         ? @js(__('Remove the block ":name" from the map and the chord sheet?'))
                         : @js(__('Remove the block ":name" from the map?'));
-                    if (!confirm(question.replace(':name', block.section))) return;
+                    if (!(await askConfirm({ message: question.replace(':name', block.section), danger: true }))) return;
 
                     this.remember();
                     if (withSheet) {

@@ -1772,8 +1772,8 @@
                     this.suggestions = all;
                     this.saveSuggestions();
                 },
-                discardSuggestion() {
-                    if (!confirm(this.messages.discardSuggestion)) return;
+                async discardSuggestion() {
+                    if (!(await askConfirm({ message: this.messages.discardSuggestion, danger: true, button: @js(__('Discard')) }))) return;
                     this.setSongSuggestions({});
                 },
                 async sendSuggestion() {
@@ -3238,6 +3238,7 @@
             };
         }
     </script>
+    @include('layouts.partials.confirm')
 </body>
 
 </html>

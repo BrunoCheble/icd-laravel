@@ -122,7 +122,7 @@
                         @endif
                         <div class="flex flex-wrap gap-2 mt-3">
                             <x-primary-button>{{ __('Approve checked') }}</x-primary-button>
-                            <x-secondary-button type="submit" formaction="{{ route('song-suggestions.reject', $suggestion) }}" onclick="return confirm(@js(__('Reject this whole suggestion?')))">{{ __('Reject all') }}</x-secondary-button>
+                            <x-secondary-button type="submit" formaction="{{ route('song-suggestions.reject', $suggestion) }}" data-confirm="{{ __('Reject this whole suggestion?') }}" data-confirm-button="{{ __('Reject all') }}" data-confirm-danger>{{ __('Reject all') }}</x-secondary-button>
                         </div>
                     </form>
                 @empty

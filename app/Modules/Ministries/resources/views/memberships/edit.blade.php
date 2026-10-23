@@ -149,7 +149,7 @@
         </form>
 
         @can('members.update')
-            <form method="POST" action="{{ route('ministries-members.destroy', $membership) }}" class="mt-4" x-data @submit="if (!confirm(@js(__('Remove this member from the ministry?')))) $event.preventDefault()">
+            <form method="POST" action="{{ route('ministries-members.destroy', $membership) }}" class="mt-4" data-confirm="{{ __('Remove this member from the ministry?') }}">
                 @csrf
                 @method('DELETE')
                 <button type="submit" class="m-btn is-danger"><i class="fa-solid fa-user-minus"></i> {{ __('Remove from the ministry') }}</button>

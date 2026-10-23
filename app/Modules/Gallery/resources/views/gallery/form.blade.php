@@ -48,7 +48,7 @@
 
         @if ($event->exists)
             @can('gallery.delete')
-                <form method="POST" action="{{ route('gallery.destroy', $event) }}" class="mt-4" x-data @submit="if (!confirm(@js(__('Delete this event? Its photos go too.')))) $event.preventDefault()">
+                <form method="POST" action="{{ route('gallery.destroy', $event) }}" class="mt-4" data-confirm="{{ __('Delete this event? Its photos go too.') }}">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="m-btn is-danger"><i class="fa-solid fa-trash"></i> {{ __('Delete event') }}</button>

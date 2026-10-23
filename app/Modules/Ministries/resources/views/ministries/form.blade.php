@@ -42,7 +42,7 @@
 
         @if ($ministry->exists)
             @can('members.delete')
-                <form method="POST" action="{{ route('ministries.destroy', $ministry) }}" class="mt-4" x-data @submit="if (!confirm(@js(__('Delete this ministry? Its roles and the list of its members go too (the members stay).')))) $event.preventDefault()">
+                <form method="POST" action="{{ route('ministries.destroy', $ministry) }}" class="mt-4" data-confirm="{{ __('Delete this ministry? Its roles and the list of its members go too (the members stay).') }}">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="m-btn is-danger"><i class="fa-solid fa-trash"></i> {{ __('Delete ministry') }}</button>

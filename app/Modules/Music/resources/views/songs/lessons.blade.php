@@ -70,7 +70,7 @@
                                             @include('music::songs.partials.lesson-card', ['saveUrl' => \Illuminate\Support\Js::from(route('songs.lessons.loops', [$song, $payload['id']]))])
                                             <div class="lesson-actions">
                                                 <button type="button" class="lf-btn" @click="editing = true"><i class="fa-solid fa-pen"></i> {{ __('Edit') }}</button>
-                                                <form method="POST" action="{{ route('songs.lessons.destroy', [$song, $payload['id']]) }}" onsubmit="return confirm(@js(__('Delete this lesson?')))">
+                                                <form method="POST" action="{{ route('songs.lessons.destroy', [$song, $payload['id']]) }}" data-confirm="{{ __('Delete this lesson?') }}">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="lf-btn is-danger"><i class="fa-solid fa-trash"></i> {{ __('Delete') }}</button>

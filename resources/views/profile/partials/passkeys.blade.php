@@ -26,7 +26,7 @@
                     <p class="truncate text-sm font-semibold text-gray-900">{{ $passkey->name }}</p>
                     <p class="text-xs text-gray-500">{{ __('Added on :date', ['date' => $passkey->created_at->format('d/m/Y')]) }}@if ($passkey->last_used_at) · {{ __('last used on :date', ['date' => $passkey->last_used_at->format('d/m/Y H:i')]) }}@endif</p>
                 </div>
-                <form method="POST" action="{{ route('passkeys.destroy', $passkey) }}" onsubmit="return confirm(@js(__('Remove this device? It will no longer sign in with the fingerprint.')))">
+                <form method="POST" action="{{ route('passkeys.destroy', $passkey) }}" data-confirm="{{ __('Remove this device? It will no longer sign in with the fingerprint.') }}">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="rounded-md px-2 py-1 text-sm font-semibold text-red-600 hover:bg-red-50"><i class="fa-solid fa-trash"></i> {{ __('Remove') }}</button>

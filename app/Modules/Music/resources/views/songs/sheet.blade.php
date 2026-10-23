@@ -392,8 +392,8 @@
                     this.remember();
                     this.blocks.splice(this.blocks.indexOf(block) + 1, 0, this.copyOf(block));
                 },
-                removeBlock(block) {
-                    if (this.blocks.length < 2 || !confirm(@js(__('Remove this block?')))) return;
+                async removeBlock(block) {
+                    if (this.blocks.length < 2 || !(await askConfirm({ message: @js(__('Remove this block?')), danger: true }))) return;
                     this.remember();
                     this.blocks = this.blocks.filter(item => item !== block);
                 },
@@ -491,7 +491,7 @@
                     const question = config.hasBars
                         ? @js(__('Make the bars again from this chord sheet? The chord map is made from scratch (one bar per chord); the one now stays in the history.'))
                         : @js(__('Make the bars from this chord sheet (one bar per chord)?'));
-                    if (!confirm(question)) return;
+                    if (!(await askConfirm(question))) return;
                     this.saving = true;
                     this.say(@js(__('Making the bars…')));
                     try {

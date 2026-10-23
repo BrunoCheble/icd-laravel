@@ -983,7 +983,8 @@
                         <div class="ws-panel-section" x-show="!versionId">
                             <div class="ws-panel-label"><i class="fa-solid fa-eraser"></i> {{ __('Clear chords') }}</div>
                             <form method="POST" action="{{ route('songs.bars.clear', $song) }}"
-                                @submit="if (!confirm(@js(__('Clear every chord? The blocks and their bars stay, each bar gets a "?" (in the map and in the chord sheet, over its lyrics) to be written by ear. Unsaved changes here are lost; the current version stays in the history.')))) $event.preventDefault(); else dirty = false">
+                                data-confirm="{{ __('Clear every chord? The blocks and their bars stay, each bar gets a "?" (in the map and in the chord sheet, over its lyrics) to be written by ear. Unsaved changes here are lost; the current version stays in the history.') }}" data-confirm-button="{{ __('Clear chords') }}" data-confirm-danger
+                                @submit="dirty = false">
                                 @csrf
                                 <button type="submit" class="ws-btn"><i class="fa-solid fa-eraser"></i> {{ __('Clear chords') }}</button>
                             </form>
@@ -1060,7 +1061,7 @@
                     return bars.length > 12 ? text + ' | …' : text;
                 },
                 async scoreImport() {
-                    if (this.dirty && !confirm(@js(__('This page has changes not saved; importing loses them. Import anyway?')))) return;
+                    if (this.dirty && !(await askConfirm(@js(__('This page has changes not saved; importing loses them. Import anyway?'))))) return;
                     // The grid's blocks and the chord sheet's sections (lyrics with each chord on its syllable), side by side.
                     const blocks = [];
                     const sheet = [];
@@ -2093,8 +2094,8 @@
                 // ---- Review: "Save as reviewed" once the bars are right ----
                 reviewedAt: config.reviewedAt || null,
                 formatDay(iso) { const date = iso ? new Date(iso) : null; return date && !isNaN(date) ? date.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''; },
-                unmarkReviewed() {
-                    if (confirm(@js(__('Undo the review of this song? It will no longer show as reviewed.')))) this.save({ reviewed: false });
+                async unmarkReviewed() {
+                    if (await askConfirm(@js(__('Undo the review of this song? It will no longer show as reviewed.')))) this.save({ reviewed: false });
                 },
                 // ---- Equal blocks played one after the other: a run of the same block "×N" ----
                 repeatCache: { key: null, value: null },
@@ -2569,7 +2570,7 @@
                 },
                 async deleteVersion() {
                     const version = this.currentVersion;
-                    if (!version || !confirm(@js(__('Delete the version for :instrument? This cannot be undone.')).replace(':instrument', version.instrument))) return;
+                    if (!version || !(await askConfirm({ message: @js(__('Delete the version for :instrument? This cannot be undone.')).replace(':instrument', version.instrument), danger: true }))) return;
                     try {
                         await this.sendJson('DELETE', version.delete_url);
                         this.dirty = false;

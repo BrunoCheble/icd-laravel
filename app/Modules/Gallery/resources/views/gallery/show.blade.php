@@ -109,7 +109,7 @@
                                         <button type="submit" class="m-btn" title="{{ __('Move on') }}" @disabled($loop->last)><i class="fa-solid fa-arrow-right"></i></button>
                                     </form>
                                     @can('gallery.delete')
-                                        <form method="POST" action="{{ route('gallery.photos.destroy', $photo) }}" x-data @submit="if (!confirm(@js(__('Delete this photo?')))) $event.preventDefault()">
+                                        <form method="POST" action="{{ route('gallery.photos.destroy', $photo) }}" data-confirm="{{ __('Delete this photo?') }}">
                                             @csrf @method('DELETE')
                                             <button type="submit" class="m-btn" title="{{ __('Delete') }}"><i class="fa-solid fa-trash"></i></button>
                                         </form>

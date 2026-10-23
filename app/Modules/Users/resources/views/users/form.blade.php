@@ -146,7 +146,7 @@
                             {{ __('The user chose their own password.') }}
                         @endif
                     </p>
-                    <form method="POST" action="{{ route('users.temporary-password', $user) }}" x-data @submit="if (!confirm(@js(__('Make a new temporary password? The current password stops working.')))) $event.preventDefault()">
+                    <form method="POST" action="{{ route('users.temporary-password', $user) }}" data-confirm="{{ __('Make a new temporary password? The current password stops working.') }}">
                         @csrf
                         <button type="submit" class="m-btn"><i class="fa-solid fa-key"></i> {{ __('Make temporary password') }}</button>
                     </form>
@@ -154,7 +154,7 @@
             </section>
 
             @unless ($isSelf)
-                <form method="POST" action="{{ route('users.destroy', $user) }}" class="mt-4" x-data @submit="if (!confirm(@js(__('Delete this user? They will no longer be able to sign in.')))) $event.preventDefault()">
+                <form method="POST" action="{{ route('users.destroy', $user) }}" class="mt-4" data-confirm="{{ __('Delete this user? They will no longer be able to sign in.') }}">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="m-btn is-danger"><i class="fa-solid fa-trash"></i> {{ __('Delete user') }}</button>

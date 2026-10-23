@@ -128,7 +128,7 @@
                                             <a href="{{ route('setlists.practice', $setlist) }}" class="sl-icon" title="{{ __('Practice the setlist') }}" aria-label="{{ __('Practice the setlist') }}"><i class="fa-solid fa-graduation-cap"></i></a>
                                         @endif
                                         <a href="{{ route('setlists.edit', $setlist) }}" class="sl-icon" title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}"><i class="fa-solid fa-pen"></i></a>
-                                        <form action="{{ route('setlists.destroy', $setlist) }}" method="POST" onsubmit="return confirm(@js(__('Are you sure to delete?')))">
+                                        <form action="{{ route('setlists.destroy', $setlist) }}" method="POST" data-confirm="{{ __('Are you sure to delete?') }}">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="sl-icon is-danger" title="{{ __('Delete') }}" aria-label="{{ __('Delete') }}"><i class="fa-solid fa-trash"></i></button>

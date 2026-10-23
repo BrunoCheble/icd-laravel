@@ -235,7 +235,7 @@
                                                 <i class="fa-solid" :class="comment.read ? 'fa-envelope' : 'fa-check'"></i> <span x-text="comment.read ? @js(__('Mark as not read')) : @js(__('Mark as read'))"></span>
                                             </button>
                                         </form>
-                                        <form method="POST" :action="comment.destroy" onsubmit="return confirm(@js(__('Delete this comment?')))">
+                                        <form method="POST" :action="comment.destroy" data-confirm="{{ __('Delete this comment?') }}">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="m-btn is-ghost"><i class="fa-solid fa-trash"></i> {{ __('Delete') }}</button>

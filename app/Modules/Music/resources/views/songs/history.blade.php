@@ -44,7 +44,7 @@
                                 @endforeach
                             </span>
                             <form method="POST" action="{{ route('songs.history.restore', [$song, $revision]) }}" class="ml-auto"
-                                onsubmit="return confirm(@js(__('Restore the version of :date? The chord map, chord sheet, key and tempo go back to it (what the song has now stays in the history).', ['date' => $revision->created_at->format('d/m/Y H:i')])))">
+                                data-confirm="{{ __('Restore the version of :date? The chord map, chord sheet, key and tempo go back to it (what the song has now stays in the history).', ['date' => $revision->created_at->format('d/m/Y H:i')]) }}">
                                 @csrf
                                 <button type="submit" class="ws-btn"><i class="fa-solid fa-clock-rotate-left"></i> {{ __('Restore') }}</button>
                             </form>

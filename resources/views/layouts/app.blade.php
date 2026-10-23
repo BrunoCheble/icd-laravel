@@ -264,5 +264,6 @@
                 window.addEventListener('pageshow', stop);
             })();
         </script>
+        @include('layouts.partials.confirm')
     </body>
 </html>

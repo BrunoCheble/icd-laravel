@@ -150,7 +150,7 @@
                         this.message = @js(__('Fill in the chord sheet first.'));
                         return;
                     }
-                    if (structure.value.trim() && !confirm(@js(__('Replace the current structure with one generated from the chord sheet?')))) return;
+                    if (structure.value.trim() && !(await askConfirm(@js(__('Replace the current structure with one generated from the chord sheet?'))))) return;
 
                     this.converting = true;
                     this.failed = false;
