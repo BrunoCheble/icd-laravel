@@ -9,14 +9,14 @@
 
     <style>
         .gl-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: 1rem; margin-top: .75rem; }
-        .gl-card { overflow: hidden; color: inherit; text-decoration: none; }
+        .gl-card { display: flex; flex-direction: column; overflow: hidden; color: inherit; text-decoration: none; }
         .gl-cover { display: grid; place-items: center; aspect-ratio: 4 / 3; background: var(--bg-f3f4f6); color: var(--tx-9ca3af); font-size: 2rem; }
         .gl-cover img { width: 100%; height: 100%; object-fit: cover; }
-        .gl-body { padding: .8rem 1rem 1rem; }
+        .gl-body { display: block; padding: .8rem 1rem 1rem; }
         .gl-body strong { display: block; font-weight: 800; color: var(--tx-111827); }
         .gl-card:hover strong { color: var(--brand-text); }
         .gl-body small { display: block; margin-top: .1rem; font-size: .82rem; color: var(--tx-6b7280); }
-        .gl-body .m-tags { margin-top: .45rem; }
+        .gl-body .m-tags { display: flex; margin-top: .45rem; }
     </style>
 
     <div class="m-page">
