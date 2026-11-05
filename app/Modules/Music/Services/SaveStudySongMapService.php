@@ -29,10 +29,12 @@ class SaveStudySongMapService
         $oldChords = UpdateSongLayoutService::chordSequence(json_decode(json_encode($song->structure ?? []), true) ?? []);
         $newChords = UpdateSongLayoutService::chordSequence($blocks);
         $sections = $song->chord_sheet['sections'] ?? null;
+        // A new key with the same number of chords: the chords were transposed, each one stays in its place.
+        $transposed = $key !== null && $key !== '' && $key !== $song->musical_key && count($oldChords) === count($newChords);
         // A chord sheet sent along (rewritten to follow the map) replaces the one stored; otherwise the stored one
         // gets the same chord changes as the map, when it had the map's chords.
         // With `$keepSheet`, the chord sheet is not touched at all.
-        $sheet = $keepSheet ? null : ($sheetSections ?? (is_array($sections) && $sections !== [] ? $this->sheet->execute($sections, $oldChords, $newChords) : null));
+        $sheet = $keepSheet ? null : ($sheetSections ?? (is_array($sections) && $sections !== [] ? $this->sheet->execute($sections, $oldChords, $newChords, $transposed) : null));
 
         if ($bpm !== null) {
             $song->bpm = round($bpm, 1);

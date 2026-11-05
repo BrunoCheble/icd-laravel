@@ -8,9 +8,10 @@ class UpdateChordSheetChordsService
      * The chord sheet with its chords changed from `$old` to `$new` (both without line breaks), when the sheet has
      * exactly the `$old` chords; null otherwise. Lyrics stay where they are: a changed chord keeps its place, a
      * removed one is taken out of its line and an added one goes right after the chord before it (or before the
-     * first one). Notes ("{c: ...}") are not touched.
+     * first one). Notes ("{c: ...}") are not touched. With `$samePlaces` (a transposition) each chord simply becomes the
+     * one at its position: comparing names would mix them up, as chords of the old key are also chords of the new one.
      */
-    public function execute(array $sections, array $old, array $new): ?array
+    public function execute(array $sections, array $old, array $new, bool $samePlaces = false): ?array
     {
         if (self::sheetChords($sections) !== $old) {
             return null;
@@ -19,7 +20,9 @@ class UpdateChordSheetChordsService
             return $sections;
         }
 
-        [$replace, $after] = self::changes($old, $new);
+        [$replace, $after] = $samePlaces && count($old) === count($new)
+            ? [array_map(fn ($chord) => [$chord], $new), []]
+            : self::changes($old, $new);
         $number = 0;
 
         return array_map(function (array $section) use (&$number, $replace, $after) {
