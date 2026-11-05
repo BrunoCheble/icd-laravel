@@ -28,6 +28,15 @@
         .sheet-page.is-moving-block .block-head { margin-bottom: 0; }
         .sheet-page.is-moving-block, .sheet-page.is-moving-block * { cursor: grabbing !important; user-select: none; }
         .block-head { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-bottom: .4rem; }
+        .sheet-page.is-moving-block .block-time { display: none; }
+        .block-time { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-bottom: .5rem; font-size: .8rem; color: var(--tx-6b7280); }
+        .block-time input { width: 5.6rem; padding: .2rem .35rem; border: 1px solid var(--bd-d1d5db); border-radius: .35rem; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--tx-111827); background: var(--bg-fff); }
+        .block-time .time-mode { display: inline-flex; margin-left: .35rem; }
+        .block-time .time-mode .sb { border-radius: 0; }
+        .block-time .time-mode .sb:first-child { border-radius: .35rem 0 0 .35rem; }
+        .block-time .time-mode .sb:last-child { border-radius: 0 .35rem .35rem 0; margin-left: -1px; }
+        .block-time .time-info { flex-basis: 100%; }
+        .block-time .time-repeat { flex-basis: 100%; }
         .block-grip { cursor: grab; color: var(--tx-9ca3af); padding: .1rem .3rem; touch-action: none; }
         .block-name { font-size: .8rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--type-color, var(--brand-text)); background: none; border: 0; cursor: pointer; padding: .1rem .2rem; }
         .block-name-input { font-size: .8rem; font-weight: 800; text-transform: uppercase; width: 12rem; padding: .15rem .35rem; border: 1px solid var(--brand); border-radius: .35rem; }
@@ -76,13 +85,16 @@
                     'audioUrl' => $song->audioUrl(),
                     'youtubeUrl' => $song->youtube_url,
                     'hasBars' => $song->hasBars(),
+                    'bpm' => $song->bpm,
+                    'firstStart' => collect(json_decode(json_encode($song->structure ?? []), true) ?? [])->first(fn ($block) => is_array($block) && ! \App\Modules\Music\Models\Song::isReturnMarker($block))['start'] ?? null,
+                    'perBar' => \App\Modules\Music\Services\CreateSongBarsService::METERS[\App\Modules\Music\Services\CreateSongBarsService::meterOf($song->structure)],
                 ]))" @keydown.window="onKey($event)">
                     <div class="sheet-toolbar">
                         <button type="button" class="sb" @click="undo()" :disabled="!history.length" title="{{ __('Undo') }} (Ctrl/⌘ + Z)"><i class="fa-solid fa-rotate-left"></i></button>
                         <button type="button" class="sb" @click="addBlock()"><i class="fa-solid fa-plus"></i> {{ __('Block') }}</button>
                         <span class="spacer"></span>
                         <span class="sheet-state" :class="{ 'is-error': stateError }" x-text="state"></span>
-                        <button type="button" class="sb green" @click="generateBars()" :disabled="saving" title="{{ __('Make the bars from this chord sheet: one bar per chord (the map is made again from scratch)') }}"><i class="fa-solid fa-table-cells"></i> {{ __('Make bars') }}</button>
+                        <button type="button" class="sb green" @click="generateBars()" :disabled="saving" title="{{ __('Make the bars from this chord sheet: from the times marked, one bar per chord in the blocks without them (the map is made again from scratch)') }}"><i class="fa-solid fa-table-cells"></i> {{ __('Make bars') }}</button>
                         <button type="button" class="sb primary" @click="save()" :disabled="saving || !dirty"><i class="fa-solid fa-floppy-disk"></i> {{ __('Save') }}</button>
                     </div>
                     <p class="sheet-hint">{{ __('Click a letter to put a "?" on it (a chord there, to name later). Double-click a chord (or select it and press Enter) to name it; drag it along its line; Delete removes the selected one. Space plays and pauses, ← → go back and forward 5 s.') }}</p>
@@ -105,6 +117,26 @@
                                     <button type="button" class="sb small" @click="mergeNext(block)" :disabled="b === blocks.length - 1" title="{{ __('Join with the next') }}"><i class="fa-solid fa-object-group"></i></button>
                                     <button type="button" class="sb small" @click="removeBlock(block)" :disabled="blocks.length < 2" title="{{ __('Remove') }}"><i class="fa-solid fa-trash"></i></button>
                                 </span>
+                            </div>
+
+                            {{-- Where the block starts in the recording, and whether it has bars or goes by its time alone --}}
+                            <div class="block-time">
+                                <span>{{ __('Starts at') }}</span>
+                                <button type="button" class="sb small" @click="nudgeStart(block, -0.1)" title="{{ __('0.1 s earlier') }}">−0,1</button>
+                                <input type="text" inputmode="decimal" :value="block.start" placeholder="0:00.00" :aria-label="@js(__('Starts at'))"
+                                    @change="setStart(block, $event.target.value); $event.target.value = block.start" @keydown.enter.prevent="$event.target.blur()">
+                                <button type="button" class="sb small" @click="nudgeStart(block, 0.1)" title="{{ __('0.1 s later') }}">+0,1</button>
+                                <button type="button" class="sb small" x-show="hasPlayer" @click="setStart(block, playerNow())" title="{{ __('Mark the start of this block now') }}"><i class="fa-regular fa-clock"></i> {{ __('Now') }}</button>
+                                <span class="time-mode" role="group" :aria-label="@js(__('Block type'))">
+                                    <button type="button" class="sb small" :class="{ primary: !block.time_only }" @click="setTimeOnly(block, false)">{{ __('Bars') }}</button>
+                                    <button type="button" class="sb small" :class="{ primary: block.time_only }" @click="setTimeOnly(block, true)" title="{{ __('No bars and no clicks: this block goes by its time alone') }}">{{ __('Time only') }}</button>
+                                </span>
+                                <span class="time-info" x-text="timeInfo(block)"></span>
+                                <template x-if="repeatHint(block)">
+                                    <div class="time-repeat">
+                                        <button type="button" class="sb small" @click="applyRepeat(block)" x-text="@js(__('Use the same length as the :name before (:seconds s)')).replace(':name', repeatHint(block).name).replace(':seconds', repeatHint(block).text)"></button>
+                                    </div>
+                                </template>
                             </div>
 
                             {{-- The whole block as text (lyrics fixes): chords in brackets, e.g. Esp[G]írito Santo --}}
@@ -204,7 +236,18 @@
                 });
                 return text;
             };
-            const toBlock = (section) => ({ id: nextId++, section: section.section || 'PART', label: section.label || null, lines: (section.lines || []).map(parseLine) });
+            const toBlock = (section) => ({ id: nextId++, section: section.section || 'PART', label: section.label || null, start: section.start || '', time_only: !!section.time_only, lines: (section.lines || []).map(parseLine) });
+            // "1:23.45", "1:23,45" or seconds -> seconds; null when it cannot be read.
+            const toSeconds = (value) => {
+                const text = String(value ?? '').trim().replace(',', '.');
+                if (!/^\d+(:\d{1,2}){0,2}(\.\d+)?$/.test(text)) return null;
+                return text.split(':').reduce((total, part) => total * 60 + Number(part), 0);
+            };
+            const formatStart = (seconds) => {
+                const units = Math.max(0, Math.round(seconds * 100));
+                const whole = Math.floor(units / 100);
+                return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}.${String(units % 100).padStart(2, '0')}`;
+            };
 
             return withYoutubeMini({
                 blocks: (config.sections.length ? config.sections : [{ section: 'VERSE_1', lines: [''] }]).map(toBlock),
@@ -366,6 +409,84 @@
                     this.openPop(box.left, box.top + box.height, { block: this.selected.block, line: line.id, at: chord.at, chord: chord.id }, chord.name);
                 },
 
+                // ---- A block's time: where it starts, and whether it has bars or goes by its time alone ----
+                get hasPlayer() { return !!audio || !!this.playerReady; },
+                playerNow() { return audio ? audio.currentTime : this.videoCurrentTime(); },
+                // A time typed, moved or caught from the player. It has to stay between the blocks around it.
+                setStart(block, value) {
+                    if (typeof value === 'string' && !value.trim()) {
+                        if (!block.start) return;
+                        this.remember();
+                        block.start = '';
+                        return;
+                    }
+                    const seconds = typeof value === 'number' ? value : toSeconds(value);
+                    if (seconds === null) return this.say(@js(__('Type the time as m:ss.cc, e.g. 1:23.50.')), true);
+                    const index = this.blocks.indexOf(block);
+                    const before = this.blocks.slice(0, index).reverse().find(item => toSeconds(item.start) !== null);
+                    const after = this.blocks.slice(index + 1).find(item => toSeconds(item.start) !== null);
+                    if (before && seconds <= toSeconds(before.start)) return this.say(@js(__(':name has to start after the block before it (:time).')).replace(':name', this.nameOf(block)).replace(':time', before.start), true);
+                    if (after && seconds >= toSeconds(after.start)) return this.say(@js(__(':name has to start before the block after it (:time).')).replace(':name', this.nameOf(block)).replace(':time', after.start), true);
+                    const text = formatStart(seconds);
+                    if (text === block.start) return;
+                    this.remember();
+                    block.start = text;
+                },
+                nudgeStart(block, seconds) {
+                    const now = toSeconds(block.start) ?? (this.hasPlayer ? this.playerNow() : 0);
+                    this.setStart(block, Math.max(0, now + seconds));
+                },
+                setTimeOnly(block, on) {
+                    if (block.time_only === on) return;
+                    this.remember();
+                    block.time_only = on;
+                },
+                // The block's length: from its start to the next block's start. Null while one of them is missing.
+                lengthOf(block) {
+                    const index = this.blocks.indexOf(block);
+                    const next = this.blocks[index + 1];
+                    // A first block without a time starts where bar 1 starts now (see applyTimes on the server).
+                    const start = toSeconds(block.start) ?? (index === 0 ? toSeconds(config.firstStart) ?? 0 : null);
+                    const end = next ? toSeconds(next.start) : null;
+                    return start !== null && end !== null && end > start ? end - start : null;
+                },
+                secondsText(seconds) { return seconds.toFixed(2).replace('.', ','); },
+                // What "Make bars" will do with this block.
+                timeInfo(block) {
+                    const length = this.lengthOf(block);
+                    const prefix = block.time_only ? @js(__('Time only: no bars and no clicks.')) + ' ' : '';
+                    if (length === null) {
+                        const next = this.blocks[this.blocks.indexOf(block) + 1];
+                        if (block.time_only && !next) return prefix + @js(__('Last block: it gets a length of one bar per chord.'));
+                        if (block.time_only) return prefix + @js(__('Without the times of this block and the next one: a length of one bar per chord.'));
+                        return next ? @js(__('Without the times of this block and the next one: one bar per chord.')) : @js(__('Last block: one bar per chord.'));
+                    }
+                    const seconds = this.secondsText(length);
+                    if (!config.bpm) return prefix + @js(__('Lasts :seconds s. Set the song\'s BPM to make the bars from the times.')).replace(':seconds', seconds);
+                    if (block.time_only) return prefix + @js(__('Lasts :seconds s.')).replace(':seconds', seconds);
+                    return @js(__('Lasts :seconds s: about :bars bars, shared among its chords.')).replace(':seconds', seconds).replace(':bars', Math.max(1, Math.round(length * config.bpm / 60 / config.perBar)));
+                },
+                // A repeated block (same name as one before it) is probably as long as that one: offered, not applied.
+                repeatHint(block) {
+                    const index = this.blocks.indexOf(block);
+                    const next = this.blocks[index + 1];
+                    const start = toSeconds(block.start);
+                    if (!next || start === null) return null;
+                    const name = this.nameOf(block);
+                    const model = this.blocks.slice(0, index).reverse().find(item => this.nameOf(item) === name && this.lengthOf(item) !== null);
+                    if (!model) return null;
+                    const length = this.lengthOf(model);
+                    const now = this.lengthOf(block);
+                    if (now !== null && Math.abs(now - length) < 0.05) return null;
+                    return { name, seconds: length, text: this.secondsText(length) };
+                },
+                // The length comes from the next block's start, so that is what the suggestion moves.
+                applyRepeat(block) {
+                    const hint = this.repeatHint(block);
+                    if (!hint) return;
+                    this.setStart(this.blocks[this.blocks.indexOf(block) + 1], toSeconds(block.start) + hint.seconds);
+                },
+
                 // ---- Blocks ----
                 rename(block, value) {
                     if (this.renaming !== block.id) return;
@@ -390,7 +511,8 @@
                 copyOf(block) { return { ...JSON.parse(JSON.stringify(block)), id: nextId++, lines: block.lines.map(line => ({ ...JSON.parse(JSON.stringify(line)), id: nextId++, chords: (line.chords || []).map(chord => ({ ...chord, id: nextId++ })) })) }; },
                 duplicate(block) {
                     this.remember();
-                    this.blocks.splice(this.blocks.indexOf(block) + 1, 0, this.copyOf(block));
+                    // The copy comes later in the song: it has its own time to mark.
+                    this.blocks.splice(this.blocks.indexOf(block) + 1, 0, { ...this.copyOf(block), start: '' });
                 },
                 async removeBlock(block) {
                     if (this.blocks.length < 2 || !(await askConfirm({ message: @js(__('Remove this block?')), danger: true }))) return;
@@ -408,14 +530,14 @@
                 split(block, at) {
                     this.remember();
                     const index = this.blocks.indexOf(block);
-                    const rest = { id: nextId++, section: 'PART', label: null, lines: block.lines.slice(at) };
+                    const rest = { id: nextId++, section: 'PART', label: null, start: '', time_only: false, lines: block.lines.slice(at) };
                     block.lines = block.lines.slice(0, at);
                     this.blocks.splice(index + 1, 0, rest);
                     this.renaming = rest.id;
                 },
                 addBlock() {
                     this.remember();
-                    const block = { id: nextId++, section: 'PART', label: null, lines: [parseLine('')] };
+                    const block = { id: nextId++, section: 'PART', label: null, start: '', time_only: false, lines: [parseLine('')] };
                     this.blocks.push(block);
                     this.textEdit = { id: block.id, text: '' };
                 },
@@ -458,7 +580,7 @@
 
                 // ---- Saving, and the bars made from the chord sheet ----
                 sections() {
-                    return this.blocks.map(block => ({ section: block.section, label: block.label, lines: block.lines.map(lineText) }));
+                    return this.blocks.map(block => ({ section: block.section, label: block.label, start: block.start || null, time_only: !!block.time_only, lines: block.lines.map(lineText) }));
                 },
                 say(text, error = false) { this.state = text; this.stateError = error; },
                 async send(url, method) {
@@ -489,8 +611,8 @@
                 async generateBars() {
                     if (this.saving) return;
                     const question = config.hasBars
-                        ? @js(__('Make the bars again from this chord sheet? The chord map is made from scratch (one bar per chord); the one now stays in the history.'))
-                        : @js(__('Make the bars from this chord sheet (one bar per chord)?'));
+                        ? @js(__('Make the bars again from this chord sheet? The chord map is made from scratch (from the times marked, and one bar per chord in the blocks without them); the one now stays in the history.'))
+                        : @js(__('Make the bars from this chord sheet (from the times marked, and one bar per chord in the blocks without them)?'));
                     if (!(await askConfirm(question))) return;
                     this.saving = true;
                     this.say(@js(__('Making the bars…')));

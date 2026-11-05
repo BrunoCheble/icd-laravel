@@ -60,7 +60,17 @@ class SaveSongChordSheetService
             }
             $name = strtoupper(trim(preg_replace('/\s+/', '_', (string) ($section['section'] ?? 'PART')))) ?: 'PART';
 
-            return ['section' => $name, 'label' => $section['label'] ?? null, 'lines' => array_values($lines)];
+            $clean = ['section' => $name, 'label' => $section['label'] ?? null, 'lines' => array_values($lines)];
+            // Where the block starts in the recording, and a block with no bars: only when set.
+            $start = UpdateSongLayoutService::toSeconds($section['start'] ?? null);
+            if ($start !== null) {
+                $clean['start'] = UpdateSongLayoutService::format($start, 2);
+            }
+            if (in_array($section['time_only'] ?? null, [true, 1, '1'], true)) {
+                $clean['time_only'] = true;
+            }
+
+            return $clean;
         }, $sections));
     }
 }

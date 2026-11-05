@@ -129,6 +129,12 @@ class UpdateSongLayoutService
         } else {
             unset($block['click_double']);
         }
+        // Only a block with no bars is marked (having bars is the default).
+        if (in_array($block['time_only'] ?? null, [true, 1, '1'], true)) {
+            $block['time_only'] = true;
+        } else {
+            unset($block['time_only']);
+        }
         // Only free timing is stored (following the bars is the default).
         if (($block['free_timing'] ?? null) === true) {
             $block['free_timing'] = true;

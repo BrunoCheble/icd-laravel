@@ -58,6 +58,8 @@ class StudySongMapRequest extends FormRequest
             // puts it (songs whose tempo changes).
             'blocks.*.free_timing'   => ['nullable', 'boolean'],
             'blocks.*.free_start'    => ['nullable'],
+            // A block with no bars: followed by its time alone, shown without bars and without clicks.
+            'blocks.*.time_only'     => ['nullable', 'boolean'],
         ];
     }
 

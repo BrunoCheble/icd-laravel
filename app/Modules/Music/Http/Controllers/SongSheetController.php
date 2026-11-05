@@ -32,7 +32,7 @@ class SongSheetController extends Controller
     public function bars(SongSheetRequest $request, Song $song, GenerateBarsFromSheetService $service): JsonResponse
     {
         $service->execute($song, $request->validated('sections'), $request->validated('updated_at'));
-        session()->flash('success', __('Bars made from the chord sheet: one bar per chord. Adjust them here (the map before is in the history).'));
+        session()->flash('success', __('Bars made from the chord sheet: from the times marked, and one bar per chord in the blocks without them. Adjust them here (the map before is in the history).'));
 
         return response()->json(['redirect' => route('songs.layout.edit', $song)]);
     }

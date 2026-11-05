@@ -37,6 +37,15 @@
     <script src="{{ asset('js/chord-transposer.js') }}?v={{ filemtime(public_path('js/chord-transposer.js')) }}"></script>
     <script src="{{ asset('js/chord-lines.js') }}?v={{ filemtime(public_path('js/chord-lines.js')) }}"></script>
     <script src="{{ asset('js/lesson-player.js') }}?v={{ filemtime(public_path('js/lesson-player.js')) }}"></script>
+    {{-- Metronome diagnostics, only with ?debug=click in the address: decided here in the browser, so that the page saved for offline use stays the same. --}}
+    <script>
+        if (new URLSearchParams(location.search).get('debug') === 'click') {
+            const script = document.createElement('script');
+            script.src = @js(asset('js/setlist-click-debug.js') . '?v=' . filemtime(public_path('js/setlist-click-debug.js')));
+            script.defer = true;
+            document.head.append(script);
+        }
+    </script>
 
     @include('music::site.partials.theme')
     <style>
@@ -1926,7 +1935,7 @@
                 // ---- Live mode: the map's bars, built from the duration of each chord (in beats, saved by the study
                 // app), counted by the BPM on this device. A chord can change on a beat or halfway through it ("and"),
                 // so the count goes by half beats ("ticks"). "Back to the start" goes back to the first block once. ----
-                live: { running: false, tick: 0, startTick: 0, startedAt: 0, click: false, usedMarkers: [], frame: null, lastBeat: -1, shownBlock: null },
+                live: { running: false, tick: 0, startTick: 0, startedAt: 0, click: false, usedMarkers: [], frame: null, lastBeat: -1, shownBlock: null, heldTick: null, clickNext: 0 },
                 liveBpm: 80,
                 taps: [],
                 get liveGrid() {
@@ -1955,7 +1964,7 @@
                         if (!blocks.some(block => !block.marker) && Number(section.lead_beats) > 0) {
                             for (let k = 0; k < Math.round(Number(section.lead_beats) * 2); k++) { ticks.push(''); numbers.push(null); }
                         }
-                        blocks.push({ tick: ticks.length, marker: false, name: this.sectionName(section), index });
+                        blocks.push({ tick: ticks.length, marker: false, name: this.sectionName(section), index, timeOnly: !!section.time_only });
                         chords.forEach((chord, i) => {
                             const n = number++;
                             for (let k = 0; k < Math.round(durations[i] * 2); k++) { ticks.push(chord); numbers.push(n); }
@@ -2032,6 +2041,9 @@
                         // Keeps the position: the count goes on from the current tick at the new tempo.
                         this.live.startTick = this.live.tick;
                         this.live.startedAt = performance.now();
+                        this.live.heldTick = null;
+                        this.cancelScheduledClicks();
+                        this.live.clickNext = this.live.tick + 1;
                     }
                     this.liveBpm = bpm;
                     if (save) this.saveSetlistBpm(bpm === Number(this.current?.bpm) ? null : bpm);
@@ -2076,6 +2088,8 @@
                     this.live.startTick = this.live.tick;
                     this.live.startedAt = performance.now();
                     this.live.lastBeat = -1;
+                    this.live.heldTick = null;
+                    this.live.clickNext = this.live.tick + 1;
                     this.requestWakeLock();
                     // The block where the count starts goes to the top right away.
                     if (this.liveMode) {
@@ -2085,20 +2099,29 @@
                     if (this.clicksOn(this.live.tick)) this.clickBeat(this.live.tick % (this.liveGrid.perBar * 2) === 0);
                     const loop = () => {
                         if (!this.live.running) return;
-                        const beatMs = 60000 / this.liveBpm;
-                        let tick = this.live.startTick + Math.floor((performance.now() - this.live.startedAt) / (beatMs / 2));
+                        const now = performance.now();
+                        const halfBeatMs = 30000 / this.liveBpm;
+                        let tick = this.live.startTick + Math.floor((now - this.live.startedAt) / halfBeatMs);
+                        // After a jump the cursor waits on the new place for the next click.
+                        if (this.live.heldTick !== null) {
+                            if (now < this.live.startedAt) tick = this.live.heldTick;
+                            else this.live.heldTick = null;
+                        }
                         const marker = this.liveGrid.markers.find(at => at <= tick && at > this.live.tick && !this.live.usedMarkers.includes(at));
                         if (marker !== undefined) {
+                            // Back to the start on the marker's own beat, so the pulse goes on.
                             this.live.usedMarkers.push(marker);
+                            this.live.startedAt += (marker - this.live.startTick) * halfBeatMs;
                             this.live.startTick = 0;
-                            this.live.startedAt = performance.now();
-                            tick = 0;
+                            tick = Math.floor((now - this.live.startedAt) / halfBeatMs);
+                            if (this.live.clickNext <= marker) this.clickBeat(true);
+                            this.live.clickNext = 1;
                         }
                         if (tick >= this.liveGrid.ticks.length) return this.stopLive();
+                        this.scheduleLiveClicks(now, halfBeatMs);
                         if (tick !== this.live.tick) {
                             const before = this.liveBar;
                             this.live.tick = tick;
-                            if (this.clicksOn(tick)) this.clickBeat(tick % (this.liveGrid.perBar * 2) === 0);
                             if (this.liveMode && this.liveBar !== before) this.scrollToLiveBar();
                             if (!this.liveMode) this.followLiveTick();
                         }
@@ -2109,7 +2132,30 @@
                 stopLive() {
                     if (this.live.frame) cancelAnimationFrame(this.live.frame);
                     this.live.running = false;
+                    this.live.heldTick = null;
+                    this.cancelScheduledClicks();
                     this.releaseWakeLock();
+                },
+                // The clicks of the next moments, scheduled ahead on the audio clock: each one sounds on its beat, also
+                // when the page is busy drawing a new block.
+                scheduleLiveClicks(now, halfBeatMs) {
+                    const size = this.liveGrid.perBar * 2;
+                    const marker = this.liveGrid.markers.find(at => at > this.live.tick && !this.live.usedMarkers.includes(at));
+                    while (this.live.clickNext < Infinity) {
+                        const tick = this.live.clickNext;
+                        if (tick >= this.liveGrid.ticks.length && tick !== marker) return;
+                        const time = this.live.startedAt + (tick - this.live.startTick) * halfBeatMs;
+                        if (time > now + 150) return;
+                        // A marker's beat is the first beat of the song again; what comes after it waits for the restart.
+                        if (tick === marker) {
+                            this.clickBeat(true, (time - now) / 1000);
+                            this.live.clickNext = Infinity;
+                            return;
+                        }
+                        // Far behind (the page stopped for a while): dropped, a click out of place is worse than none.
+                        if (this.clicksOn(tick) && time > now - 80) this.clickBeat(tick % size === 0, (time - now) / 1000);
+                        this.live.clickNext = tick + 1;
+                    }
                 },
                 // Tapping a bar: the count goes on from it (right away when running).
                 goToLiveBar(bar) {
@@ -2123,11 +2169,30 @@
                         if (this.liveMode) this.scrollToLiveBar(true);
                         return;
                     }
-                    this.live.tick = tick;
-                    this.live.startTick = this.live.tick;
-                    this.live.startedAt = performance.now();
+                    if (this.live.running) this.jumpOnPulse(tick);
+                    else {
+                        this.live.tick = tick;
+                        this.live.startTick = this.live.tick;
+                        this.live.startedAt = performance.now();
+                    }
                     if (!this.liveMode) this.followLiveTick(true);
                     else if (!this.liveEdit) this.fitFocus();
+                },
+                // A jump while counting keeps the pulse: the clicks stay at the same moments and the next one is the jump's
+                // beat. The cursor goes there right away and waits for it.
+                jumpOnPulse(tick) {
+                    const now = performance.now();
+                    const halfBeatMs = 30000 / this.liveBpm;
+                    const step = this.liveGrid.clickDouble ? 1 : 2;
+                    const position = this.live.startTick + (now - this.live.startedAt) / halfBeatMs;
+                    const next = Math.ceil(position / step - 1e-6) * step;
+                    const target = Math.floor(tick / step) * step;
+                    this.cancelScheduledClicks();
+                    this.live.startedAt += (next - this.live.startTick) * halfBeatMs;
+                    this.live.startTick = target;
+                    this.live.clickNext = target;
+                    this.live.heldTick = tick;
+                    this.live.tick = tick;
                 },
                 // ---- The BPM count shown in the map and the chord sheet: the block, bar and chord of the current beat ----
                 // Start tick of each chord of the map (chord n of the map, as numbered for the highlights).
@@ -2336,22 +2401,36 @@
                 },
                 // A tick that clicks: each beat, and each "and" too when the song's click is doubled (the drummer's
                 // tempo; the bars keep the BPM).
-                clicksOn(tick) { return tick % 2 === 0 || !!this.liveGrid?.clickDouble; },
-                // Metronome click (when on); the first beat of a bar is higher.
-                clickBeat(accent) {
+                clicksOn(tick) {
+                    if (tick % 2 !== 0 && !this.liveGrid?.clickDouble) return false;
+                    // A block with no bars has no clicks.
+                    return !(this.liveGrid?.blocks || []).filter(block => block.tick <= tick).at(-1)?.timeOnly;
+                },
+                // Metronome click (when on), `delay` seconds from now; the first beat of a bar is higher.
+                clickBeat(accent, delay = 0) {
                     if (!this.live.click) return;
                     try {
                         this.clickContext = this.clickContext || new AudioContext();
                         const context = this.clickContext;
+                        if (context.state === 'suspended') context.resume();
+                        const when = context.currentTime + Math.max(0, delay);
                         const oscillator = context.createOscillator();
                         const gain = context.createGain();
                         oscillator.frequency.value = accent ? 1600 : 1000;
-                        gain.gain.setValueAtTime(0.4, context.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.05);
+                        gain.gain.setValueAtTime(0.4, when);
+                        gain.gain.exponentialRampToValueAtTime(0.001, when + 0.05);
                         oscillator.connect(gain).connect(context.destination);
-                        oscillator.start();
-                        oscillator.stop(context.currentTime + 0.06);
+                        oscillator.start(when);
+                        oscillator.stop(when + 0.06);
+                        this.scheduledClicks = this.scheduledClicks.filter(item => item.when > context.currentTime);
+                        this.scheduledClicks.push({ oscillator, when });
                     } catch (e) {}
+                },
+                // The clicks scheduled ahead and still to sound (a jump or a stop takes them back).
+                scheduledClicks: [],
+                cancelScheduledClicks() {
+                    this.scheduledClicks.forEach(item => { try { item.oscillator.stop(); } catch (e) {} });
+                    this.scheduledClicks = [];
                 },
 
                 // ---- Section timer ----

@@ -212,6 +212,9 @@
         .block-menu-time .nudge { flex: none; padding: 0 .45rem; border: 1px solid var(--bd-d1d5db); border-radius: .45rem; background: var(--bg-fff); color: var(--tx-4b5563); font-size: .72rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
         .block-menu-time .nudge:hover { border-color: var(--brand); color: var(--brand-text); }
         .block-menu-time .now { color: var(--brand-text); }
+        .time-only-badge { padding: 0 .4rem; border: 1px solid var(--bd-d1d5db); border-radius: .35rem; font-size: .7rem; font-weight: 600; color: var(--tx-6b7280); white-space: nowrap; }
+        .mark-correct-label { margin-top: .6rem; margin-bottom: .25rem; }
+        .mark-error { margin-top: .3rem; color: var(--tx-dc2626); }
         .link-btn { margin-top: .3rem; padding: 0; border: 0; background: none; color: var(--brand-text); font-size: .75rem; text-decoration: underline; cursor: pointer; }
         .chord-picker .block-menu-field:first-of-type { margin-top: .45rem; }
         .menu-chords button.is-current { border-color: var(--type-color, var(--brand)); background: var(--type-color, var(--brand)); color: #fff; }
@@ -462,6 +465,7 @@
                                                 <button type="button" class="block-more" @click.stop="openBlockMenu(bar.group, $event.currentTarget)"
                                                     :title="@js(__('Block menu'))" :aria-label="@js(__('Block menu'))"><i class="fa-solid fa-ellipsis"></i></button>
                                             </template>
+                                            <span class="time-only-badge" x-show="bar.group.data.time_only" title="{{ __('No bars and no clicks: this block goes by its time alone') }}">{{ __('Time only') }}</span>
                                             <template x-if="freeTiming && !versionId">
                                                 <button type="button" class="block-mark" :class="{ 'is-marked': isMarked(bar.group) }" @click.stop="openMark(bar.group, $event)"
                                                     :title="`${@js(__('Mark the start of this block now'))} (${formatClock(blockStart(bar.group))})`" :aria-label="@js(__('Mark the start of this block now'))"><i class="fa-regular fa-clock"></i></button>
@@ -723,6 +727,16 @@
                                         </div>
                                     </div>
                                 </template>
+                                {{-- The time corrected by hand: typed, or moved a little from where the click caught it --}}
+                                <p class="help mark-correct-label">{{ __('Or correct the time:') }}</p>
+                                <div class="block-menu-time">
+                                    <button type="button" class="nudge" @click="nudgeMark(-0.1)" title="{{ __('0.1 s earlier') }}">−0,1</button>
+                                    <input type="text" inputmode="decimal" :value="markMenu?.typed" @input="markMenu.typed = $event.target.value; markMenu.error = ''"
+                                        @keydown.enter.prevent="applyTypedMark()" :aria-label="@js(__('Starts at'))" placeholder="0:00.00">
+                                    <button type="button" class="nudge" @click="nudgeMark(0.1)" title="{{ __('0.1 s later') }}">+0,1</button>
+                                </div>
+                                <p class="help mark-error" x-show="markMenu?.error" x-text="markMenu?.error"></p>
+                                <div class="row"><button type="button" class="ws-btn" @click="applyTypedMark()">{{ __('Use this time') }}</button></div>
                             </div>
                         </template>
                     </div>
@@ -1387,7 +1401,12 @@
                         if (this.clickOnly && this.playing && this.atEnd()) { this.stopClock(); this.clickOffset = 0; }
                         if (this.isPlaying()) this.keepLoop();
                         this.scheduleClicks();
-                        const tick = this.isPlaying() ? this.tickAt(this.clock) : this.currentTick;
+                        let tick = this.isPlaying() ? this.tickAt(this.clock) : this.currentTick;
+                        // Jumped on the BPM alone: the cursor waits on the new place for the next click.
+                        if (this.heldTick !== null) {
+                            if (this.isPlaying() && this.clock < this.heldUntil) tick = this.heldTick;
+                            else this.heldTick = null;
+                        }
                         if (tick !== this.currentTick) {
                             const before = this.currentBar;
                             const chordBefore = this.playingSheetChord;
@@ -1568,8 +1587,10 @@
                     const time = Math.max(0, this.now());
                     const rect = event?.currentTarget?.getBoundingClientRect();
                     const place = rect ? { x: Math.min(rect.left, window.innerWidth - 300), y: rect.bottom + 4 } : { x: 16, y: 80 };
+                    // The field to correct by hand: where the click caught the song, or, stopped, the block's start now.
+                    const typed = this.formatClock(this.isPlaying() ? time : this.blockStart(block));
                     if (i <= 0) {
-                        this.markMenu = { id: block.id, first: true, exact: time, ...place };
+                        this.markMenu = { id: block.id, first: true, exact: time, typed, error: '', ...place };
                         return;
                     }
                     const starts = this.freeStarts(timed);
@@ -1578,12 +1599,29 @@
                     const bars = Math.round((time - expected) / bar);
                     const snapped = expected + bars * bar;
                     this.markMenu = {
-                        id: block.id, first: false, exact: time, snapped, bars, expected,
+                        id: block.id, first: false, exact: time, snapped, bars, expected, typed, error: '',
                         // Far from any bar line (near the middle of a bar): the tempo probably changed there.
                         far: Math.abs(time - snapped) > bar * 0.3 || snapped <= starts[i - 1],
                         marked: block.data.free_start !== undefined,
                         ...place,
                     };
+                },
+                // The clock's time moved a little by hand, before it is used.
+                nudgeMark(seconds) {
+                    const menu = this.markMenu;
+                    if (!menu) return;
+                    const now = toSeconds(String(menu.typed).trim().replace(',', '.')) ?? menu.exact;
+                    menu.typed = this.formatClock(Math.max(0, now + seconds));
+                    menu.error = '';
+                },
+                // The time as corrected in the clock's menu, under the same rules as the block menu's field. The menu stays
+                // open, telling why, when it cannot be used.
+                applyTypedMark() {
+                    const menu = this.markMenu;
+                    if (!menu) return;
+                    const block = this.blocks.find(item => item.id === menu.id);
+                    if (this.setBlockTime(block, menu.typed)) this.markMenu = null;
+                    else menu.error = this.notice;
                 },
                 applyMark(value) {
                     const menu = this.markMenu;
@@ -1703,7 +1741,8 @@
                     this.playing = true;
                 },
                 stopClock() {
-                    this.clickOffset = this.now();
+                    this.clickOffset = this.heldTick !== null ? this.heldUntil : this.now();
+                    this.heldTick = null;
                     this.playing = false;
                 },
                 isPlaying() { return this.playing; },
@@ -1805,9 +1844,29 @@
                         this.moveTo(tick);
                         return this.withCountIn(() => this.playFromTickNow(tick));
                     }
+                    if (this.clickOnly && this.isPlaying()) return this.jumpOnPulse(tick);
                     this.playFromTickNow(tick);
                 },
+                // Where the cursor waits after a jump on the BPM alone, and the clock's time when it goes on from there.
+                heldTick: null,
+                heldUntil: 0,
+                // A jump on the BPM alone keeps the pulse: the clock moves by a whole number of pulses, so the clicks
+                // stay at the same moments and the next one is the jump's beat.
+                jumpOnPulse(tick) {
+                    const pulse = this.halfBeat * (this.clickDouble ? 1 : 2);
+                    const next = Math.ceil(this.now() / pulse - 1e-6) * pulse;
+                    const target = Math.floor(Math.max(0, this.timeOfTick(tick)) / pulse + 1e-6) * pulse;
+                    this.cancelScheduledClicks();
+                    this.clickStartedAt -= (target - next) * 1000;
+                    this.clickStart = null;
+                    this.clickUntil = target - 0.005;
+                    this.heldTick = tick;
+                    this.heldUntil = target;
+                    this.currentTick = tick;
+                    this.followSheet(true);
+                },
                 playFromTickNow(tick) {
+                    this.heldTick = null;
                     const time = Math.max(0, this.timeOfTick(tick));
                     this.currentTick = tick;
                     this.followSheet(true);
@@ -2130,6 +2189,8 @@
                 isHiddenBar(bar) {
                     const owner = bar.owner === null ? null : this.blocks.find(block => block.id === bar.owner);
                     if (!owner) return false;
+                    // A block with no bars shows only its head (a bar where another block starts stays).
+                    if (owner.data.time_only && !bar.blocks.some(block => block !== owner && !this.isMarker(block))) return true;
                     return this.isHiddenRepeat(owner) || (this.accordion && !this.isOpenBlock(owner));
                 },
                 // ---- Accordion: every block collapsed to its head, one open at a time ----
@@ -3430,14 +3491,14 @@
                 },
                 // Back to the start of the repeated passage when playing reaches its end (or left it).
                 keepLoop() {
-                    if (!this.loop || performance.now() < this.loopCooldown) return;
+                    if (!this.loop || this.heldTick !== null || performance.now() < this.loopCooldown) return;
                     const size = this.perBar * 2;
                     const start = this.timeOfTick(this.loop.from * size);
                     const end = this.timeOfTick(Math.min((this.loop.to + 1) * size, this.ticks.length));
                     if (this.clock >= end - 0.03 || this.clock < start - 0.5) {
                         // The player reports the old time for a moment after a jump: no new jump meanwhile.
                         this.loopCooldown = performance.now() + (audio || this.clickOnly ? 250 : 1000);
-                        this.playFromTick(this.loop.from * size);
+                        this.playFromTickNow(this.loop.from * size);
                     }
                 },
                 // Metronome: the clicks of the next moments are scheduled ahead on the audio clock, so each one
@@ -3477,6 +3538,8 @@
                         if (time > until) break;
                         // Each beat, and each "and" too when the click is doubled.
                         if ((tick % 2 && !this.clickDouble) || time <= this.clickUntil) continue;
+                        // A block with no bars has no clicks.
+                        if (this.blockOfTick(tick)?.data.time_only) continue;
                         this.click(tick % (this.perBar * 2) === 0, context, context.currentTime + Math.max(0, (time - now) / rate));
                     }
                     this.clickUntil = Math.max(this.clickUntil, until);
@@ -3491,7 +3554,15 @@
                         oscillator.connect(gain).connect(context.destination);
                         oscillator.start(when);
                         oscillator.stop(when + 0.06);
+                        this.scheduledClicks = this.scheduledClicks.filter(item => item.when > context.currentTime);
+                        this.scheduledClicks.push({ oscillator, when });
                     } catch (e) {}
+                },
+                // The clicks scheduled ahead and still to sound: a jump plays them again with the new place's accents.
+                scheduledClicks: [],
+                cancelScheduledClicks() {
+                    this.scheduledClicks.forEach(item => { try { item.oscillator.stop(); } catch (e) {} });
+                    this.scheduledClicks = [];
                 },
                 // Enter: the chord of the selected beat (or of its "and"), typed again in the cell.
                 editCurrentBeat() {
@@ -3676,24 +3747,25 @@
                 },
                 // A block's start time typed in (m:ss.cc or seconds), or null: back to right after the block before it.
                 // The first block's is the song's start; another one's is a free-timing mark (turned on if it is off).
+                // True when the time was used.
                 setBlockTime(block, value) {
-                    if (!block || this.versionId) return;
+                    if (!block || this.versionId) return false;
                     const timed = this.timedBlocks();
                     const i = timed.indexOf(block);
-                    if (i < 0) return;
+                    if (i < 0) return false;
                     if (value === null) {
-                        if (i === 0 || block.data.free_start === undefined) return;
+                        if (i === 0 || block.data.free_start === undefined) return false;
                         this.remember();
                         const data = { ...block.data };
                         delete data.free_start;
                         block.data = data;
                         this.revision++;
-                        return;
+                        return true;
                     }
                     const seconds = typeof value === 'number' ? Math.round(value * 100) / 100 : toSeconds(String(value).trim().replace(',', '.'));
                     if (seconds === null || seconds < 0) {
                         this.notice = @js(__('Type the time as m:ss.cc, e.g. 1:23.50.'));
-                        return;
+                        return false;
                     }
                     if (i === 0) {
                         this.remember();
@@ -3702,7 +3774,7 @@
                         if (seconds <= this.blockStart(timed[i - 1]) + 0.05) {
                             this.notice = @js(__(':name has to start after the block before it (:time).')).replace(':name', this.blockName(block)).replace(':time', this.formatClock(this.blockStart(timed[i - 1])));
                             this.revision++;
-                            return;
+                            return false;
                         }
                         const turnedOn = !this.freeTiming;
                         // Turning free timing on is remembered too, so one undo takes both back.
@@ -3717,11 +3789,12 @@
                         if (turnedOn) {
                             this.revision++;
                             this.notice = @js(__(':name starts at :time (free timing turned on).')).replace(':name', this.blockName(block)).replace(':time', this.formatClock(seconds));
-                            return;
+                            return true;
                         }
                     }
                     this.revision++;
                     this.notice = @js(__(':name starts at :time.')).replace(':name', this.blockName(block)).replace(':time', this.formatClock(seconds));
+                    return true;
                 },
                 // ---- Dragging a block by its head: while dragging, the bars hide and only the heads show, so the order is
                 // easy to see; dropped before or after another block ----
