@@ -61,9 +61,10 @@ class GenerateBarsFromSheetService
     }
 
     /**
-     * The blocks with the times marked on the chord sheet. Every block starts on a bar line: its end is the bar line
-     * nearest to the next block's mark. The positions are counted from the song's start, so that rounding does not add
-     * up from block to block. Nothing here turns on free timing: the song stays on its BPM. A first block without a time
+     * The blocks with the times marked on the chord sheet. Every block with bars starts on a bar line: its end is the bar
+     * line nearest to the next block's mark. A block with no bars ("time only") ignores the bar lines: it lasts from its
+     * mark to the next one, and the bars after it are counted again from its end. The positions are counted from the
+     * song's start, so that rounding does not add up from block to block. Nothing here turns on free timing: the song stays on its BPM. A first block without a time
      * starts where bar 1 started before (the very start of the recording when it had none): it is never worked out
      * backwards from a later block, which would make the music before it a delay.
      */
@@ -81,6 +82,8 @@ class GenerateBarsFromSheetService
 
         $half = $bpm ? 30 / $bpm : null;
         $tick = 0;
+        // Where the bars being counted start: the start of the song, or the end of the last block with no bars.
+        $barBase = 0;
         $origin = null;
         $chained = false;
         foreach ($structure as $i => &$block) {
@@ -96,8 +99,16 @@ class GenerateBarsFromSheetService
                 $origin = $starts[$i] - $tick * $half;
             }
             $barTicks = $beatsPerBar * 2;
-            $ticks = $timed($i) ? (int) round(($starts[$i + 1] - $origin) / $half / $barTicks) * $barTicks - $tick : null;
-            $durations = $ticks === null ? null : self::distribute($chords, $ticks, $beatsPerBar, isset($block['time_only']));
+            $timeOnly = isset($block['time_only']);
+            $ticks = null;
+            if ($timed($i)) {
+                // A block with no bars ends at the next block's mark itself (to the half beat); any other block at
+                // the bar line nearest to it.
+                $ticks = $timeOnly
+                    ? (int) round(($starts[$i + 1] - $origin) / $half) - $tick
+                    : (int) round(($starts[$i + 1] - $origin - $barBase * $half) / $half / $barTicks) * $barTicks - ($tick - $barBase);
+            }
+            $durations = $ticks === null ? null : self::distribute($chords, $ticks, $beatsPerBar, $timeOnly);
             $chained = $durations !== null;
             $durations ??= array_fill(0, $chords, $beatsPerBar);
             $block['durations'] = $durations;
@@ -106,6 +117,9 @@ class GenerateBarsFromSheetService
                 $block['start'] = UpdateSongLayoutService::format(max(0, $origin + $tick * $half), 2);
             }
             $tick += (int) round(array_sum($durations) * 2);
+            if ($timeOnly) {
+                $barBase = $tick;
+            }
         }
         unset($block);
         if ($origin !== null && isset($structure[0])) {

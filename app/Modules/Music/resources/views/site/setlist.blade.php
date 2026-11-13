@@ -258,6 +258,8 @@
         .bar-row + .bar-row { margin-top: calc(.3rem * var(--line-gap, 1)); }
         .map-bar { min-width: 0; padding: .1rem .45rem; border-right: 2px solid var(--border); border-radius: .2rem; font-size: calc(1.05rem * var(--chord-scale, 1)); line-height: 1.4; }
         .map-bar.is-playing { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+        /* A chord of a block with no bars ("time only"): no bar line after it. */
+        .map-bar.is-free { border-right-style: dashed; border-right-width: 1px; }
         .bar-chords { display: flex; flex-wrap: wrap; column-gap: .45em; user-select: none; -webkit-user-select: none; }
         .bar-chords .bar-slash, .bar-repeat { color: var(--muted); font-weight: 400; }
         .bar-chords .is-off { font-size: .78em; align-self: flex-end; }
@@ -464,7 +466,7 @@
                  block or a bar goes on from it --}}
             <div class="player" x-show="current && bpmMode" x-cloak>
                 <button type="button" class="btn btn-icon" @click="toggleLive()" :aria-label="live.running ? @js(__('Stop')) : @js(__('Start'))"><i class="fa-solid" :class="live.running ? 'fa-stop' : 'fa-play'"></i></button>
-                <span class="player-time" x-text="`${liveBar + 1}/${liveGrid?.bars.length ?? 0}`"></span>
+                <span class="player-time" x-text="`${liveGrid?.bars[liveBar]?.number ?? '–'}/${liveGrid?.barCount ?? 0}`"></span>
                 <div class="player-section">
                     <div class="names">
                         <strong x-text="liveChordNow ? chordFor(liveChordNow) : '—'"></strong>
@@ -682,7 +684,7 @@
                                         <div class="focus-head">
                                             <span class="focus-block" x-text="item.restart ? '↺ ' + @js(__('Back to the start')) + ' · ' + item.block : item.block"></span>
                                             <span class="focus-starts" x-show="item.starts" x-text="item.starts ? '→ ' + item.starts : ''"></span>
-                                            <span class="focus-number" x-text="`${item.now ? @js(__('Now')) : (item.role === 'next' ? @js(__('Next')) : @js(__('Before')))} · ${item.index + 1}/${liveGrid.bars.length}`"></span>
+                                            <span class="focus-number" x-text="`${item.now ? @js(__('Now')) : (item.role === 'next' ? @js(__('Next')) : @js(__('Before')))}${item.bar.free ? '' : ` · ${item.bar.number}/${liveGrid.barCount}`}`"></span>
                                         </div>
                                         <div class="focus-beats" :style="`grid-template-columns: repeat(${item.bar.beats.length}, minmax(0, 1fr))`">
                                             <template x-for="(beat, i) in item.bar.beats" :key="i">
@@ -701,12 +703,12 @@
                             <template x-for="(bar, b) in liveGrid.bars" :key="`${current.id}-live-${b}`">
                                 <div class="live-bar" :class="{ 'is-current': b === liveBar, 'has-block': bar.blocks.some(block => !block.marker) }"
                                     :style="bar.blocks.length ? typeStyle(bar.blocks[0].name) : ''" @click="goToLiveBar(b)" :data-live-bar="b">
-                                    <span class="number" x-text="b + 1"></span>
+                                    <span class="number" x-text="bar.number ?? ''"></span>
                                     <div class="live-block"><template x-for="block in bar.blocks" :key="block.tick"><span x-text="(block.marker ? '↺ ' + @js(__('Back to the start')) : block.name) + ' '"></span></template></div>
                                     <div class="live-beats" :style="`grid-template-columns: repeat(${bar.beats.length}, minmax(0, 1fr))`">
                                         <template x-for="(beat, i) in bar.beats" :key="i">
                                             <span class="live-beat" :class="{ 'is-repeat': beat.repeat && !insertAt(beat.tick), 'is-on': b === liveBar && i === liveBeat }">
-                                                <span :class="halfClasses(beat, 0)" @click="tapHalf(beat, 0, $event)" x-text="halfText(beat, 0)"></span><template x-if="beat.and !== null || liveEdit"><span class="and" :class="halfClasses(beat, 1)" @click="tapHalf(beat, 1, $event)" x-text="halfText(beat, 1)"></span></template>
+                                                <span :class="halfClasses(beat, 0)" @click="tapHalf(beat, 0, $event)" x-text="halfText(beat, 0)"></span><template x-if="beat.and !== null || (liveEdit && !bar.free)"><span class="and" :class="halfClasses(beat, 1)" @click="tapHalf(beat, 1, $event)" x-text="halfText(beat, 1)"></span></template>
                                             </span>
                                         </template>
                                     </div>
@@ -763,7 +765,7 @@
                                             <template x-for="(row, r) in barChart.sections[index].rows" :key="r">
                                                 <div class="bar-row">
                                                     <template x-for="bar in row" :key="bar.index">
-                                                        <div class="map-bar" :class="{ 'is-playing': bar.index === playingBar }" :data-map-bar="bar.index">
+                                                        <div class="map-bar" :class="{ 'is-playing': bar.index === playingBar, 'is-free': bar.free }" :data-map-bar="bar.index">
                                                             <template x-if="bar.repeat"><span class="bar-repeat">%</span></template>
                                                             <template x-if="!bar.repeat">
                                                                 <span class="bar-chords"><template x-for="(token, t) in bar.tokens" :key="t"><span
@@ -1082,6 +1084,35 @@
             if (typeof value === 'number' && Number.isFinite(value) && value >= 0) return value;
             if (typeof value !== 'string' || !/^\d+(:\d{1,2}){0,2}(\.\d+)?$/.test(value.trim())) return null;
             return value.trim().split(':').reduce((total, part) => total * 60 + Number(part), 0);
+        }
+
+        // The bars of a map of `total` half beats: whole bars of `size` half beats, counted from the start and again from
+        // the end of each block with no bars ("time only"); each chord of such a block on its own (`free`), with no bar
+        // line. `free`: the [start, end) half beats of those chords, in order. A bar cut short by such a block ends there.
+        function barSpans(total, size, free) {
+            const spans = [];
+            let at = 0;
+            for (const [start, end] of [...free, [total, total]]) {
+                for (let bar = at; bar < start; bar += size) spans.push({ start: bar, end: Math.min(bar + size, start), free: false });
+                if (end > start) spans.push({ start, end, free: true });
+                at = Math.max(at, end);
+            }
+            // Numbers of the bars with bar lines (none for the free chords).
+            let number = 0;
+            spans.forEach(span => { span.number = span.free ? null : ++number; });
+            return spans;
+        }
+        // Index of the span of `spans` (from barSpans) that has half beat `tick`.
+        function spanAt(spans, tick) {
+            let low = 0;
+            let high = spans.length - 1;
+            if (high < 0) return 0;
+            while (low < high) {
+                const middle = Math.ceil((low + high) / 2);
+                if (spans[middle].start <= tick) low = middle;
+                else high = middle - 1;
+            }
+            return low;
         }
 
         // Note letters of a chord in capitals: the root and the bass after "/" (am -> Am, bb -> Bb, c#m7/g -> C#m7/G).
@@ -1479,6 +1510,8 @@
                     const ticks = [];
                     const starts = [];
                     const chordTicks = [];
+                    // The chords of the blocks with no bars ("time only"): each one on its own, no bar line.
+                    const free = [];
                     let perBar = 0;
                     for (const [index, section] of sections.entries()) {
                         if (!section || typeof section !== 'object' || section.jump === 'start') continue;
@@ -1497,17 +1530,19 @@
                         chords.forEach((name, k) => {
                             const number = offset === null || offset === undefined ? null : offset + k;
                             if (number !== null) chordTicks[number] = [ticks.length, ticks.length + Math.max(1, Math.round(durations[k] * 2))];
+                            if (section.time_only) free.push([ticks.length, ticks.length + Math.max(1, Math.round(durations[k] * 2))]);
                             for (let t = 0; t < Math.max(1, Math.round(durations[k] * 2)); t++) ticks.push({ name, number, passing: passing.includes(k) });
                         });
                     }
                     if (!ticks.length) return null;
                     const size = perBar * 2;
+                    const spans = barSpans(ticks.length, size, free);
 
                     // Chords of each bar, a chord held over the bar line written again at its start.
                     const bars = [];
-                    for (let start = 0; start < ticks.length; start += size) {
+                    for (const { start, end, free: isFree } of spans) {
                         const segments = [];
-                        ticks.slice(start, start + size).forEach((tick, at) => {
+                        ticks.slice(start, end).forEach((tick, at) => {
                             const last = segments[segments.length - 1];
                             if (last && last.name === tick.name) {
                                 if (tick.number !== null && !last.numbers.includes(tick.number)) last.numbers.push(tick.number);
@@ -1515,13 +1550,13 @@
                             }
                             segments.push({ name: tick.name, at, numbers: tick.number === null ? [] : [tick.number], passing: tick.passing, push: false });
                         });
-                        bars.push({ index: bars.length, start, segments });
+                        bars.push({ index: bars.length, start, length: end - start, free: isFree, segments });
                     }
                     // A chord starting on the last half beat of a bar and going on in the next one is written there, pushed.
                     bars.forEach((bar, b) => {
                         const last = bar.segments[bar.segments.length - 1];
                         const next = bars[b + 1]?.segments[0];
-                        if (bar.segments.length > 1 && last.at === size - 1 && next && next.name === last.name) {
+                        if (!bar.free && !bars[b + 1]?.free && bar.segments.length > 1 && last.at === bar.length - 1 && next && next.name === last.name) {
                             bar.segments.pop();
                             next.push = true;
                         }
@@ -1529,13 +1564,14 @@
                     bars.forEach(bar => {
                         const segments = bar.segments;
                         let tokens;
-                        if (segments.length === 1) {
+                        if (segments.length === 1 || bar.free) {
                             tokens = [segments[0]];
-                        } else if (segments.length === 2 && segments[1].at === size / 2 && perBar % 2 === 0) {
+                        } else if (segments.length === 2 && bar.length === size && segments[1].at === size / 2 && perBar % 2 === 0) {
                             tokens = segments;
                         } else {
                             tokens = [];
-                            for (let beat = 0; beat < perBar; beat++) {
+                            // (A bar cut short by a block with no bars has only its own beats.)
+                            for (let beat = 0; beat < Math.ceil(bar.length / 2); beat++) {
                                 const on = segments.find(segment => segment.at === beat * 2);
                                 const off = segments.find(segment => segment.at === beat * 2 + 1);
                                 tokens.push(on || { slash: true, numbers: [] });
@@ -1556,7 +1592,7 @@
                         result[index] ||= { bars: [] };
                         const signature = bar.tokens.map(token => token.slash ? '/' : (token.push ? '^' : '') + token.name + (token.off ? '&' : '')).join(' ');
                         // "%": the same bar again in the same block.
-                        bar.repeat = previous && previous.index === index && previous.signature === signature && !bar.tokens.some(token => token.push);
+                        bar.repeat = !bar.free && previous && previous.index === index && previous.signature === signature && !bar.tokens.some(token => token.push);
                         previous = { index, signature };
                         result[index].bars.push(bar);
                     });
@@ -1566,7 +1602,7 @@
                         item.rows = [];
                         for (let i = 0; i < item.bars.length; i += perRow) item.rows.push(item.bars.slice(i, i + perRow));
                     });
-                    return { perBar, perRow, size, sections: result, chordTicks };
+                    return { perBar, perRow, size, spans, sections: result, chordTicks };
                 },
                 playingBar: -1,
                 // Bar being played: from the chord being played and the time since it started.
@@ -1576,7 +1612,7 @@
                     const times = this.chordTimes;
                     if (!span || !times || !(Number(this.current?.bpm) > 0)) return -1;
                     const tick = Math.min(span[1] - 1, span[0] + Math.max(0, Math.floor((time - times[n]) / (30 / Number(this.current.bpm)))));
-                    return Math.floor(tick / chart.size);
+                    return spanAt(chart.spans, tick);
                 },
                 // Number of the first chord of each map section in the whole map.
                 get mapChordOffsets() {
@@ -1655,7 +1691,7 @@
                     if (!place || !this.canSuggest([place.n])) return;
                     event.stopPropagation();
                     const box = event.currentTarget.getBoundingClientRect();
-                    const size = this.liveGrid.perBar * 2;
+                    const bar = this.liveGrid.bars[this.liveBarAt(tick)];
                     const existing = this.songSuggestions[place.key];
                     // The same place in the blocks with the same name, when the same chord is there and lasts that long.
                     const same = this.sameBlockChords([place.n]);
@@ -1670,7 +1706,7 @@
                         applyAll: false,
                         name: existing ? this.chordFor(existing.to) : '',
                         original: this.chordFor(this.baseChord(place.n)),
-                        place: @js(__('New chord: bar :bar, beat :beat')).replace(':bar', Math.floor(tick / size) + 1).replace(':beat', Math.floor((tick % size) / 2) + 1) + (tick % 2 ? ` (${@js(__('and'))})` : ''),
+                        place: @js(__('New chord: bar :bar, beat :beat')).replace(':bar', bar?.number ?? '–').replace(':beat', Math.floor((tick - (bar?.start ?? 0)) / 2) + 1) + (tick % 2 ? ` (${@js(__('and'))})` : ''),
                         changed: !!existing,
                         error: '',
                         left: Math.max(8, Math.min(box.left, window.innerWidth - 290)),
@@ -1949,6 +1985,8 @@
                     let perBar = 4;
                     let clickDouble = false;
                     let complete = structure.length > 0;
+                    // The chords of the blocks with no bars ("time only"): each one on its own, no bar line.
+                    const free = [];
                     // Number of the chord of each tick (chord n of the map, as corrections count them).
                     const numbers = [];
                     let number = 0;
@@ -1967,16 +2005,19 @@
                         blocks.push({ tick: ticks.length, marker: false, name: this.sectionName(section), index, timeOnly: !!section.time_only });
                         chords.forEach((chord, i) => {
                             const n = number++;
+                            if (section.time_only) free.push([ticks.length, ticks.length + Math.round(durations[i] * 2)]);
                             for (let k = 0; k < Math.round(durations[i] * 2); k++) { ticks.push(chord); numbers.push(n); }
                         });
                     });
                     if (complete && ticks.length) {
                         const size = perBar * 2;
                         const bars = [];
-                        for (let start = 0; start < ticks.length; start += size) {
-                            const part = ticks.slice(start, start + size);
+                        for (const { start, end, free: isFree, number: barNumber } of barSpans(ticks.length, size, free)) {
+                            const part = ticks.slice(start, end);
                             const beats = [];
-                            for (let i = 0; i < part.length; i += 2) {
+                            // A chord of a block with no bars: one place, the chord alone.
+                            if (isFree) beats.push({ chord: part[0], repeat: false, and: null, tick: start, n: numbers[start], andN: null });
+                            else for (let i = 0; i < part.length; i += 2) {
                                 const onBeat = part[i];
                                 const previous = start + i > 0 ? ticks[start + i - 1] : null;
                                 const at = start + i;
@@ -1990,11 +2031,11 @@
                                     andN: part[i + 1] !== undefined && numbers[at + 1] !== numbers[at] ? numbers[at + 1] : null,
                                 });
                             }
-                            bars.push({ start, beats, blocks: blocks.filter(block => block.tick >= start && block.tick < start + size) });
+                            bars.push({ start, end, free: isFree, number: barNumber, beats, blocks: blocks.filter(block => block.tick >= start && block.tick < end) });
                         }
                         const chordStart = [];
                         numbers.forEach((n, t) => { if (n !== null && chordStart[n] === undefined) chordStart[n] = t; });
-                        value = { perBar, clickDouble, ticks, numbers, chordStart, bars, blocks: blocks.filter(block => !block.marker), markers: blocks.filter(block => block.marker).map(block => block.tick) };
+                        value = { perBar, clickDouble, ticks, numbers, chordStart, bars, barCount: bars.filter(bar => !bar.free).length, blocks: blocks.filter(block => !block.marker), markers: blocks.filter(block => block.marker).map(block => block.tick) };
                     }
                     return value;
                 },
@@ -2006,15 +2047,14 @@
                 get focusBars() {
                     const grid = this.liveGrid;
                     if (!grid) return [];
-                    const size = grid.perBar * 2;
                     const current = this.liveBar;
-                    const end = (current + 1) * size;
+                    const end = grid.bars[current]?.end ?? 0;
                     const restart = grid.markers.some(at => at > this.live.tick && at <= end && !this.live.usedMarkers.includes(at));
                     const next = restart ? 0 : current + 1;
                     const describe = (index, role, back = false) => {
-                        const start = index * size;
+                        const start = grid.bars[index]?.start ?? 0;
                         const block = grid.blocks.filter(item => !item.marker && item.tick <= start).at(-1);
-                        const starts = grid.blocks.find(item => !item.marker && item.tick > start && item.tick < start + size);
+                        const starts = grid.blocks.find(item => !item.marker && item.tick > start && item.tick < (grid.bars[index]?.end ?? start));
                         const item = { index, role, now: role === 'now', bar: grid.bars[index], block: block?.name ?? '', starts: starts?.name ?? '', restart: back, empty: false };
                         return { ...item, fits: this.focusFits(item) };
                     };
@@ -2023,8 +2063,18 @@
                     if (next < grid.bars.length) items.push(describe(next, 'next', restart));
                     return items;
                 },
-                get liveBar() { return this.liveGrid ? Math.floor(this.live.tick / (this.liveGrid.perBar * 2)) : 0; },
-                get liveBeat() { return this.liveGrid ? Math.floor((this.live.tick % (this.liveGrid.perBar * 2)) / 2) : 0; },
+                get liveBar() { return this.liveGrid ? this.liveBarAt(this.live.tick) : 0; },
+                get liveBeat() {
+                    const bar = this.liveGrid?.bars[this.liveBar];
+                    return bar && !bar.free ? Math.floor((this.live.tick - bar.start) / 2) : 0;
+                },
+                // Bar of the Live view that has half beat `tick` (each chord of a block with no bars is one).
+                liveBarAt(tick) { return this.liveGrid ? spanAt(this.liveGrid.bars, tick) : 0; },
+                // The first beat of a bar (the higher click); none in a block with no bars.
+                isBarStart(tick) {
+                    const bar = this.liveGrid?.bars[this.liveBarAt(tick)];
+                    return !!bar && !bar.free && bar.start === tick;
+                },
                 get liveChordNow() { return this.liveGrid?.ticks[this.live.tick] ?? ''; },
                 get liveChordNext() {
                     const ticks = this.liveGrid?.ticks || [];
@@ -2096,7 +2146,7 @@
                         this.live.shownBlock = null;
                         this.scrollToLiveBar();
                     }
-                    if (this.clicksOn(this.live.tick)) this.clickBeat(this.live.tick % (this.liveGrid.perBar * 2) === 0);
+                    if (this.clicksOn(this.live.tick)) this.clickBeat(this.isBarStart(this.live.tick));
                     const loop = () => {
                         if (!this.live.running) return;
                         const now = performance.now();
@@ -2139,7 +2189,6 @@
                 // The clicks of the next moments, scheduled ahead on the audio clock: each one sounds on its beat, also
                 // when the page is busy drawing a new block.
                 scheduleLiveClicks(now, halfBeatMs) {
-                    const size = this.liveGrid.perBar * 2;
                     const marker = this.liveGrid.markers.find(at => at > this.live.tick && !this.live.usedMarkers.includes(at));
                     while (this.live.clickNext < Infinity) {
                         const tick = this.live.clickNext;
@@ -2153,13 +2202,13 @@
                             return;
                         }
                         // Far behind (the page stopped for a while): dropped, a click out of place is worse than none.
-                        if (this.clicksOn(tick) && time > now - 80) this.clickBeat(tick % size === 0, (time - now) / 1000);
+                        if (this.clicksOn(tick) && time > now - 80) this.clickBeat(this.isBarStart(tick), (time - now) / 1000);
                         this.live.clickNext = tick + 1;
                     }
                 },
                 // Tapping a bar: the count goes on from it (right away when running).
                 goToLiveBar(bar) {
-                    this.goToLiveTick(bar * this.liveGrid.perBar * 2);
+                    this.goToLiveTick(this.liveGrid.bars[bar]?.start ?? 0);
                 },
                 goToLiveTick(tick) {
                     if (!this.bpmMode) {
@@ -2237,7 +2286,7 @@
                     const starts = this.liveChordStarts;
                     let n = -1;
                     while (n + 1 < starts.length && starts[n + 1] <= tick) n++;
-                    const bar = this.barChart ? Math.floor(tick / this.barChart.size) : -1;
+                    const bar = this.barChart ? spanAt(this.barChart.spans, tick) : -1;
                     const changedBar = bar !== this.playingBar;
                     this.playingChord = n;
                     this.playingBar = bar;
@@ -2277,7 +2326,7 @@
                 focusDebug: new URLSearchParams(location.search).get('debug') === 'focus' ? [] : null,
                 logFocus(text) {
                     if (!this.focusDebug) return;
-                    const bar = this.liveGrid ? this.liveBar + 1 : '-';
+                    const bar = this.liveGrid?.bars[this.liveBar]?.number ?? '-';
                     this.focusDebug = [`${(performance.now() / 1000).toFixed(2)}s bar ${bar} beat ${this.liveBeat + 1}: ${text}`, ...this.focusDebug].slice(0, 8);
                 },
                 focusFixKey(index, now, beat) { return `${this.currentId}:${index}:${now ? 'now' : 'side'}:${beat}`; },
@@ -2387,12 +2436,11 @@
                     if (!this.isRunning && !this.scrollNext) return;
                     this.scrollNext = false;
                     if (force) this.live.shownBlock = null;
-                    const size = (this.liveGrid?.perBar ?? 4) * 2;
                     const block = (this.liveGrid?.blocks || []).filter(item => !item.marker && item.tick <= this.live.tick).at(-1);
                     const newBlock = !!block && block.tick !== this.live.shownBlock;
                     this.live.shownBlock = block ? block.tick : null;
                     this.$nextTick(() => {
-                        const bar = newBlock ? Math.floor(block.tick / size) : this.liveBar;
+                        const bar = newBlock ? this.liveBarAt(block.tick) : this.liveBar;
                         const element = document.querySelector(`[data-live-bar="${bar}"]`);
                         if (!element) return;
                         element.style.scrollMarginTop = `${(document.querySelector('.chrome')?.offsetHeight ?? 0) + 8}px`;
@@ -2659,7 +2707,7 @@
                     if (this.liveMode) {
                         const block = this.liveGrid.blocks.find(item => item.index === target.index);
                         if (!block) return;
-                        this.goToLiveBar(Math.floor(block.tick / (this.liveGrid.perBar * 2)));
+                        this.goToLiveBar(this.liveBarAt(block.tick));
                         this.scrollToLiveBar();
                         this.scrollNext = false;
                         return;
@@ -2997,7 +3045,7 @@
                         if (!blocks.length) return;
                         const current = blocks.filter(block => block.tick <= this.live.tick).length - 1;
                         const target = blocks[Math.max(0, Math.min(blocks.length - 1, current + step))];
-                        this.goToLiveBar(Math.floor(target.tick / (this.liveGrid.perBar * 2)));
+                        this.goToLiveBar(this.liveBarAt(target.tick));
                         return this.scrollToLiveBar();
                     }
                     const index = this.blockStepTarget(step);

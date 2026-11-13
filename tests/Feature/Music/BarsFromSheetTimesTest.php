@@ -4,6 +4,7 @@ namespace Tests\Feature\Music;
 
 use App\Modules\Music\Models\Song;
 use App\Modules\Music\Services\GenerateBarsFromSheetService;
+use App\Modules\Music\Services\UpdateSongLayoutService;
 use Illuminate\Validation\ValidationException;
 
 class BarsFromSheetTimesTest extends MusicTestCase
@@ -130,18 +131,37 @@ class BarsFromSheetTimesTest extends MusicTestCase
 
     public function test_a_block_with_no_bars_is_marked_and_shared_in_beats(): void
     {
-        // The nearest bar line is 36 beats away: shared in beats among the 3 chords.
+        // 35 beats to the next mark (no bar line looked for): shared in beats among the 3 chords.
         [$song, $structure] = $this->make([
             $this->section('INTRO', ['C', 'G', 'Am'], '0:10', true),
             $this->section('CHORUS', ['F'], '0:40'),
         ]);
 
         $this->assertTrue($structure[0]['time_only']);
-        $this->assertSame([12, 12, 12], $structure[0]['durations']);
+        $this->assertSame([12, 11, 12], $structure[0]['durations']);
         $this->assertArrayNotHasKey('time_only', $structure[1]);
         $this->assertTrue($song->hasBars());
         $this->assertTrue($song->chord_sheet['sections'][0]['time_only']);
         $this->assertSame('0:10', $song->chord_sheet['sections'][0]['start']);
+    }
+
+    public function test_a_block_with_no_bars_lasts_to_the_next_mark_and_the_bars_are_counted_again_after_it(): void
+    {
+        // Sete Vezes Mais at 116 BPM: blocks with no bars marked in the middle of bars.
+        [, $structure] = $this->make([
+            $this->section('INTRO', ['F', 'Bb', 'C9'], '0:06', true),
+            $this->section('VERSE_1', ['F', 'Bb', 'C', 'F', 'Bb', 'C', 'C#º'], '0:18.66', true),
+            $this->section('VERSE_2', ['C#7M', 'D#7'], '0:52.28'),
+            $this->section('VERSE_3', ['G#7M'], '1:08.86'),
+        ], 116.0);
+
+        // At the marks themselves, to the half beat (0.26 s here).
+        $seconds = fn (string $time) => UpdateSongLayoutService::toSeconds($time);
+        $this->assertEqualsWithDelta(18.66, $seconds($structure[1]['start']), 0.13);
+        $this->assertEqualsWithDelta(52.28, $seconds($structure[2]['start']), 0.13);
+        // The bars of VERSE_2 are whole bars from its own start (16.58 s: 8 bars), not from the start of the song.
+        $this->assertSame([16, 16], $structure[2]['durations']);
+        $this->assertSame(0, array_sum($structure[2]['durations']) % 4);
     }
 
     public function test_times_without_a_bpm_are_refused(): void
