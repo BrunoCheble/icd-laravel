@@ -1,0 +1,41 @@
+name: Deploy the church site (site-icd)
+
+# The church site (BrunoCheble/site-icd, branch main) is also pulled by cPanel's "Git Version Control", but its own
+# repository has no cPanel secrets: this workflow does its "Update from Remote" with this repository's secrets.
+# The site's folder on cPanel is found by its remote (so no path to keep here). Run it after pushing the site:
+# Actions → "Deploy the church site" → Run workflow, or `gh workflow run deploy-site.yml -R BrunoCheble/icd-laravel`.
+# A repository_dispatch "deploy-site" (from the site's own workflow, with a GitHub token) runs it too.
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [deploy-site]
+
+concurrency:
+  group: cpanel-deploy-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      API: https://${{ secrets.CPANEL_HOST }}:2083/execute
+      AUTH: "Authorization: cpanel ${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_TOKEN }}"
+
+    steps:
+      # Only the folders and branches are shown (a remote's address can hold a token).
+      - name: Find the site's repository on cPanel
+        id: find
+        run: |
+          repos=$(curl -sS --fail -H "$AUTH" "$API/VersionControl/retrieve")
+          echo "$repos" | jq '[.data[] | {repository_root, branch}]'
+          root=$(echo "$repos" | jq -r '[.data[] | select((.source_repository.remote_url // "") | test("site-icd"))][0].repository_root // empty')
+          [ -n "$root" ] || { echo "site-icd is not in cPanel's Git Version Control"; exit 1; }
+          echo "Site repository: $root"
+          echo "root=$root" >> "$GITHUB_OUTPUT"
+
+      - name: Update from Remote
+        run: |
+          response=$(curl -sS --fail -H "$AUTH" -G "$API/VersionControl/update" \
+            --data-urlencode "repository_root=${{ steps.find.outputs.root }}" --data-urlencode "branch=main")
+          echo "$response" | jq '{status, errors, head: .data.last_update}'
+          [ "$(echo "$response" | jq -r '.status')" = "1" ]
