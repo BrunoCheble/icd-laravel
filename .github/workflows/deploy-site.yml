@@ -28,7 +28,7 @@ jobs:
         run: |
           repos=$(curl -sS --fail -H "$AUTH" "$API/VersionControl/retrieve")
           echo "$repos" | jq '[.data[] | {repository_root, branch}]'
-          root=$(echo "$repos" | jq -r '[.data[] | select((.source_repository.remote_url // "") | test("site-icd"))][0].repository_root // empty')
+          root=$(echo "$repos" | jq -r '[.data[] | select((.source_repository.url // .source_repository.remote_url // "") | test("site-icd"))][0].repository_root // empty')
           [ -n "$root" ] || { echo "site-icd is not in cPanel's Git Version Control"; exit 1; }
           echo "Site repository: $root"
           echo "root=$root" >> "$GITHUB_OUTPUT"
