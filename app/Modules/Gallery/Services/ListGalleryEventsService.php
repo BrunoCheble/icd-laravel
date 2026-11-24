@@ -7,9 +7,19 @@ use Illuminate\Support\Collection;
 
 class ListGalleryEventsService
 {
-    /** Every event, the most recent first, with its photos (for the cover and the count). */
-    public function execute(): Collection
+    /**
+     * Every album with its photos (for the cover and the count), split: the events, the most recent first, and the
+     * spaces in the order they were made (the site's order).
+     *
+     * @return array{events: Collection, spaces: Collection}
+     */
+    public function execute(): array
     {
-        return GalleryEvent::query()->with('photos')->orderByDesc('event_date')->orderByDesc('id')->get();
+        $albums = GalleryEvent::query()->with('photos')->orderByDesc('event_date')->orderByDesc('id')->get();
+
+        return [
+            'events' => $albums->reject->isSpace()->values(),
+            'spaces' => $albums->filter->isSpace()->sortBy('id')->values(),
+        ];
     }
 }

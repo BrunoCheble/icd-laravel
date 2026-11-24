@@ -28,3 +28,4 @@ yarn-error.log
 /public/images/announcements/*
 !/public/images/announcements/categories/
 !/public/images/announcements/default.jpg
+/public/images/gallery/

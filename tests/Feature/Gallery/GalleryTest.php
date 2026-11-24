@@ -107,6 +107,32 @@ class GalleryTest extends TestCase
         $this->assertNotContains($empty->name, array_column($data, 'name'));
     }
 
+    public function test_a_space_has_no_date_and_goes_to_the_sites_gallery_after_the_events(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $this->get(route('gallery.create', ['kind' => 'space']))->assertOk()->assertSee('value="space"', false);
+        $this->post(route('gallery.store'), ['kind' => 'space', 'name' => 'ZZ Teste Nave', 'event_date' => '2026-10-01', 'is_published' => '1'])->assertRedirect();
+        $this->post(route('gallery.store'), ['kind' => 'space', 'name' => 'ZZ Teste Cantina', 'is_published' => '1'])->assertRedirect();
+        $this->post(route('gallery.store'), ['kind' => 'event', 'name' => 'ZZ Teste Sem data', 'is_published' => '1'])->assertSessionHasErrors('event_date');
+        [$hall, $canteen] = [GalleryEvent::query()->where('name', 'ZZ Teste Nave')->firstOrFail(), GalleryEvent::query()->where('name', 'ZZ Teste Cantina')->firstOrFail()];
+        $this->assertTrue($hall->isSpace());
+        $this->assertNull($hall->event_date);
+        $event = $this->event('ZZ Teste Culto', '2026-10-01');
+        $draft = GalleryEvent::create(['kind' => GalleryEvent::SPACE, 'name' => 'ZZ Teste Fraldário', 'is_published' => false]);
+        [$photo, $other] = [$this->upload($hall), $this->upload($canteen)];
+        $this->upload($event);
+        $this->upload($draft);
+
+        $data = $this->getJson(route('api.gallery.index'))->assertOk()->json('data');
+        $this->assertSame(['ZZ Teste Culto', 'ZZ Teste Nave', 'ZZ Teste Cantina'], array_column($data, 'name'));
+        $this->assertSame(['2026-10-01', null, null], array_column($data, 'date'));
+        $this->assertSame([$photo->id], array_column($data[1]['photos'], 'id'));
+        $this->assertSame($other->thumbUrl(), $data[2]['cover']);
+
+        $this->get(route('gallery.index'))->assertOk()->assertSeeInOrder(['ZZ Teste Culto', 'ZZ Teste Nave', 'ZZ Teste Cantina']);
+        $this->get(route('gallery.show', $hall))->assertOk()->assertSee('ZZ Teste Nave');
+    }
+
     public function test_a_user_needs_the_gallery_permission(): void
     {
         $event = $this->event('ZZ Teste Permissão', '2026-10-01');

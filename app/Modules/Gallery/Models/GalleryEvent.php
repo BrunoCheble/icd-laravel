@@ -6,17 +6,28 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * An event of the site's gallery (a service, a baptism, a meeting…) and its photos. Published, it shows on the site
- * (its visible photos, the cover first).
+ * An album of the site's gallery and its photos: an event (a service, a baptism, a meeting…, with its date) or one of
+ * the church's spaces (the entrance, the hall, the kids' rooms…, without a date). Published, it shows on the site (its
+ * visible photos, the cover first; the events first, then the spaces).
  */
 class GalleryEvent extends Model
 {
-    protected $fillable = ['name', 'event_date', 'is_published', 'cover_photo_id'];
+    public const EVENT = 'event';
+    public const SPACE = 'space';
+
+    protected $fillable = ['kind', 'name', 'event_date', 'is_published', 'cover_photo_id'];
+
+    protected $attributes = ['kind' => self::EVENT];
 
     protected $casts = [
         'event_date' => 'date',
         'is_published' => 'boolean',
     ];
+
+    public function isSpace(): bool
+    {
+        return $this->kind === self::SPACE;
+    }
 
     /** Its photos in their order. */
     public function photos(): HasMany

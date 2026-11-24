@@ -1647,5 +1647,15 @@
     "Not saved": "Não guardado",
     "photo": "foto",
     "caption": "legenda",
-    "Are you sure?": "Tem a certeza?"
+    "Are you sure?": "Tem a certeza?",
+    "New space": "Novo espaço",
+    "Edit space": "Editar espaço",
+    "Event": "Evento",
+    "Events": "Eventos",
+    "Space of the church": "Espaço da igreja",
+    "Spaces of the church": "Espaços da igreja",
+    "No spaces yet.": "Ainda não há espaços.",
+    "Space saved.": "Espaço guardado.",
+    "Space saved. Now add its photos.": "Espaço guardado. Agora junte as fotos.",
+    "Its photos show on the site's \"Galeria\", after the events (the spaces in the order they were made).": "As fotos aparecem na \"Galeria\" do site, depois dos eventos (os espaços pela ordem em que foram criados)."
 }

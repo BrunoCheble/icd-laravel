@@ -41,13 +41,13 @@
             <div>
                 <h1>{{ $event->name }}</h1>
                 <p>
-                    {{ $event->event_date->translatedFormat('d F Y') }} · {{ trans_choice(':count photo|:count photos', $event->photos->count(), ['count' => $event->photos->count()]) }} ·
+                    {{ $event->isSpace() ? __('Space of the church') : $event->event_date->translatedFormat('d F Y') }} · {{ trans_choice(':count photo|:count photos', $event->photos->count(), ['count' => $event->photos->count()]) }} ·
                     @if ($event->is_published)<span class="m-tag is-ok"><i class="fa-solid fa-globe"></i> {{ __('On the site') }}</span>@else<span class="m-tag is-off"><i class="fa-solid fa-eye-slash"></i> {{ __('Not on the site') }}</span>@endif
                 </p>
             </div>
             @can('gallery.update')
                 <div class="m-head-actions">
-                    <a href="{{ route('gallery.edit', $event) }}" class="m-btn"><i class="fa-solid fa-pen"></i> {{ __('Edit event') }}</a>
+                    <a href="{{ route('gallery.edit', $event) }}" class="m-btn"><i class="fa-solid fa-pen"></i> {{ $event->isSpace() ? __('Edit space') : __('Edit event') }}</a>
                 </div>
             @endcan
         </div>

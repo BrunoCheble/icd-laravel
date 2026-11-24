@@ -30,34 +30,39 @@
             @can('gallery.write')
                 <div class="m-head-actions">
                     <a href="{{ route('gallery.create') }}" class="m-btn is-primary"><i class="fa-solid fa-plus"></i> {{ __('New event') }}</a>
+                    <a href="{{ route('gallery.create', ['kind' => 'space']) }}" class="m-btn"><i class="fa-solid fa-plus"></i> {{ __('New space') }}</a>
                 </div>
             @endcan
         </div>
 
-        @if ($events->isEmpty())
-            <div class="m-card m-section"><p class="m-muted">{{ __('No events yet.') }}</p></div>
-        @else
-            <div class="gl-list">
-                @foreach ($events as $event)
-                    @php($cover = $event->cover())
-                    <a href="{{ route('gallery.show', $event) }}" class="m-card gl-card">
-                        <span class="gl-cover">
-                            @if ($cover)<img src="{{ $cover->thumbUrl() }}" alt="" loading="lazy">@else<i class="fa-regular fa-images"></i>@endif
-                        </span>
-                        <span class="gl-body">
-                            <strong>{{ $event->name }}</strong>
-                            <small>{{ $event->event_date->translatedFormat('d M Y') }} · {{ trans_choice(':count photo|:count photos', $event->photos->count(), ['count' => $event->photos->count()]) }}</small>
-                            <span class="m-tags">
-                                @if ($event->is_published)
-                                    <span class="m-tag is-ok"><i class="fa-solid fa-globe"></i> {{ __('On the site') }}</span>
-                                @else
-                                    <span class="m-tag is-off"><i class="fa-solid fa-eye-slash"></i> {{ __('Not on the site') }}</span>
-                                @endif
+        {{-- The events and the church's spaces (on the site's "Galeria": the events first, then the spaces) --}}
+        @foreach ([['albums' => $events, 'title' => __('Events'), 'empty' => __('No events yet.')], ['albums' => $spaces, 'title' => __('Spaces of the church'), 'empty' => __('No spaces yet.')]] as $group)
+            <h2 class="m-label" style="margin-top: 1.5rem; font-size: .95rem;">{{ $group['title'] }}</h2>
+            @if ($group['albums']->isEmpty())
+                <div class="m-card m-section" style="margin-top: .75rem;"><p class="m-muted">{{ $group['empty'] }}</p></div>
+            @else
+                <div class="gl-list">
+                    @foreach ($group['albums'] as $event)
+                        @php($cover = $event->cover())
+                        <a href="{{ route('gallery.show', $event) }}" class="m-card gl-card">
+                            <span class="gl-cover">
+                                @if ($cover)<img src="{{ $cover->thumbUrl() }}" alt="" loading="lazy">@else<i class="fa-regular fa-images"></i>@endif
                             </span>
-                        </span>
-                    </a>
-                @endforeach
-            </div>
-        @endif
+                            <span class="gl-body">
+                                <strong>{{ $event->name }}</strong>
+                                <small>@unless ($event->isSpace()){{ $event->event_date->translatedFormat('d M Y') }} · @endunless{{ trans_choice(':count photo|:count photos', $event->photos->count(), ['count' => $event->photos->count()]) }}</small>
+                                <span class="m-tags">
+                                    @if ($event->is_published)
+                                        <span class="m-tag is-ok"><i class="fa-solid fa-globe"></i> {{ __('On the site') }}</span>
+                                    @else
+                                        <span class="m-tag is-off"><i class="fa-solid fa-eye-slash"></i> {{ __('Not on the site') }}</span>
+                                    @endif
+                                </span>
+                            </span>
+                        </a>
+                    @endforeach
+                </div>
+            @endif
+        @endforeach
     </div>
 </x-app-layout>
