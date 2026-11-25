@@ -97,11 +97,67 @@ class MinistriesTest extends TestCase
         $this->assertNull($response->json('data.0.photo'));
     }
 
+    public function test_a_text_keeps_numbered_lists_sub_items_and_tables(): void
+    {
+        $text = MinistryBio::clean(['sections' => [['title' => '', 'blocks' => [
+            ['type' => 'text', 'text' => '**“Porque tive fome.”** — Mateus 25:35'],
+            ['type' => 'list', 'ordered' => true, 'items' => [['title' => 'Funções:', 'text' => 'servir', 'sub' => [' Café ', '', '<b>Bolos</b>']]]],
+            ['type' => 'table', 'head' => true, 'rows' => [['Função', 'Responsável', ''], ['Caixa', 'Ana'], ['', ''], ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']]],
+            ['type' => 'table', 'rows' => [['', '']]],
+        ]]]]);
+
+        $this->assertEquals([
+            ['type' => 'text', 'text' => '**“Porque tive fome.”** — Mateus 25:35'],
+            ['type' => 'list', 'ordered' => true, 'items' => [['title' => 'Funções:', 'text' => 'servir', 'sub' => ['Café', 'Bolos']]]],
+            ['type' => 'table', 'head' => true, 'rows' => [
+                ['Função', 'Responsável', '', '', '', '', '', ''],
+                ['Caixa', 'Ana', '', '', '', '', '', ''],
+                ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+            ]],
+        ], $text['sections'][0]['blocks']);
+        $this->assertSame('', $text['sections'][0]['title']);
+    }
+
+    public function test_a_ministry_page_on_the_site_is_edited_and_the_site_gets_the_visible_ones_in_order(): void
+    {
+        $this->actingAs(User::factory()->create());
+        [$music, $kids, $hidden] = [Ministry::create(['name' => 'ZZ Teste Music']), Ministry::create(['name' => 'ZZ Teste Kids']), Ministry::create(['name' => 'ZZ Teste Oculto'])];
+        $page = ['layout' => 'sections', 'sections' => [
+            ['title' => '', 'blocks' => [['type' => 'text', 'text' => 'Abertura']]],
+            ['title' => '1. Funções', 'blocks' => [['type' => 'table', 'head' => true, 'rows' => [['Função', 'Quem'], ['Som', 'Ana']]]]],
+        ]];
+
+        $this->get(route('ministries.show', $music))->assertOk()->assertSee(route('ministries.site.edit', $music));
+        $this->get(route('ministries.site.edit', $music))->assertOk()->assertSee('textEditor', false);
+        $this->put(route('ministries.site.update', $music), [
+            'site_visible' => '1', 'site_order' => 2, 'site_group' => 'ministries', 'site_icon' => 'fas fa-music', 'site_tag' => 'ICD Music',
+            'site_title' => '', 'site_page_title' => 'ICD MUSIC', 'site_summary' => ' Louvor ', 'site_page' => json_encode($page),
+        ])->assertRedirect(route('ministries.show', $music));
+        $this->put(route('ministries.site.update', $kids), ['site_visible' => '1', 'site_order' => 1, 'site_group' => 'departments', 'site_summary' => 'Crianças'])->assertRedirect();
+        $this->put(route('ministries.site.update', $hidden), ['site_order' => 0, 'site_group' => 'ministries', 'site_summary' => 'Não aparece'])->assertRedirect();
+        $this->put(route('ministries.site.update', $music), ['site_group' => 'nope', 'site_icon' => '<script>'])->assertSessionHasErrors(['site_group', 'site_icon']);
+
+        $music->refresh();
+        $this->assertSame(['music', 'Louvor', null], [$music->site_icon, $music->site_summary, $music->site_title]);
+        $this->assertEquals($page, $music->site_page);
+        $this->get(route('ministries.show', $music))->assertSee('On the site: Ministries');
+
+        $data = $this->getJson(route('api.ministries.index'))->assertOk()->json('data');
+        $this->assertSame(['ZZ Teste Kids', 'ZZ Teste Music'], array_column($data, 'title'));
+        $this->assertSame(['departments', 'Departamentos', 'church', 'ZZ Teste Kids', 'ZZ Teste Kids', null],
+            [$data[0]['group'], $data[0]['group_label'], $data[0]['icon'], $data[0]['tag'], $data[0]['page_title'], $data[0]['page']]);
+        $this->assertSame(['music', 'ICD Music', 'ICD MUSIC'], [$data[1]['icon'], $data[1]['tag'], $data[1]['page_title']]);
+        $this->assertEquals($page, $data[1]['page']);
+    }
+
     public function test_the_ministries_follow_the_members_permissions(): void
     {
         $ministry = Ministry::create(['name' => 'ZZ Teste Music']);
         $reader = User::factory()->withPermissions(['members' => ['read']])->create();
         $this->actingAs($reader)->get(route('ministries.show', $ministry))->assertOk();
+        $this->actingAs($reader)->get(route('ministries.site.edit', $ministry))->assertForbidden();
+        $this->actingAs($reader)->put(route('ministries.site.update', $ministry), ['site_group' => 'ministries', 'site_visible' => '1'])->assertForbidden();
+        $this->assertFalse($ministry->fresh()->site_visible);
         $this->actingAs($reader)->post(route('ministries-members.store', $ministry), ['member_id' => $this->member('Ana')->id])->assertForbidden();
         $this->actingAs(User::factory()->withPermissions(['prayers' => ['read']])->create())->get('/ministries')->assertForbidden();
         $this->assertSame(0, MinistryMember::query()->count());

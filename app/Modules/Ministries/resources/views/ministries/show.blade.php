@@ -33,10 +33,12 @@
                 <p>
                     {{ trans_choice(':count member|:count members', $ministry->memberships->where('active', true)->count(), ['count' => $ministry->memberships->where('active', true)->count()]) }}
                     @if ($ministry->isPastoral()) · <span class="m-tag is-ok"><i class="fa-solid fa-globe"></i> {{ __('On the site: Pastors') }}</span>@endif
+                    @if ($ministry->site_visible) · <span class="m-tag is-ok"><i class="fa-solid fa-globe"></i> {{ __('On the site: Ministries') }}</span>@endif
                 </p>
             </div>
             @can('members.update')
                 <div class="m-head-actions">
+                    <a href="{{ route('ministries.site.edit', $ministry) }}" class="m-btn"><i class="fa-solid fa-globe"></i> <span class="m-hide-sm">{{ __('Page on the site') }}</span></a>
                     <a href="{{ route('ministries.edit', $ministry) }}" class="m-btn"><i class="fa-solid fa-pen"></i> <span class="m-hide-sm">{{ __('Edit') }}</span></a>
                 </div>
             @endcan

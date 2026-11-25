@@ -5,10 +5,14 @@
 
 use App\Modules\Ministries\Http\Controllers\MembershipController;
 use App\Modules\Ministries\Http\Controllers\MinistryController;
+use App\Modules\Ministries\Http\Controllers\MinistrySiteController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
     Route::resource('ministries', MinistryController::class);
+    // Its page on the church site (the card and the text): editing the ministry.
+    Route::get('ministries/{ministry}/site', [MinistrySiteController::class, 'edit'])->name('ministries.site.edit');
+    Route::put('ministries/{ministry}/site', [MinistrySiteController::class, 'update'])->name('ministries.site.update');
 
     Route::post('ministries/{ministry}/members', [MembershipController::class, 'store'])->name('ministries-members.store');
     Route::get('ministries-members/{membership}/edit', [MembershipController::class, 'edit'])->name('ministries-members.edit');
